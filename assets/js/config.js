@@ -8,7 +8,7 @@ export const CONFIG = {
   // ── GitHub ─────────────────────────────
   // Dein GitHub-Benutzername und Repository-Name
   github: {
-    owner:  'DEIN_GITHUB_USERNAME',   // ← ändern
+    owner:  'SimonLukas102030',
     repo:   'LearningForge',
     branch: 'main'
   },
@@ -17,12 +17,13 @@ export const CONFIG = {
   // Kopiere diese Werte aus deiner Firebase Console:
   // Project Settings → Your apps → Firebase SDK snippet → Config
   firebase: {
-    apiKey:            'DEIN_API_KEY',
-    authDomain:        'DEIN_PROJEKT.firebaseapp.com',
-    projectId:         'DEIN_PROJEKT_ID',
-    storageBucket:     'DEIN_PROJEKT.appspot.com',
-    messagingSenderId: 'DEINE_SENDER_ID',
-    appId:             'DEINE_APP_ID'
+    apiKey: "AIzaSyCnKKCqpyffKqI8Env0BiJBwOy6MJBcAeY",
+    authDomain: "learningforge-e995e.firebaseapp.com",
+    projectId: "learningforge-e995e",
+    storageBucket: "learningforge-e995e.firebasestorage.app",
+    messagingSenderId: "174451084007",
+    appId: "1:174451084007:web:9d00a9ffa304de4513f042",
+    measurementId: "G-YDH9P8MXMW"
   },
 
   // ── Gemini KI (optional) ───────────────
