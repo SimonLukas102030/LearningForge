@@ -61,7 +61,7 @@ export async function getStructure(forceRefresh = false) {
 
 export async function getTopicMeta(subjectId, yearId, topicId) {
   try {
-    const res = await fetch(`${RAW()}/F%C3%A4cher/${subjectId}/${yearId}/${topicId}/meta.json`);
+    const res = await fetch(`${RAW()}/F%C3%A4cher/${subjectId}/${yearId}/${topicId}/meta.json`, { cache: 'no-store' });
     if (!res.ok) return {};
     return await res.json();
   } catch { return {}; }
@@ -69,7 +69,7 @@ export async function getTopicMeta(subjectId, yearId, topicId) {
 
 export async function getTopicQuestions(subjectId, yearId, topicId) {
   try {
-    const res = await fetch(`${RAW()}/F%C3%A4cher/${subjectId}/${yearId}/${topicId}/questions.json`);
+    const res = await fetch(`${RAW()}/F%C3%A4cher/${subjectId}/${yearId}/${topicId}/questions.json`, { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json();
     return data.questions || [];
