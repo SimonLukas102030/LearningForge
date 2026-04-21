@@ -177,8 +177,7 @@ input, textarea, select { font-family: var(--font); }
   display: none;
   animation: fadeIn 0.15s ease;
 }
-.user-chip:hover .user-dropdown,
-.user-chip:focus-within .user-dropdown { display: block; }
+.user-chip.open .user-dropdown { display: block; }
 .user-dropdown a, .user-dropdown button {
   display: block; width: 100%;
   padding: 10px 16px; font-size: 14px; text-align: left;

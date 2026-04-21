@@ -42,6 +42,9 @@ export function startApp() {
   });
 
   window.addEventListener('hashchange', route);
+  document.addEventListener('click', () => {
+    document.getElementById('userChip')?.classList.remove('open');
+  });
 }
 
 // ── Router ───────────────────────────────
@@ -91,7 +94,7 @@ function renderNav(breadcrumbs = []) {
         <button class="btn-icon" id="themeBtn" onclick="window.LF.toggleTheme()" title="Theme wechseln">
           ${theme === 'dark' ? '☀️' : '🌙'}
         </button>
-        <div class="user-chip">
+        <div class="user-chip" id="userChip" onclick="window.LF.toggleUserMenu(event)">
           <div class="avatar">${currentUser.photoURL
             ? `<img src="${currentUser.photoURL}" alt="">`
             : (currentUser.displayName || 'U')[0].toUpperCase()
@@ -449,6 +452,11 @@ let selectedTime = 15;
 
 window.LF = {
   toggleTheme,
+  toggleUserMenu: (e) => {
+    e.stopPropagation();
+    const chip = document.getElementById('userChip');
+    chip?.classList.toggle('open');
+  },
   doLogout: async () => { await logout(); location.hash = '#/'; },
   toggleAuthMode: () => {
     const nameGroup = document.getElementById('nameGroup');
