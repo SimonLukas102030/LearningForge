@@ -48,11 +48,6 @@ jobs:
               -o "$dir/ic_launcher_round.png"
           done
 
-      - name: Decode keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > keystore.jks
-
       - name: Set version from tag
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
@@ -61,25 +56,13 @@ jobs:
             echo "VERSION_NAME=${{ inputs.version_name }}" >> $GITHUB_ENV
           fi
 
-      - name: Update version in build.gradle
-        run: |
-          TAG="${{ github.ref_name }}"
-          VERSION_CODE=$(date +%s | cut -c 5-)
-          sed -i "s/versionCode 1/versionCode $VERSION_CODE/" android/app/build.gradle
-          sed -i "s/versionName '1.0.0'/versionName '$VERSION_NAME'/" android/app/build.gradle
-
-      - name: Build release APK
+      - name: Build debug APK
         working-directory: android
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
-          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle :app:assembleRelease
+        run: gradle :app:assembleDebug
 
       - name: Rename APK
         run: |
-          mv android/app/build/outputs/apk/release/app-release.apk \
+          mv android/app/build/outputs/apk/debug/app-debug.apk \
              LearningForge-${{ env.VERSION_NAME }}.apk
 
       - name: Upload APK to Release
