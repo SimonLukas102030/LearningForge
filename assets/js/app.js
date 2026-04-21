@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -1104,9 +1104,14 @@ window.LF = {
   resetAllGrades: async () => {
     if (!confirm('Alle Statistiken und Noten wirklich löschen?')) return;
     userData.grades = {};
-    await db().collection('users').doc(currentUser.uid).update({ grades: {} }).catch(console.error);
-    await db().collection('leaderboard').doc(currentUser.uid).delete().catch(console.error);
-    showToast('Statistiken zurückgesetzt.', 'info');
+    try {
+      await db().collection('users').doc(currentUser.uid).update({ grades: {} });
+      await resetLeaderboard(currentUser.uid);
+      showToast('Statistiken und Rangliste zurückgesetzt.', 'success');
+    } catch (e) {
+      console.error('Reset-Fehler:', e);
+      showToast('Fehler: ' + (e.message || e.code || 'Unbekannt'), 'error');
+    }
     renderProfile();
   },
 
