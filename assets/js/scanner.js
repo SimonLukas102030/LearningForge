@@ -127,6 +127,16 @@ function buildStructure(tree, subjectsConfig) {
     };
   }
 
+  // Leere Jahre und Fächer entfernen (z.B. nach gelöschten Ordnern)
+  for (const s of Object.values(subjects)) {
+    for (const [yid, year] of Object.entries(s.years)) {
+      if (Object.keys(year.topics).length === 0) delete s.years[yid];
+    }
+  }
+  for (const [sid, s] of Object.entries(subjects)) {
+    if (Object.keys(s.years).length === 0) delete subjects[sid];
+  }
+
   return subjects;
 }
 
