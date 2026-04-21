@@ -30,7 +30,7 @@ export const CONFIG = {
   // Kostenloser API-Key: https://aistudio.google.com/app/apikey
   // Ohne Key: automatische Keyword-Auswertung als Fallback
   gemini: {
-    apiKey: ''   // ← optional eintragen
+    apiKey: 'AIzaSyAmnyA7I1S86WqotKt-r_3b3SMri0N6cMM'
   }
 
 };

@@ -161,20 +161,46 @@ function evaluateWithKeywords(question, answer, maxPoints) {
   if (!answer || answer.trim().length < 5) {
     return { points: 0, feedback: 'Keine oder zu kurze Antwort.' };
   }
-  const lower    = answer.toLowerCase();
+
+  const norm = s => s.toLowerCase()
+    .replace(/[.,;:!?()[\]{}'"`´]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  const noSpace = s => s.replace(/\s/g, '');
+  const nums    = s => s.match(/\d+[,.]?\d*/g) || [];
+
+  const na  = norm(answer);
+  const nns = noSpace(na);
+
   const keywords = question.keywords || [];
   if (keywords.length === 0) {
-    const ratio = Math.min(answer.trim().split(/\s+/).length / 15, 1);
+    const words = answer.trim().split(/\s+/).length;
     return {
-      points:   Math.round(ratio * maxPoints * 0.6),
-      feedback: 'Automatische Auswertung (kein KI-Key konfiguriert). Tipp: Kopieren & von ChatGPT auswerten lassen.'
+      points:   Math.round(Math.min(words / 15, 1) * maxPoints * 0.6),
+      feedback: 'Automatische Auswertung — kein Gemini-Key. Tipp: Kopieren & in ChatGPT einfügen.'
     };
   }
-  const matched = keywords.filter(kw => lower.includes(kw.toLowerCase())).length;
-  const ratio   = matched / keywords.length;
+
+  let matched = 0;
+  for (const kw of keywords) {
+    const nk  = norm(kw);
+    const nks = noSpace(nk);
+    // 1. Direkter Treffer
+    if (na.includes(nk))   { matched++; continue; }
+    // 2. Ohne Leerzeichen (z.B. "3 s" → "3s")
+    if (nns.includes(nks)) { matched++; continue; }
+    // 3. Nur Zahlen vergleichen (z.B. "45 m" → "45")
+    const kNums = nums(nk);
+    if (kNums.length > 0 && kNums.every(n => na.includes(n))) { matched++; continue; }
+  }
+
+  const ratio       = matched / keywords.length;
+  const wordBonus   = answer.trim().split(/\s+/).length >= 25 ? 0.1 : 0;
+  const finalRatio  = Math.min(ratio + wordBonus, 1);
+  const pts         = Math.round(finalRatio * maxPoints);
+
   return {
-    points:   Math.round(ratio * maxPoints),
-    feedback: `${matched} von ${keywords.length} Schlüsselbegriffen gefunden.`
+    points:   pts,
+    feedback: `${matched} von ${keywords.length} Schlüsselbegriffen erkannt.${ratio < 0.5 ? ' Füge Gemini-API-Key in config.js ein für genaue KI-Auswertung.' : ''}`
   };
 }
 

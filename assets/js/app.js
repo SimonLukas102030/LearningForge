@@ -1079,6 +1079,7 @@ window.LF = {
     if (!confirm('Alle Statistiken und Noten wirklich löschen?')) return;
     userData.grades = {};
     await db().collection('users').doc(currentUser.uid).update({ grades: {} }).catch(console.error);
+    await db().collection('leaderboard').doc(currentUser.uid).delete().catch(console.error);
     showToast('Statistiken zurückgesetzt.', 'info');
     renderProfile();
   },
