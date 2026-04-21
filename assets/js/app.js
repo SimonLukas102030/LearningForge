@@ -18,6 +18,7 @@ let testState          = null;
 let tabSwitchPenalty   = false;
 let visibilityHandler  = null;
 let calcExpr           = '';
+let currentSubtopics   = null;
 
 // ── Theme ────────────────────────────────
 export function initTheme() {
@@ -414,9 +415,17 @@ async function renderTopic(subjectId, yearId, topicId) {
   const prevGrade = grades[`${subjectId}__${yearId}__${topicId}`];
   const color     = getSubjectColor(subjectId);
 
-  const lernenTab = meta.content
-    ? `<div class="content-block"><div class="content-body">${meta.content}</div></div>`
-    : `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
+  let lernenTab;
+  if (meta.subtopics?.length > 0) {
+    currentSubtopics = meta.subtopics;
+    lernenTab = renderSubtopicGrid(meta.subtopics);
+  } else if (meta.content) {
+    currentSubtopics = null;
+    lernenTab = `<div class="content-block"><div class="content-body">${meta.content}</div></div>`;
+  } else {
+    currentSubtopics = null;
+    lernenTab = `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
+  }
 
   const uebenTab = questions.length > 0
     ? renderUebenStart(questions, subjectId, yearId, topicId)
@@ -452,6 +461,19 @@ async function renderTopic(subjectId, yearId, topicId) {
     <div id="tabLernen" class="tab-panel">${lernenTab}</div>
     <div id="tabUeben"  class="tab-panel" style="display:none">${uebenTab}</div>
     <div id="tabTest"   class="tab-panel" style="display:none">${testTab}</div>`;
+}
+
+function renderSubtopicGrid(subtopics) {
+  const cards = subtopics.map((st, i) => `
+    <div class="subtopic-card" onclick="window.LF.openSubtopic(${i})">
+      <div class="subtopic-index">${i + 1}</div>
+      <div class="subtopic-info">
+        <div class="subtopic-name">${st.name}</div>
+        ${st.description ? `<div class="subtopic-desc">${st.description}</div>` : ''}
+      </div>
+      <div class="subtopic-arrow">›</div>
+    </div>`).join('');
+  return `<div class="subtopic-grid" id="subtopicGrid">${cards}</div>`;
 }
 
 function renderUebenStart(questions, subjectId, yearId, topicId) {
@@ -1024,8 +1046,11 @@ window.LF = {
 
     let questions = null;
     const meta = await getTopicMeta(subjectId, yearId, topicId);
-    if (meta.content) {
-      questions = await generateQuestionsWithGemini(meta.content, selectedTime);
+    const contentForGemini = meta.subtopics?.length > 0
+      ? meta.subtopics.map(st => st.content).join(' ')
+      : meta.content;
+    if (contentForGemini) {
+      questions = await generateQuestionsWithGemini(contentForGemini, selectedTime);
     }
     if (!questions || questions.length === 0) {
       const allQ = await getTopicQuestions(subjectId, yearId, topicId);
@@ -1115,7 +1140,37 @@ window.LF = {
     renderProfile();
   },
 
-  downloadPDF: () => window.print()
+  downloadPDF: () => window.print(),
+
+  openSubtopic: (idx) => {
+    const st = currentSubtopics?.[idx];
+    if (!st) return;
+    const grid = document.getElementById('subtopicGrid');
+    if (!grid) return;
+    grid.innerHTML = `
+      <button class="btn btn-ghost btn-sm" onclick="window.LF.closeSubtopic()" style="margin-bottom:16px">
+        ← Zurück zur Übersicht
+      </button>
+      <div class="subtopic-detail">
+        <h2 class="subtopic-detail-title">${st.name}</h2>
+        <div class="content-body">${st.content}</div>
+      </div>`;
+  },
+
+  closeSubtopic: () => {
+    if (!currentSubtopics) return;
+    const grid = document.getElementById('subtopicGrid');
+    if (!grid) return;
+    grid.innerHTML = currentSubtopics.map((st, i) => `
+      <div class="subtopic-card" onclick="window.LF.openSubtopic(${i})">
+        <div class="subtopic-index">${i + 1}</div>
+        <div class="subtopic-info">
+          <div class="subtopic-name">${st.name}</div>
+          ${st.description ? `<div class="subtopic-desc">${st.description}</div>` : ''}
+        </div>
+        <div class="subtopic-arrow">›</div>
+      </div>`).join('');
+  }
 };
 
 function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, subject, topic) {
@@ -1517,9 +1572,12 @@ window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
 
   showToast('Testbogen wird generiert…', 'info');
   const meta = await getTopicMeta(subjectId, yearId, topicId);
+  const contentForGemini = meta.subtopics?.length > 0
+    ? meta.subtopics.map(st => st.content).join(' ')
+    : meta.content;
   let questions = null;
-  if (meta.content) {
-    questions = await generateQuestionsWithGemini(meta.content, selectedTime);
+  if (contentForGemini) {
+    questions = await generateQuestionsWithGemini(contentForGemini, selectedTime);
   }
   if (!questions || questions.length === 0) {
     const allQ = await getTopicQuestions(subjectId, yearId, topicId);

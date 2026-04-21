@@ -1324,3 +1324,73 @@ input, textarea, select { font-family: var(--font); }
   .calc-panel  { width: 220px; }
   .calc-btn    { padding: 9px 4px; font-size: 14px; }
 }
+
+/* ── Unterthemen ─────────────────────────── */
+.subtopic-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.subtopic-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.subtopic-card:hover {
+  border-color: var(--subject-color, var(--accent));
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  transform: translateY(-1px);
+}
+
+.subtopic-index {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--subject-color, var(--accent));
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.subtopic-info { flex: 1; }
+
+.subtopic-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.subtopic-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.subtopic-arrow {
+  font-size: 24px;
+  color: var(--text-muted);
+  font-weight: 300;
+  line-height: 1;
+}
+
+.subtopic-detail { }
+
+.subtopic-detail-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+}
