@@ -91,6 +91,7 @@ function renderNav(breadcrumbs = []) {
                   style="${b.href ? 'cursor:pointer' : 'cursor:default'}">${b.label}</span>
           `).join('')}
         </div>
+        <span class="nav-sep-bar">|</span>
         <div class="nav-links">
           <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
           <a class="nav-link ${breadcrumbs[0]?.label==='Statistiken' ? 'active' : ''}" onclick="location.hash='#/statistiken'">Statistiken</a>
@@ -384,31 +385,51 @@ async function renderTopic(subjectId, yearId, topicId) {
   const questions = await getTopicQuestions(subjectId, yearId, topicId);
   const grades    = userData?.grades || {};
   const prevGrade = grades[`${subjectId}__${yearId}__${topicId}`];
+  const color     = getSubjectColor(subjectId);
 
-  document.getElementById('topicBody').innerHTML = `
-    ${meta.content ? `
-      <div class="content-block">
-        <h2>📖 Lerninhalt</h2>
-        <div class="content-body">${meta.content}</div>
-      </div>` : ''}
-    ${questions.length > 0 ? renderTestStart(questions, prevGrade, subjectId, yearId, topicId, subject, topic) : `
-      <div class="content-block">
-        <div class="empty-state"><div class="empty-icon">🚧</div>Noch keine Testfragen für dieses Thema.</div>
-      </div>`}`;
-}
+  const lernenTab = meta.content
+    ? `<div class="content-block"><div class="content-body">${meta.content}</div></div>`
+    : `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
 
-function renderTestStart(questions, prevGrade, subjectId, yearId, topicId, subject, topic) {
+  const uebenTab = questions.length > 0
+    ? renderUebenStart(questions, subjectId, yearId, topicId)
+    : `<div class="empty-state" style="padding:40px">Keine Übungsaufgaben vorhanden.</div>`;
+
   const gradeInfo = prevGrade ? calcGrade(prevGrade.points||0, prevGrade.maxPoints||1) : null;
-  return `
+  const testTab = questions.length > 0 ? `
     <div class="test-start" id="testArea">
-      <h2>🎯 Test starten</h2>
-      ${gradeInfo ? `<p>Letzte Note: <strong>${prevGrade.grade} – ${gradeInfo.label}</strong> (${prevGrade.points}/${prevGrade.maxPoints} Punkte)</p>` : '<p>Noch kein Test gemacht. Wie lange möchtest du testen?</p>'}
+      <h2>Test starten</h2>
+      ${gradeInfo
+        ? `<p>Letzte Note: <strong>${prevGrade.grade} – ${gradeInfo.label}</strong> (${prevGrade.points}/${prevGrade.maxPoints} Punkte)</p>`
+        : '<p>Noch kein Test gemacht. Wie lange möchtest du testen?</p>'}
       <div class="time-selector">
         ${TIME_OPTIONS.map(t => `<button class="time-btn ${t===15?'active':''}" onclick="window.LF.selectTime(${t})" id="timeBtn${t}">${t} min</button>`).join('')}
       </div>
       <div class="time-hint" id="timeHint">Zwei bis drei Sätze mit kurzer Begründung.</div>
       <button class="btn btn-primary btn-lg" onclick="window.LF.startTest('${subjectId}','${yearId}','${topicId}')">
-        Test beginnen →
+        Test beginnen
+      </button>
+    </div>` : `<div class="empty-state" style="padding:40px">Keine Testfragen vorhanden.</div>`;
+
+  document.getElementById('topicBody').innerHTML = `
+    <div class="topic-tabs" style="--subject-color:${color}">
+      <button class="tab-btn active" id="tabBtnLernen"  onclick="window.LF.switchTab('Lernen')">Lernen</button>
+      <button class="tab-btn"        id="tabBtnUeben"   onclick="window.LF.switchTab('Ueben')">Üben</button>
+      <button class="tab-btn"        id="tabBtnTest"    onclick="window.LF.switchTab('Test')">Test</button>
+    </div>
+    <div id="tabLernen" class="tab-panel">${lernenTab}</div>
+    <div id="tabUeben"  class="tab-panel" style="display:none">${uebenTab}</div>
+    <div id="tabTest"   class="tab-panel" style="display:none">${testTab}</div>`;
+}
+
+function renderUebenStart(questions, subjectId, yearId, topicId) {
+  return `
+    <div class="ueben-start" id="uebenArea">
+      <h2>Üben</h2>
+      <p>Beantworte die Fragen in deinem eigenen Tempo. Keine Zeitbegrenzung, keine Note — nur Lernen.</p>
+      <p style="color:var(--text-muted);font-size:14px">${questions.length} Aufgaben verfügbar</p>
+      <button class="btn btn-primary btn-lg" onclick="window.LF.startUeben('${subjectId}','${yearId}','${topicId}')">
+        Üben starten
       </button>
     </div>`;
 }
@@ -710,13 +731,53 @@ function renderProfile() {
           <div class="profile-name">${currentUser.displayName || 'Nutzer'}</div>
           <div class="profile-email">${currentUser.email}</div>
           <br>
-          <button class="btn btn-secondary btn-sm" onclick="window.LF.doLogout()">Abmelden</button>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-secondary btn-sm" onclick="window.LF.doLogout()">Abmelden</button>
+            <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Statistiken zurücksetzen</button>
+          </div>
         </div>
         <div class="grades-overview">
           <h3>Ø Noten nach Fach</h3>
           ${gradeRows}
         </div>
       </div>
+    </div>`;
+}
+
+// ── Üben-Ablauf ───────────────────────────
+let uebenState = null;
+
+function renderUebenQuestion() {
+  const { questions, current } = uebenState;
+  const q   = questions[current];
+  const pct = Math.round((current / questions.length) * 100);
+
+  const answerHtml = q.type === 'multiple_choice'
+    ? `<div class="ueben-mc-options">
+        ${q.shuffledOptions.map((opt, i) => `
+          <button class="ueben-mc-option" onclick="window.LF.checkUebenMC(${i})">${opt}</button>
+        `).join('')}
+       </div>`
+    : `<textarea class="form-input form-textarea" id="uebenTextarea" placeholder="Deine Antwort..."></textarea>
+       <button class="btn btn-secondary" id="uebenCheckBtn" onclick="window.LF.checkUebenText()" style="margin-top:10px">
+         Antwort prüfen
+       </button>`;
+
+  document.getElementById('uebenArea').innerHTML = `
+    <div class="ueben-active">
+      <div class="ueben-header">
+        <span class="ueben-progress-txt">Aufgabe ${current+1} von ${questions.length}</span>
+        <div class="progress-bar" style="width:200px"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="question-card">
+        <div class="question-num">${q.type === 'multiple_choice' ? 'Multiple Choice' : 'Freitext'}</div>
+        <div class="question-text">${q.question}</div>
+        ${answerHtml}
+      </div>
+      <div id="uebenFeedback"></div>
+      <button class="btn btn-primary" id="uebenNext" style="display:none;margin-top:12px" onclick="window.LF.nextUeben()">
+        Nächste Aufgabe
+      </button>
     </div>`;
 }
 
@@ -807,7 +868,83 @@ window.LF = {
     const subject   = structure[subjectId];
     const topic     = subject.years[yearId].topics[topicId];
     renderActiveTest(selected, selectedTime, subjectId, yearId, topicId, subject, topic);
-  }
+  },
+
+  switchTab: (name) => {
+    ['Lernen','Ueben','Test'].forEach(t => {
+      document.getElementById(`tab${t}`)?.style.setProperty('display', t === name ? 'block' : 'none');
+      document.getElementById(`tabBtn${t}`)?.classList.toggle('active', t === name);
+    });
+  },
+
+  startUeben: async (subjectId, yearId, topicId) => {
+    const all = await getTopicQuestions(subjectId, yearId, topicId);
+    const questions = [...all].sort(() => Math.random() - 0.5).map(q => {
+      if (q.type === 'multiple_choice' && q.options) {
+        const indexed = q.options.map((opt,i) => ({ opt, correct: i === q.correct }));
+        indexed.sort(() => Math.random() - 0.5);
+        return { ...q, shuffledOptions: indexed.map(x=>x.opt), shuffledCorrectIndex: indexed.findIndex(x=>x.correct) };
+      }
+      return q;
+    });
+    uebenState = { questions, current: 0, correct: 0 };
+    renderUebenQuestion();
+  },
+
+  checkUebenMC: (selectedIdx) => {
+    const q    = uebenState.questions[uebenState.current];
+    const ok   = selectedIdx === q.shuffledCorrectIndex;
+    if (ok) uebenState.correct++;
+    document.querySelectorAll('.ueben-mc-option').forEach((el, i) => {
+      el.style.pointerEvents = 'none';
+      if (i === q.shuffledCorrectIndex) el.classList.add('ueben-correct');
+      else if (i === selectedIdx && !ok) el.classList.add('ueben-wrong');
+    });
+    document.getElementById('uebenFeedback').innerHTML =
+      `<div class="ueben-feedback-box ${ok?'ok':'fail'}">${ok ? 'Richtig!' : `Falsch. Richtige Antwort: <strong>${q.shuffledOptions[q.shuffledCorrectIndex]}</strong>`}</div>`;
+    document.getElementById('uebenNext').style.display = 'block';
+  },
+
+  checkUebenText: () => {
+    const q      = uebenState.questions[uebenState.current];
+    const answer = document.getElementById('uebenTextarea')?.value?.trim() || '';
+    document.getElementById('uebenFeedback').innerHTML =
+      `<div class="ueben-feedback-box info">
+        ${q.sampleAnswer ? `<strong>Musterantwort:</strong><br>${q.sampleAnswer}` : 'Vergleiche deine Antwort mit dem Lerninhalt.'}
+      </div>`;
+    document.getElementById('uebenNext').style.display = 'block';
+    document.getElementById('uebenCheckBtn').style.display = 'none';
+  },
+
+  nextUeben: () => {
+    uebenState.current++;
+    if (uebenState.current >= uebenState.questions.length) {
+      const total = uebenState.questions.length;
+      const mcQ   = uebenState.questions.filter(q=>q.type==='multiple_choice').length;
+      document.getElementById('uebenArea').innerHTML = `
+        <div style="text-align:center;padding:32px">
+          <div style="font-size:48px;margin-bottom:16px">Fertig!</div>
+          <p style="font-size:18px;font-weight:700">${uebenState.correct} von ${mcQ} Multiple-Choice-Fragen richtig</p>
+          <p style="color:var(--text-muted);margin-top:8px">Mache den Test, wenn du dich bereit fühlst.</p>
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:24px">
+            <button class="btn btn-primary" onclick="window.LF.switchTab('Test')">Zum Test</button>
+            <button class="btn btn-secondary" onclick="window.LF.startUeben('${uebenState.questions[0]?.__subjectId||''}','','')">Nochmal üben</button>
+          </div>
+        </div>`;
+      return;
+    }
+    renderUebenQuestion();
+  },
+
+  resetAllGrades: async () => {
+    if (!confirm('Alle Statistiken und Noten wirklich löschen?')) return;
+    userData.grades = {};
+    await db().collection('users').doc(currentUser.uid).update({ grades: {} }).catch(console.error);
+    showToast('Statistiken zurückgesetzt.', 'info');
+    renderProfile();
+  },
+
+  downloadPDF: () => window.print()
 };
 
 function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, subject, topic) {
@@ -915,6 +1052,11 @@ window.LF.submitTest = async () => {
 };
 
 function renderResults(questions, answers, results, grade, total, max, timeUsed, meta) {
+  const mins = Math.floor(timeUsed/60);
+  const secs = timeUsed % 60;
+  const date = new Date().toLocaleDateString('de-DE');
+  const pct  = Math.round(total/max*100);
+
   const resultItems = questions.map((q, i) => {
     const r   = results[i];
     const pts = r.points || 0;
@@ -929,32 +1071,77 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <div class="r-pts ${cls}">${pts}/${r.maxPoints}</div>
         </div>
         <div class="r-answer">Antwort: ${answerText}</div>
-        <div class="r-feedback">💬 ${r.feedback}</div>
+        <div class="r-feedback">${r.feedback}</div>
+      </div>`;
+  }).join('');
+
+  // Print-Items (DIN A4)
+  const printItems = questions.map((q, i) => {
+    const r = results[i];
+    const answerText = q.type === 'multiple_choice'
+      ? (q.shuffledOptions?.[parseInt(answers[i])] || '(keine Wahl)')
+      : (answers[i] || '(keine Antwort)');
+    return `
+      <div class="print-question">
+        <div class="print-q-header">
+          <span class="print-q-num">Aufgabe ${i+1}</span>
+          <span class="print-q-pts">${r.points}/${r.maxPoints} Punkte</span>
+        </div>
+        <div class="print-q-text">${q.question}</div>
+        <div class="print-q-answer"><strong>Antwort:</strong> ${answerText}</div>
+        <div class="print-q-feedback"><strong>Feedback:</strong> ${r.feedback}</div>
       </div>`;
   }).join('');
 
   document.getElementById('testArea').innerHTML = `
     <div class="results-page">
-      <div class="grade-display">
-        <div class="grade-circle" style="background:${grade.color}">${grade.grade}</div>
-        <div class="grade-label">${grade.label}</div>
-        <div class="grade-points">${total} von ${max} Punkten · ${Math.round(total/max*100)}%</div>
+
+      <!-- Bildschirm-Ansicht -->
+      <div class="no-print">
+        <div class="grade-display">
+          <div class="grade-circle" style="background:${grade.color}">${grade.grade}</div>
+          <div class="grade-label">${grade.label}</div>
+          <div class="grade-points">${total} von ${max} Punkten · ${pct}%</div>
+        </div>
+        <div class="section-title">Aufgaben im Detail</div>
+        <div class="results-list">${resultItems}</div>
+        <div class="copy-section">
+          <p>Fragen + Antworten kopieren — z.B. für ChatGPT-Feedback</p>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="window.LF.copyResults()">Kopieren</button>
+            <button class="btn btn-secondary" onclick="window.LF.downloadPDF()">Als PDF speichern</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="window.LF.startTest('${testState.subjectId}','${testState.yearId}','${testState.topicId}')">
+            Nochmal testen
+          </button>
+          <button class="btn btn-secondary" onclick="location.hash='#/'">Zurück</button>
+        </div>
       </div>
-      <div class="section-title">Aufgaben im Detail</div>
-      <div class="results-list">${resultItems}</div>
-      <div class="copy-section">
-        <p>📋 Alle Fragen, Antworten und Punkte kopieren — z.B. für ChatGPT-Feedback</p>
-        <button class="btn btn-secondary" onclick="window.LF.copyResults()">Kopieren</button>
+
+      <!-- Print / PDF-Ansicht (DIN A4) -->
+      <div class="print-area">
+        <div class="print-header">
+          <div class="print-title">Test-Ergebnis</div>
+          <div class="print-subtitle">${meta.subjectName} — ${meta.topicName}</div>
+        </div>
+        <div class="print-meta-row">
+          <div class="print-meta-item"><span>Datum</span><strong>${date}</strong></div>
+          <div class="print-meta-item"><span>Zeit</span><strong>${mins} min ${secs} s von ${meta.timeMinutes} min</strong></div>
+          <div class="print-meta-item"><span>Punkte</span><strong>${total} / ${max} (${pct}%)</strong></div>
+          <div class="print-meta-item">
+            <span>Note</span>
+            <strong class="print-grade-badge" style="background:${grade.color}">${grade.grade} — ${grade.label}</strong>
+          </div>
+        </div>
+        <div class="print-divider"></div>
+        <div class="print-questions">${printItems}</div>
+        <div class="print-footer">Erstellt mit LearningForge</div>
       </div>
-      <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="window.LF.startTest('${meta.subjectName}','${testState.yearId||''}','${testState.topicId||''}')">
-          Nochmal testen
-        </button>
-        <button class="btn btn-secondary" onclick="location.hash='#/'">Zurück</button>
-      </div>
+
     </div>`;
 
-  // copyText für den Button speichern
   testState._copyText = generateCopyText(questions, answers, results, timeUsed, meta);
 }
 

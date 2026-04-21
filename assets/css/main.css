@@ -894,3 +894,177 @@ input, textarea, select { font-family: var(--font); }
   .login-card { padding: 28px 20px; }
   .test-topbar { flex-direction: column; gap: 8px; text-align: center; }
 }
+
+/* ── 24. Nav separator ──────────────────── */
+.nav-sep-bar {
+  color: var(--border);
+  font-size: 18px;
+  font-weight: 300;
+  padding: 0 4px;
+  user-select: none;
+  line-height: 1;
+}
+
+/* ── 25. Topic Tabs ─────────────────────── */
+.topic-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 20px;
+}
+.tab-btn {
+  padding: 10px 20px;
+  border: none; background: transparent;
+  font-size: 14px; font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.tab-btn:hover { background: var(--bg-input); color: var(--text); }
+.tab-btn.active {
+  color: var(--subject-color, var(--accent));
+  border-bottom-color: var(--subject-color, var(--accent));
+}
+.tab-panel { animation: fadeIn 0.2s ease; }
+
+/* ── 26. Üben mode ──────────────────────── */
+.ueben-start {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.ueben-start h2 { font-size: 20px; font-weight: 700; }
+.ueben-start p  { color: var(--text-muted); font-size: 14px; }
+
+.ueben-active { animation: fadeIn 0.2s ease; }
+
+.ueben-header {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 16px;
+}
+.ueben-progress-txt { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+
+.ueben-mc-options { display: flex; flex-direction: column; gap: 10px; }
+.ueben-mc-option {
+  width: 100%; text-align: left;
+  padding: 12px 16px; border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  background: var(--bg-input); color: var(--text);
+  font-size: 14px; font-weight: 500;
+  transition: border-color var(--transition), background var(--transition);
+}
+.ueben-mc-option:hover { border-color: var(--accent); background: var(--accent-subtle); }
+.ueben-mc-option.ueben-correct {
+  border-color: #10b981; background: #d1fae5; color: #065f46;
+}
+.ueben-mc-option.ueben-wrong {
+  border-color: #ef4444; background: #fee2e2; color: #991b1b;
+}
+[data-theme="dark"] .ueben-mc-option.ueben-correct { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .ueben-mc-option.ueben-wrong   { background: #450a0a; color: #fca5a5; }
+
+.ueben-feedback-box {
+  margin-top: 14px; padding: 14px 16px;
+  border-radius: var(--radius-sm); font-size: 14px; line-height: 1.6;
+}
+.ueben-feedback-box.ok   { background: #d1fae5; color: #065f46; border-left: 3px solid #10b981; }
+.ueben-feedback-box.fail { background: #fee2e2; color: #991b1b; border-left: 3px solid #ef4444; }
+.ueben-feedback-box.info { background: var(--accent-subtle); color: var(--text); border-left: 3px solid var(--accent); }
+[data-theme="dark"] .ueben-feedback-box.ok   { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .ueben-feedback-box.fail { background: #450a0a; color: #fca5a5; }
+
+/* ── 27. Print / DIN A4 ─────────────────── */
+.print-area { display: none; }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 20mm 18mm;
+  }
+
+  .no-print { display: none !important; }
+
+  .print-area {
+    display: block;
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 11pt;
+    color: #000;
+    line-height: 1.5;
+  }
+
+  .print-header {
+    border-bottom: 2pt solid #000;
+    padding-bottom: 8pt;
+    margin-bottom: 12pt;
+  }
+  .print-title {
+    font-size: 18pt; font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .print-subtitle {
+    font-size: 12pt; color: #444; margin-top: 3pt;
+  }
+
+  .print-meta-row {
+    display: flex; gap: 0;
+    border: 1pt solid #ccc;
+    border-radius: 4pt;
+    overflow: hidden;
+    margin-bottom: 14pt;
+  }
+  .print-meta-item {
+    flex: 1; padding: 7pt 10pt;
+    border-right: 1pt solid #ccc;
+    display: flex; flex-direction: column; gap: 2pt;
+  }
+  .print-meta-item:last-child { border-right: none; }
+  .print-meta-item span { font-size: 8pt; color: #666; text-transform: uppercase; letter-spacing: 0.4px; }
+  .print-meta-item strong { font-size: 11pt; }
+
+  .print-grade-badge {
+    display: inline-block;
+    padding: 1pt 8pt;
+    border-radius: 12pt;
+    color: #fff !important;
+    font-weight: 700;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-divider {
+    height: 1pt; background: #ddd; margin: 0 0 14pt;
+  }
+
+  .print-question {
+    margin-bottom: 14pt;
+    padding-bottom: 12pt;
+    border-bottom: 0.5pt solid #eee;
+    page-break-inside: avoid;
+  }
+  .print-question:last-child { border-bottom: none; }
+
+  .print-q-header {
+    display: flex; justify-content: space-between;
+    align-items: baseline; margin-bottom: 4pt;
+  }
+  .print-q-num { font-size: 9pt; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 0.5px; }
+  .print-q-pts { font-size: 9pt; font-weight: 700; color: #555; }
+  .print-q-text { font-size: 11pt; font-weight: 600; margin-bottom: 5pt; }
+  .print-q-answer { font-size: 10pt; color: #333; margin-bottom: 3pt; }
+  .print-q-feedback { font-size: 10pt; color: #444; font-style: italic; }
+
+  .print-footer {
+    margin-top: 20pt;
+    font-size: 8pt; color: #aaa;
+    text-align: right;
+    border-top: 0.5pt solid #ddd;
+    padding-top: 6pt;
+  }
+
+  /* Hide everything else on print */
+  body > *:not(#app) { display: none !important; }
+  .navbar { display: none !important; }
+}
