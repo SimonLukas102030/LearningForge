@@ -1,0 +1,81 @@
+{
+  "questions": [
+    {
+      "id": "g1", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was war der unmittelbare Auslöser des Ersten Weltkriegs?",
+      "options": ["Der Angriff Deutschlands auf Frankreich", "Die Ermordung von Thronfolger Franz Ferdinand in Sarajevo", "Die russische Mobilmachung", "Der Einmarsch in Belgien"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g2", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was war das Ziel des Schlieffenplans?",
+      "options": ["Einen langen Stellungskrieg führen", "Russland zuerst besiegen", "Einen Zweifrontenkrieg durch schnellen Sieg gegen Frankreich vermeiden", "Die britische Flotte vernichten"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "g3", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie lange dauerte die Schlacht von Verdun?",
+      "options": ["2 Wochen", "3 Monate", "10 Monate", "2 Jahre"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "g4", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was versteht man unter dem 'Steckrübenwinter'?",
+      "options": ["Ein besonders kalter Winter 1916/17", "Eine Hungersnot durch Seeblockade und Missernte, bei der Steckrüben als Grundnahrungsmittel dienten", "Ein erfolgreicher Ernte-Winter", "Ein Militäreinsatz in Russland"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g5", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Warum erklärten die USA 1917 Deutschland den Krieg? (Hauptgründe)",
+      "options": ["Wegen der russischen Revolution", "Wegen des uneingeschränkten U-Boot-Kriegs und des Zimmermann-Telegramms", "Wegen der Niederlage Frankreichs", "Auf Wunsch Großbritanniens"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g6", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was verlor Russland durch den Frieden von Brest-Litowsk?",
+      "options": ["Nur Finnland", "Ca. 1 Million km² und 26% der Bevölkerung", "Nur die Ukraine", "Nichts – es war ein Siegfrieden"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g7", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Warum verlor Kriegspropaganda ab 1917 an Wirkung?",
+      "options": ["Weil die Presse verboten wurde", "Weil Kriegsmüdigkeit, Hunger und die Front-Realität den Propagandaparolen widersprachen", "Weil alle Soldaten heimkamen", "Wegen des Frauenwahlrechts"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g8", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre, warum das Jahr 1917 als 'Epochenjahr' oder Wendepunkt des Ersten Weltkriegs gilt. Nenne mindestens zwei Ereignisse.",
+      "maxPoints": 6,
+      "keywords": ["usa", "kriegseintritt", "russland", "revolution", "wilson", "bolschewiki", "ressourcen", "soldaten", "wende"],
+      "sampleAnswer": "1917 gilt als Wendepunkt, weil die USA nach dem uneingeschränkten U-Boot-Krieg und dem Zimmermann-Telegramm in den Krieg eintraten und 2 Millionen Soldaten sowie enorme Ressourcen einbrachten. Gleichzeitig führte die Russische Revolution zum Ausscheiden Russlands aus dem Krieg (Brest-Litowsk). Wilson formulierte seine 14 Punkte als neue Friedensordnung."
+    },
+    {
+      "id": "g9", "type": "free_text", "difficulty": "medium",
+      "question": "Welche Rolle spielten Frauen in der deutschen Kriegswirtschaft? Nenne konkrete Beispiele und erkläre die langfristigen Folgen.",
+      "maxPoints": 6,
+      "keywords": ["rüstung", "landwirtschaft", "munitionettes", "lohn", "frauenwahlrecht", "heimatfront", "männerberufe"],
+      "sampleAnswer": "Frauen übernahmen Männerberufe: über 700.000 arbeiteten in der Rüstungsindustrie, ca. 5 Millionen in der Landwirtschaft, dazu Straßenbahn, Post, Verwaltung. Sie verdienten aber 50% weniger als Männer. Langfristig anerkannte der Staat ihre Leistung mit dem Frauenwahlrecht 1918, danach jedoch Druck zur Re-Traditionalisierung."
+    },
+    {
+      "id": "g10", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre Stärken und Schwächen von Feldpostbriefen als historische Quelle.",
+      "maxPoints": 6,
+      "keywords": ["zensur", "selbstzensur", "authentizität", "alltagsgeschichte", "perspektive", "subjektivität", "überlieferung"],
+      "sampleAnswer": "Stärken: Feldpostbriefe sind authentische Zeugnisse von unten, zeigen Alltagsgeschichte und Mentalitäten, ihre Massenhaftigkeit erlaubt breite Analysen. Schwächen: Militärische Zensur filterte Inhalte, Soldaten zensierten sich selbst (keine Kritik, keine Traumabeschreibungen), sie sind subjektiv und überliefern nur einen Teil der Erfahrungen."
+    },
+    {
+      "id": "g11", "type": "free_text", "difficulty": "hard",
+      "question": "Vergleiche die Kriegspropaganda Deutschlands und Großbritanniens. Welche unterschiedlichen Strategien nutzten sie und warum?",
+      "maxPoints": 8,
+      "keywords": ["verteidigungskrieg", "burgfrieden", "kitchener", "belgien", "gräuel", "feindbilder", "mobilisierung", "zensur"],
+      "sampleAnswer": "Deutschland stellte den Krieg als 'Verteidigungskrieg' gegen russische und französische Aggression dar, betonte kulturelle Überlegenheit und rief zum 'Burgfrieden' (nationale Einheit) auf. Feindbilder: 'perfides Albion', russische Barbarei. Großbritannien nutzte das berühmte Kitchener-Plakat, betrieb Gräuelpropaganda über deutsche Verbrechen in Belgien ('Hunnen') und stellte sich als Verteidiger der Zivilisation dar. Das War Propaganda Bureau arbeitete professionell. Beide Seiten nutzten Zensur, emotionale Bildsprache und Feindbilder, unterschieden sich aber in den konkreten Narrativen."
+    },
+    {
+      "id": "g12", "type": "free_text", "difficulty": "hard",
+      "question": "Was sind Wilsons 14 Punkte? Erkläre mindestens 4 Punkte und bewerte ihre historische Bedeutung.",
+      "maxPoints": 10,
+      "keywords": ["selbstbestimmung", "völkerbund", "meeresfreiheit", "abrüstung", "öffentlich", "frieden", "versailles", "hoffnung"],
+      "sampleAnswer": "Wilsons 14 Punkte (Januar 1918) umfassten: 1) Öffentliche Friedensverträge ohne Geheimdiplomatie, 2) Freiheit der Meere, 3) Allgemeine Abrüstung, 4) Selbstbestimmungsrecht der Völker (konkret für Europa), 5) Gründung eines Völkerbundes zur Friedenssicherung. Historische Bedeutung: Sie weckten weltweite Hoffnungen auf eine neue Friedensordnung. Deutschland stützte seinen Waffenstillstandsantrag 1918 auf die 14 Punkte. Im Versailler Vertrag wurden sie jedoch nur teilweise umgesetzt – das schürte Enttäuschung und trug zu späteren Konflikten bei."
+    }
+  ]
+}

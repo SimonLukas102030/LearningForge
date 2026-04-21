@@ -1,0 +1,67 @@
+{
+  "questions": [
+    {
+      "id": "sp1", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was besagt das Superpositionsprinzip?",
+      "options": ["Bewegungen addieren sich immer zur größten Bewegung", "Mehrere Bewegungen laufen unabhängig voneinander ab und überlagern sich", "Die schnellste Bewegung dominiert", "Nur eine Bewegung kann gleichzeitig wirken"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp2", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Welche Beschleunigung wirkt in horizontaler Richtung (ohne Reibung)?",
+      "options": ["9,81 m/s²", "0 m/s²", "Die halbe Erdbeschleunigung", "Hängt von der Masse ab"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp3", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie lautet die Formel für den zurückgelegten Weg beim freien Fall?",
+      "options": ["s = v · t", "s = ½ · g · t²", "s = g · t", "s = v² / g"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp4", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Eine Kugel wird waagerecht abgeschossen, eine andere gleichzeitig fallen gelassen. Was gilt?",
+      "options": ["Die fallende Kugel trifft zuerst auf", "Die abgeschossene Kugel trifft zuerst auf", "Beide treffen gleichzeitig auf", "Es hängt von der Horizontalgeschwindigkeit ab"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "sp5", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Ein Objekt wird mit v₀ = 20 m/s senkrecht nach oben geworfen (g = 10 m/s²). Wie lange steigt es?",
+      "options": ["1 s", "2 s", "4 s", "20 s"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp6", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Beim schiefen Wurf mit v₀ = 10 m/s und α = 30°: Was ist vₓ? (cos 30° ≈ 0,87)",
+      "options": ["5 m/s", "8,7 m/s", "10 m/s", "0 m/s"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp7", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Welche Formel berechnet die resultierende Geschwindigkeit aus vₓ und v_y?",
+      "options": ["v = vₓ + v_y", "v = vₓ · v_y", "v = √(vₓ² + v_y²)", "v = (vₓ + v_y) / 2"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "sp8", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre, warum die Zeit t als 'gemeinsamer Taktgeber' für horizontale und vertikale Bewegung gilt. Was bedeutet das praktisch?",
+      "maxPoints": 4,
+      "keywords": ["gleich", "beide", "richtung", "taktgeber", "horizontal", "vertikal", "unabhängig"],
+      "sampleAnswer": "Die Zeit t ist in beiden Bewegungsrichtungen identisch — sie läuft gleichzeitig für die horizontale und die vertikale Bewegung. Das bedeutet: Um die Position zu berechnen, setzt man dieselbe Zeit t in beide Formeln ein (sₓ = vₓ·t und s_y = ½·g·t²). Die Fallzeit hängt nur von der Höhe ab, nicht von der horizontalen Geschwindigkeit."
+    },
+    {
+      "id": "sp9", "type": "free_text", "difficulty": "medium",
+      "question": "Ein Objekt wird mit v₀ = 30 m/s senkrecht nach oben geworfen (g = 10 m/s²). Berechne Steigzeit und maximale Höhe mit Lösungsweg.",
+      "maxPoints": 6,
+      "keywords": ["t = v₀/g", "3 s", "h = v₀²/2g", "45 m", "steigzeit", "höhe"],
+      "sampleAnswer": "Steigzeit: t_s = v₀ / g = 30 / 10 = 3 s. Maximale Höhe: h_max = v₀² / (2·g) = 900 / 20 = 45 m."
+    },
+    {
+      "id": "sp10", "type": "free_text", "difficulty": "hard",
+      "question": "Erkläre das Superpositionsprinzip am Beispiel des waagerechten Wurfs. Welche Bewegungen überlagern sich, welche Formeln gelten jeweils und was ist das Besondere daran?",
+      "maxPoints": 8,
+      "keywords": ["horizontal", "vertikal", "unabhängig", "gleichförmig", "freier fall", "sₓ = vₓ·t", "s_y = ½·g·t²", "gleichzeitig", "überlagern"],
+      "sampleAnswer": "Beim waagerechten Wurf überlagern sich zwei unabhängige Bewegungen: 1) Horizontal: gleichförmige Bewegung mit konstanter Geschwindigkeit vₓ (keine Beschleunigung) → sₓ = vₓ · t. 2) Vertikal: freier Fall mit Erdbeschleunigung g → s_y = ½·g·t². Das Besondere: Beide Bewegungen laufen vollständig unabhängig voneinander ab — die horizontale Bewegung hat keinen Einfluss auf die Fallzeit. Daher landet ein waagerecht abgeschossenes Objekt gleichzeitig mit einem fallen gelassenen, das auf gleicher Höhe startet."
+    }
+  ]
+}

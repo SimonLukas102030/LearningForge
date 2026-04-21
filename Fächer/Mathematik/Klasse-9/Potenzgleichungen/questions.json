@@ -1,0 +1,66 @@
+{
+  "questions": [
+    {
+      "id": "p1", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie viele reelle Lösungen hat x² = 49?",
+      "options": ["Keine", "Genau eine (x = 7)", "Zwei (x = 7 und x = −7)", "Unendlich viele"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "p2", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie viele reelle Lösungen hat x² = −9?",
+      "options": ["Keine reellen Lösungen", "x = 3", "x = ±3", "x = −3"],
+      "correct": 0, "points": 2
+    },
+    {
+      "id": "p3", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was ist die Lösung von x³ = −27?",
+      "options": ["x = 3", "x = −3", "x = ±3", "Keine Lösung"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "p4", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Löse: 2x² = 18",
+      "options": ["x = 9", "x = ±3", "x = 3", "x = ±9"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "p5", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was ist ³√64?",
+      "options": ["8", "4", "6", "32"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "p6", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Löse: (x − 2)³ = 8",
+      "options": ["x = 4", "x = 2", "x = 0", "x = ±4"],
+      "correct": 0, "points": 2
+    },
+    {
+      "id": "p7", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Löse: x² + 11 = 36",
+      "options": ["x = 25", "x = ±5", "x = 5", "Keine Lösung"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "p8", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Wie viele Lösungen hat x⁵ = 0?",
+      "options": ["Keine", "Genau eine (x = 0)", "Zwei", "Fünf"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "p9", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre den Unterschied bei der Lösungsanzahl zwischen geradem und ungeradem Exponenten in einer Potenzgleichung. Gib je ein Beispiel.",
+      "maxPoints": 4,
+      "keywords": ["gerade", "ungerade", "zwei", "eine", "negativ", "±", "plus minus"],
+      "sampleAnswer": "Bei geradem Exponenten (z.B. x² = 9) gibt es zwei Lösungen (x = ±3), da sowohl 3² als auch (−3)² = 9 ergeben. Bei negativem a gibt es keine reellen Lösungen. Bei ungeradem Exponenten (z.B. x³ = −8) gibt es immer genau eine Lösung (x = −2), da ungerade Exponenten auch negative Werte annehmen können."
+    },
+    {
+      "id": "p10", "type": "free_text", "difficulty": "hard",
+      "question": "Löse die Gleichung 5x² − 80 = 0 vollständig mit Lösungsweg und Probe.",
+      "maxPoints": 6,
+      "keywords": ["x² = 16", "x = ±4", "probe", "4²", "16", "80"],
+      "sampleAnswer": "5x² − 80 = 0 | +80: 5x² = 80 | ÷5: x² = 16 | Wurzel: x = ±4. Probe: 5·(4)² − 80 = 5·16 − 80 = 80 − 80 = 0 ✓ und 5·(−4)² − 80 = 0 ✓. Lösungsmenge: {−4; 4}"
+    }
+  ]
+}
