@@ -1105,7 +1105,7 @@ window.LF = {
     if (!confirm('Alle Statistiken und Noten wirklich löschen?')) return;
     if (userData) userData.grades = {};
     try {
-      await db().collection('users').doc(currentUser.uid).update({ grades: {} });
+      await db().collection('users').doc(currentUser.uid).set({ grades: {} }, { merge: true });
       await resetLeaderboard(currentUser.uid);
       showToast('Statistiken und Rangliste zurückgesetzt.', 'success');
     } catch (e) {
