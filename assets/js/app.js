@@ -6,7 +6,8 @@ import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scann
 import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
-  generateCopyText, TIME_OPTIONS, getTimeConfig
+  generateCopyText, TIME_OPTIONS, getTimeConfig,
+  generateQuestionsWithGemini
 } from './test-engine.js';
 
 // ── Globaler State ───────────────────────
@@ -1011,11 +1012,27 @@ window.LF = {
     if (hint) hint.textContent = getTimeConfig(t).textExpectation;
   },
   startTest: async (subjectId, yearId, topicId) => {
-    const questions = await getTopicQuestions(subjectId, yearId, topicId);
-    const selected  = selectQuestions(questions, selectedTime);
-    const subject   = structure[subjectId];
-    const topic     = subject.years[yearId].topics[topicId];
-    renderActiveTest(selected, selectedTime, subjectId, yearId, topicId, subject, topic);
+    const subject = structure[subjectId];
+    const topic   = subject.years[yearId].topics[topicId];
+
+    const testAreaEl = document.getElementById('testArea');
+    if (testAreaEl) testAreaEl.innerHTML = `
+      <div style="text-align:center;padding:60px">
+        <div class="spinner" style="margin:0 auto 20px"></div>
+        <p>Fragen werden generiert…</p>
+      </div>`;
+
+    let questions = null;
+    const meta = await getTopicMeta(subjectId, yearId, topicId);
+    if (meta.content) {
+      questions = await generateQuestionsWithGemini(meta.content, selectedTime);
+    }
+    if (!questions || questions.length === 0) {
+      const allQ = await getTopicQuestions(subjectId, yearId, topicId);
+      questions  = selectQuestions(allQ, selectedTime);
+    }
+
+    renderActiveTest(questions, selectedTime, subjectId, yearId, topicId, subject, topic);
   },
 
   switchTab: (name) => {
@@ -1489,11 +1506,20 @@ window.LF.calcEval = () => {
 
 // ── Test als PDF herunterladen ────────────
 window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
-  const subject   = structure?.[subjectId];
-  const year      = subject?.years?.[yearId];
-  const topic     = year?.topics?.[topicId];
-  const allQ      = await getTopicQuestions(subjectId, yearId, topicId);
-  const questions = selectQuestions(allQ, selectedTime);
+  const subject = structure?.[subjectId];
+  const year    = subject?.years?.[yearId];
+  const topic   = year?.topics?.[topicId];
+
+  showToast('Testbogen wird generiert…', 'info');
+  const meta = await getTopicMeta(subjectId, yearId, topicId);
+  let questions = null;
+  if (meta.content) {
+    questions = await generateQuestionsWithGemini(meta.content, selectedTime);
+  }
+  if (!questions || questions.length === 0) {
+    const allQ = await getTopicQuestions(subjectId, yearId, topicId);
+    questions  = selectQuestions(allQ, selectedTime);
+  }
 
   const totalPts = questions.reduce((s, q) =>
     s + (q.type === 'multiple_choice' ? (q.points || 2) : (q.maxPoints || 4)), 0);

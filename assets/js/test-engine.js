@@ -259,3 +259,87 @@ export function generateCopyText(questions, answers, results, timeUsedSeconds, m
 export function getTimeConfig(minutes) {
   return TIME_CONFIG[minutes] || TIME_CONFIG[15];
 }
+
+// ── KI-Fragengenerierung ─────────────────
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+export async function generateQuestionsWithGemini(htmlContent, timeMinutes) {
+  if (!CONFIG.gemini.apiKey || !htmlContent) return [];
+
+  const cfg        = TIME_CONFIG[timeMinutes] || TIME_CONFIG[15];
+  const totalCount = cfg.maxQuestions === Infinity ? 20 : Math.min(cfg.maxQuestions, 20);
+  const mcCount    = Math.max(1, Math.round(totalCount * 0.55));
+  const textCount  = Math.max(1, totalCount - mcCount);
+
+  const content = htmlContent
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 3500);
+
+  const prompt =
+`Du bist ein Lehrer. Erstelle abwechslungsreiche Testfragen zum folgenden Lerninhalt.
+Generiere jedes Mal andere Fragen — variiere Formulierungen, Zahlenwerte und Beispiele.
+
+LERNINHALT:
+${content}
+
+ANFORDERUNGEN:
+- ${mcCount} Multiple-Choice-Fragen (4 Optionen, genau eine richtig, "correct": Index 0–3)
+- ${textCount} Freitext-Fragen
+- Schwierigkeiten: ${cfg.difficulties.map(d => `"${d}"`).join(', ')}
+- Freitext-Erwartung: ${cfg.textExpectation}
+- Sprache: Deutsch
+- Bei Mathe/Physik: Zahlenwerte bei jeder Generierung leicht variieren
+
+Antworte AUSSCHLIESSLICH mit diesem JSON-Array, ohne weitere Zeichen:
+[
+  {"type":"multiple_choice","difficulty":"easy","question":"...","options":["...","...","...","..."],"correct":0,"points":2},
+  {"type":"free_text","difficulty":"medium","question":"...","maxPoints":4,"sampleAnswer":"..."}
+]`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${CONFIG.gemini.apiKey}`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      }
+    );
+    const data    = await res.json();
+    const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    const cleaned = raw.replace(/```json\n?|\n?```/g, '').trim();
+    const arr     = JSON.parse(cleaned);
+
+    if (!Array.isArray(arr) || arr.length === 0) return [];
+
+    return arr.map((q, i) => {
+      q.id = `gen_${Date.now()}_${i}`;
+      if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
+        const pairs    = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.correct }));
+        const shuffled = shuffleArr(pairs);
+        return {
+          ...q,
+          shuffledOptions:      shuffled.map(x => x.opt),
+          shuffledCorrectIndex: shuffled.findIndex(x => x.isCorrect),
+          timeConfig: cfg
+        };
+      }
+      return {
+        ...q,
+        maxPoints:  Math.round((q.maxPoints || 4) * cfg.pointFactor),
+        timeConfig: cfg
+      };
+    });
+  } catch {
+    return [];
+  }
+}
