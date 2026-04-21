@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "de.simonsstudios.learningforge",
+    "sha256_cert_fingerprints": ["E5:38:CC:E2:82:6C:3C:8C:4A:A4:20:3B:D3:8D:B2:3C:DD:E2:E3:52:F7:2B:09:FD:6A:00:49:BC:3C:C4:8F:5E"]
+  }
+}]
