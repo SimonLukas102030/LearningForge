@@ -14,12 +14,19 @@ android {
         versionName '1.0.0'
     }
 
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('KEYSTORE_PATH') ?: '../keystore.jks')
+            storePassword System.getenv('STORE_PASSWORD') ?: 'learningforge123'
+            keyAlias System.getenv('KEY_ALIAS') ?: 'learningforge'
+            keyPassword System.getenv('KEY_PASSWORD') ?: 'learningforge123'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
-        }
-        debug {
-            applicationIdSuffix ''
+            signingConfig signingConfigs.release
         }
     }
 

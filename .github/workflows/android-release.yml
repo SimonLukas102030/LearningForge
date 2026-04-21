@@ -56,13 +56,23 @@ jobs:
             echo "VERSION_NAME=${{ inputs.version_name }}" >> $GITHUB_ENV
           fi
 
-      - name: Build debug APK
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 --decode > keystore.jks
+
+      - name: Build release APK
         working-directory: android
-        run: gradle :app:assembleDebug
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+          STORE_PASSWORD: learningforge123
+          KEY_ALIAS: learningforge
+          KEY_PASSWORD: learningforge123
+        run: gradle :app:assembleRelease
 
       - name: Rename APK
         run: |
-          mv android/app/build/outputs/apk/debug/app-debug.apk \
+          mv android/app/build/outputs/apk/release/app-release.apk \
              LearningForge-${{ env.VERSION_NAME }}.apk
 
       - name: Upload APK to Release
