@@ -1,0 +1,5 @@
+{
+  "name":        "Zahlen und Mengen",
+  "description": "Natürliche Zahlen, ganze Zahlen und ihre Eigenschaften",
+  "content": "<h3>Was sind natürliche Zahlen?</h3><p>Natürliche Zahlen sind die Zahlen, die wir zum Zählen verwenden: <strong>1, 2, 3, 4, …</strong> Je nach Definition gehört auch die <strong>0</strong> dazu.</p><p>Sie gehen ins Unendliche und haben kein größtes Element.</p><h3>Ganze Zahlen</h3><p>Ganze Zahlen erweitern die natürlichen Zahlen um die <strong>negativen Zahlen</strong> und die Null: <strong>…, -3, -2, -1, 0, 1, 2, 3, …</strong></p><ul><li>Jede natürliche Zahl ist auch eine ganze Zahl</li><li>Negative Zahlen liegen links von der 0 auf dem Zahlenstrahl</li><li>Der Betrag einer Zahl ist ihr Abstand von der 0</li></ul><h3>Der Zahlenstrahl</h3><p>Auf dem Zahlenstrahl liegen die Zahlen in aufsteigender Reihenfolge von links nach rechts. Zahlen weiter rechts sind immer größer.</p><blockquote>Merke: Je weiter links auf dem Zahlenstrahl, desto kleiner die Zahl.</blockquote>"
+}

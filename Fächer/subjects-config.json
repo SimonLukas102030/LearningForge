@@ -1,0 +1,64 @@
+{
+  "_comment": "Farben und Icons für jedes Fach. Ordnername = Key. Neue Fächer hier eintragen.",
+
+  "Mathematik": {
+    "name":  "Mathematik",
+    "color": "#3b82f6",
+    "icon":  "📐"
+  },
+  "Deutsch": {
+    "name":  "Deutsch",
+    "color": "#ef4444",
+    "icon":  "📖"
+  },
+  "Englisch": {
+    "name":  "Englisch",
+    "color": "#8b5cf6",
+    "icon":  "🌍"
+  },
+  "Geschichte": {
+    "name":  "Geschichte",
+    "color": "#f59e0b",
+    "icon":  "🏛️"
+  },
+  "Biologie": {
+    "name":  "Biologie",
+    "color": "#10b981",
+    "icon":  "🌿"
+  },
+  "Chemie": {
+    "name":  "Chemie",
+    "color": "#14b8a6",
+    "icon":  "⚗️"
+  },
+  "Physik": {
+    "name":  "Physik",
+    "color": "#6366f1",
+    "icon":  "⚛️"
+  },
+  "Geographie": {
+    "name":  "Geographie",
+    "color": "#84cc16",
+    "icon":  "🗺️"
+  },
+  "Informatik": {
+    "name":  "Informatik",
+    "color": "#06b6d4",
+    "icon":  "💻"
+  },
+  "Musik": {
+    "name":  "Musik",
+    "color": "#ec4899",
+    "icon":  "🎵"
+  },
+  "Kunst": {
+    "name":  "Kunst",
+    "color": "#f97316",
+    "icon":  "🎨"
+  },
+  "Sport": {
+    "name":  "Sport",
+    "color": "#eab308",
+    "icon":  "⚽"
+  }
+}
