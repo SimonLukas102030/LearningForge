@@ -389,3 +389,117 @@ Browser-Cache leeren mit **Strg+Shift+R**.
 
 5. **`window.LF`:** Alle Event-Handler aus HTML-Templates nutzen `window.LF.*`.
    Das Objekt wird in `app.js` am Ende definiert.
+
+6. **Rangliste (Firestore-Regeln):** Die `leaderboard`-Collection braucht eigene Regeln.
+   Ohne diese erscheint ein Hinweis auf der Rangliste-Seite:
+   ```
+   match /leaderboard/{uid} {
+     allow read: if request.auth != null;
+     allow write: if request.auth != null && request.auth.uid == uid;
+   }
+   ```
+
+7. **Tab-Wechsel-Erkennung:** Während eines Tests registriert `document.visibilitychange` jeden Tab-Wechsel.
+   Das Ergebnis wird sofort als Note 6 gewertet und im Leaderboard gespeichert.
+
+8. **Keine Emojis** im JS-Code, HTML-Templates oder JSON (außer `subjects-config.json`-Icons und `meta.json`-Inhalte).
+
+---
+
+## Lerninhalt-Format (meta.json) — Visuelles Lernen
+
+Der `content`-Key enthält HTML-String. Für visuell ansprechendes Lernen
+gibt es spezielle CSS-Klassen. **Kein langer Fließtext** — stattdessen
+Boxen, Formeln, Schritte und Hervorhebungen nutzen.
+
+### Callout-Boxen
+
+```html
+<div class="lf-box lf-info">💡 Hinweis oder interessante Information</div>
+<div class="lf-box lf-tip">✅ Tipp oder Merkhilfe</div>
+<div class="lf-box lf-warn">⚠️ Wichtiger Hinweis oder häufiger Fehler</div>
+<div class="lf-box lf-danger">🚨 Typischer Denkfehler</div>
+<div class="lf-box lf-formula">v = s / t</div>
+```
+
+### Schlüsselkonzept-Karte
+
+```html
+<div class="lf-key">
+  <div class="lf-key-title">Kernaussage</div>
+  <div class="lf-key-body">Das Superpositionsprinzip: Mehrere Bewegungen laufen
+  <span class="lf-hl">unabhängig voneinander</span> ab und überlagern sich.</div>
+</div>
+```
+
+### Definition
+
+```html
+<dl class="lf-def">
+  <dt>Beschleunigung</dt>
+  <dd>Änderung der Geschwindigkeit pro Zeit: a = Δv / Δt (Einheit: m/s²)</dd>
+  <dt>Gleichförmige Bewegung</dt>
+  <dd>Konstante Geschwindigkeit, keine Beschleunigung.</dd>
+</dl>
+```
+
+### Schritte-Liste (nummeriert, visuell)
+
+```html
+<ol class="lf-steps">
+  <li>Gegeben: v₀ = 20 m/s, g = 10 m/s²</li>
+  <li>Gesucht: Steigzeit t</li>
+  <li>Formel: t = v₀ / g</li>
+  <li>Einsetzen: t = 20 / 10 = <span class="lf-hl">2 s</span></li>
+</ol>
+```
+
+### Zwei-Spalten-Layout
+
+```html
+<div class="lf-two-col">
+  <div>
+    <strong>Waagerechter Wurf</strong>
+    <p>Horizontal: gleichförmig (keine Beschleunigung)</p>
+  </div>
+  <div>
+    <strong>Freier Fall</strong>
+    <p>Vertikal: gleichmäßig beschleunigt (g = 9,81 m/s²)</p>
+  </div>
+</div>
+```
+
+### Tabelle
+
+```html
+<table class="lf-table">
+  <thead><tr><th>Note</th><th>Sekundarstufe-Punkte</th><th>Bedeutung</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>15</td><td>Sehr gut</td></tr>
+    <tr><td>6</td><td>0</td><td>Ungenügend</td></tr>
+  </tbody>
+</table>
+```
+
+### Bild mit Beschriftung
+
+```html
+<img class="lf-img" src="https://..." alt="Parabelwurf">
+<p class="lf-img-caption">Abb.: Überlagerung von horizontaler und vertikaler Bewegung</p>
+```
+
+### Inline-Hervorhebung
+
+```html
+Die Fallzeit hängt <span class="lf-hl">nicht</span> von der Horizontalgeschwindigkeit ab.
+```
+
+### Vollständiges Beispiel meta.json
+
+```json
+{
+  "name": "Superpositionsprinzip",
+  "description": "Überlagerung unabhängiger Bewegungen",
+  "content": "<div class='lf-key'><div class='lf-key-title'>Kernaussage</div><div class='lf-key-body'>Mehrere Bewegungen laufen <span class='lf-hl'>unabhängig voneinander</span> ab und überlagern sich.</div></div><div class='lf-box lf-formula'>sₓ = vₓ · t &nbsp;|&nbsp; s_y = ½ · g · t²</div><ol class='lf-steps'><li>Horizontal: gleichförmig — keine Beschleunigung</li><li>Vertikal: freier Fall — g = 9,81 m/s²</li><li>Zeit t ist für beide Richtungen identisch</li></ol><div class='lf-box lf-tip'>💡 Ein senkrecht fallen gelassenes und ein waagerecht abgeschossenes Objekt landen gleichzeitig!</div>"
+}
+```

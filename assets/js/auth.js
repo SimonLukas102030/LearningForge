@@ -88,3 +88,21 @@ export async function saveGrade(uid, subjectId, yearId, topicId, gradeData) {
 export function onAuthStateChanged(callback) {
   return _auth.onAuthStateChanged(callback);
 }
+
+// ── Rangliste ────────────────────────────
+const GRADE_TO_PTS = { 1: 15, 2: 12, 3: 9, 4: 6, 5: 3, 6: 0 };
+
+export async function updateLeaderboard(uid, displayName, photoURL, subjectId, yearId, topicId, gradeNum) {
+  const points = GRADE_TO_PTS[Math.round(gradeNum)] ?? 0;
+  await _db.collection('leaderboard').doc(uid).set({
+    displayName,
+    photoURL: photoURL || null,
+    scores: { [`${subjectId}__${yearId}__${topicId}`]: points },
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+export async function getLeaderboard() {
+  const snap = await _db.collection('leaderboard').get();
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}

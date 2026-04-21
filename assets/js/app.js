@@ -3,17 +3,19 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig
 } from './test-engine.js';
 
 // ── Globaler State ───────────────────────
-let currentUser   = null;
-let userData      = null;
-let structure     = null;
-let testState     = null; // aktiver Test
+let currentUser        = null;
+let userData           = null;
+let structure          = null;
+let testState          = null;
+let tabSwitchPenalty   = false;
+let visibilityHandler  = null;
 
 // ── Theme ────────────────────────────────
 export function initTheme() {
@@ -44,6 +46,7 @@ export function startApp() {
   window.addEventListener('hashchange', route);
   document.addEventListener('click', () => {
     document.getElementById('userChip')?.classList.remove('open');
+    document.getElementById('mobileNav')?.classList.remove('open');
   });
 }
 
@@ -68,6 +71,8 @@ function route() {
     renderSettings();
   } else if (parts[0] === 'statistiken') {
     renderStatistics();
+  } else if (parts[0] === 'rangliste') {
+    renderLeaderboard();
   } else {
     renderDashboard();
   }
@@ -76,6 +81,7 @@ function route() {
 // ── Navbar rendern ───────────────────────
 function renderNav(breadcrumbs = []) {
   const theme = document.documentElement.getAttribute('data-theme');
+  const act   = (label) => breadcrumbs[0]?.label === label ? 'active' : '';
   return `
     <nav class="navbar">
       <div class="nav-brand" onclick="location.hash='#/'">
@@ -94,14 +100,20 @@ function renderNav(breadcrumbs = []) {
         <span class="nav-sep-bar">|</span>
         <div class="nav-links">
           <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
-          <a class="nav-link ${breadcrumbs[0]?.label==='Statistiken' ? 'active' : ''}" onclick="location.hash='#/statistiken'">Statistiken</a>
-          <a class="nav-link ${breadcrumbs[0]?.label==='Profil' ? 'active' : ''}" onclick="location.hash='#/profil'">Profil</a>
-          <a class="nav-link ${breadcrumbs[0]?.label==='Einstellungen' ? 'active' : ''}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
+          <a class="nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken'">Statistiken</a>
+          <a class="nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste'">Rangliste</a>
+          <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
+          <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
         </div>
       </div>
       <div class="nav-right">
         <button class="btn-icon" id="themeBtn" onclick="window.LF.toggleTheme()" title="Theme wechseln">
           ${theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+        <button class="btn-icon hamburger" onclick="window.LF.toggleMobileMenu(event)" aria-label="Menü">
+          <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
+            <rect width="16" height="2" rx="1"/><rect y="6" width="16" height="2" rx="1"/><rect y="12" width="16" height="2" rx="1"/>
+          </svg>
         </button>
         <div class="user-chip" id="userChip" onclick="window.LF.toggleUserMenu(event)">
           <div class="avatar">${currentUser.photoURL
@@ -110,15 +122,25 @@ function renderNav(breadcrumbs = []) {
           }</div>
           <span class="uname">${currentUser.displayName?.split(' ')[0] || 'Nutzer'}</span>
           <div class="user-dropdown">
-            <a onclick="location.hash='#/profil'">👤 Profil</a>
-            <a onclick="location.hash='#/statistiken'">📊 Statistiken</a>
-            <a onclick="location.hash='#/einstellungen'">⚙️ Einstellungen</a>
+            <a onclick="location.hash='#/profil'">Profil</a>
+            <a onclick="location.hash='#/statistiken'">Statistiken</a>
+            <a onclick="location.hash='#/rangliste'">Rangliste</a>
+            <a onclick="location.hash='#/einstellungen'">Einstellungen</a>
             <div class="divider"></div>
             <button class="danger" onclick="window.LF.doLogout()">Abmelden</button>
           </div>
         </div>
       </div>
-    </nav>`;
+    </nav>
+    <div class="mobile-nav" id="mobileNav">
+      <a class="mobile-nav-link ${!breadcrumbs.length ? 'mnl-active' : ''}" onclick="location.hash='#/';window.LF.closeMobileMenu()">Start</a>
+      <a class="mobile-nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken';window.LF.closeMobileMenu()">Statistiken</a>
+      <a class="mobile-nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste';window.LF.closeMobileMenu()">Rangliste</a>
+      <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
+      <a class="mobile-nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">Einstellungen</a>
+      <div class="mobile-nav-sep"></div>
+      <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">Abmelden</a>
+    </div>`;
 }
 
 // ── Login-Seite ──────────────────────────
@@ -744,6 +766,96 @@ function renderProfile() {
     </div>`;
 }
 
+// ── Rangliste ────────────────────────────
+async function renderLeaderboard() {
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Rangliste' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>🏆 Rangliste</h1>
+        <div class="sub">Note 1 = 15 Pkt · Note 2 = 12 Pkt · … · Note 6 = 0 Pkt (Sekundarstufe)</div>
+      </div>
+      <div id="lbContent"><div class="spinner" style="margin:40px auto"></div></div>
+    </div>`;
+
+  let data = [];
+  let permError = false;
+  try { data = await getLeaderboard(); }
+  catch(e) { if (e.code === 'permission-denied') permError = true; }
+
+  if (permError) {
+    document.getElementById('lbContent').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔒</div>
+        Firestore-Regel fehlt.<br>
+        <small style="color:var(--text-light);font-size:13px;display:block;margin-top:8px">
+          Füge in der Firebase Console unter Firestore → Regeln hinzu:<br>
+          <code style="font-size:11px">match /leaderboard/{uid} { allow read: if request.auth != null; allow write: if request.auth.uid == uid; }</code>
+        </small>
+      </div>`;
+    return;
+  }
+
+  if (!data.length) {
+    document.getElementById('lbContent').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">🏆</div>Noch keine Einträge.<br>Mache Tests um in die Rangliste aufgenommen zu werden!</div>`;
+    return;
+  }
+
+  const subjects = Object.values(structure || {});
+  const users = data.map(u => {
+    const sc = u.scores || {};
+    const subjectAvgs = {};
+    subjects.forEach(s => {
+      const vals = Object.entries(sc).filter(([k]) => k.startsWith(s.id + '__')).map(([,v]) => v);
+      if (vals.length) subjectAvgs[s.id] = { avg: vals.reduce((a,b)=>a+b,0)/vals.length, count: vals.length };
+    });
+    const all = Object.values(sc);
+    return { ...u, subjectAvgs, overall: all.length ? all.reduce((a,b)=>a+b,0)/all.length : null, testCount: all.length };
+  }).filter(u => u.overall !== null);
+
+  const renderRow = (rank, u, score, count, isMe) => {
+    const medal = rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${rank}</span>`;
+    const av = u.photoURL
+      ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      : (u.displayName || '?')[0].toUpperCase();
+    const col = score>=12?'#10b981':score>=9?'#22d3ee':score>=6?'#f59e0b':score>=3?'#f97316':'#ef4444';
+    return `
+      <div class="lb-row${isMe?' lb-me':''}">
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-avatar">${av}</div>
+        <div class="lb-name">${u.displayName||'Unbekannt'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+        <div class="lb-meta">${count} Test${count!==1?'s':''}</div>
+        <div class="lb-score" style="color:${col}">${score.toFixed(1)}</div>
+      </div>`;
+  };
+
+  const top10 = [...users].sort((a,b)=>b.overall-a.overall).slice(0,10);
+  const top10Html = top10.map((u,i)=>renderRow(i+1,u,u.overall,u.testCount,u.uid===currentUser?.uid)).join('');
+
+  const subjectGridHtml = subjects.map(s => {
+    const ranked = users.filter(u=>u.subjectAvgs[s.id]).sort((a,b)=>b.subjectAvgs[s.id].avg-a.subjectAvgs[s.id].avg).slice(0,5);
+    if (!ranked.length) return '';
+    const color = getSubjectColor(s.id);
+    return `
+      <div class="lb-card">
+        <div class="lb-card-head" style="border-top:3px solid ${color}">${s.icon} ${s.name}</div>
+        ${ranked.map((u,i)=>renderRow(i+1,u,u.subjectAvgs[s.id].avg,u.subjectAvgs[s.id].count,u.uid===currentUser?.uid)).join('')}
+      </div>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('lbContent').innerHTML = `
+    <div class="lb-main">
+      <div class="lb-main-title">Gesamt — Top 10</div>
+      <div class="lb-header-row">
+        <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
+        <span class="lb-name">Name</span><span class="lb-meta">Tests</span><span class="lb-score">Ø Pkt</span>
+      </div>
+      ${top10Html}
+    </div>
+    ${subjectGridHtml ? `<div class="section-title" style="margin-top:32px;margin-bottom:16px">Nach Fach</div><div class="lb-grid">${subjectGridHtml}</div>` : ''}`;
+}
+
 // ── Üben-Ablauf ───────────────────────────
 let uebenState = null;
 
@@ -781,6 +893,27 @@ function renderUebenQuestion() {
     </div>`;
 }
 
+// ── Tab-Wechsel-Erkennung ─────────────────
+function setupTabSwitchDetection() {
+  tabSwitchPenalty = false;
+  removeTabSwitchDetection();
+  visibilityHandler = () => {
+    if (!document.hidden || !testState) return;
+    removeTabSwitchDetection();
+    tabSwitchPenalty = true;
+    showToast('Tab-Wechsel erkannt — Test wird als Note 6 gewertet.', 'error');
+    setTimeout(() => window.LF.submitTest(), 1500);
+  };
+  document.addEventListener('visibilitychange', visibilityHandler);
+}
+
+function removeTabSwitchDetection() {
+  if (visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler);
+    visibilityHandler = null;
+  }
+}
+
 // ── Test-Ablauf ───────────────────────────
 let selectedTime = 15;
 
@@ -788,8 +921,14 @@ window.LF = {
   toggleTheme,
   toggleUserMenu: (e) => {
     e.stopPropagation();
-    const chip = document.getElementById('userChip');
-    chip?.classList.toggle('open');
+    document.getElementById('userChip')?.classList.toggle('open');
+  },
+  toggleMobileMenu: (e) => {
+    e.stopPropagation();
+    document.getElementById('mobileNav')?.classList.toggle('open');
+  },
+  closeMobileMenu: () => {
+    document.getElementById('mobileNav')?.classList.remove('open');
   },
   doLogout: async () => { await logout(); location.hash = '#/'; },
   toggleAuthMode: () => {
@@ -948,6 +1087,7 @@ window.LF = {
 };
 
 function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, subject, topic) {
+  setupTabSwitchDetection();
   testState = {
     questions, timeMinutes, subjectId, yearId, topicId,
     subjectName: subject.name, topicName: topic.name,
@@ -1022,21 +1162,28 @@ window.LF.setAnswer = (idx, val) => {
 
 window.LF.submitTest = async () => {
   clearInterval(timerInterval);
+  removeTabSwitchDetection();
+  const penalty = tabSwitchPenalty;
+  tabSwitchPenalty = false;
+
   const { questions, answers, timeMinutes, subjectId, yearId, topicId, subjectName, topicName, startTime } = testState;
-  const timeUsed = Math.round((Date.now() - startTime) / 1000);
+  const timeUsed        = Math.round((Date.now() - startTime) / 1000);
+  const effectiveAns    = penalty ? new Array(questions.length).fill(null) : answers;
 
   document.getElementById('testArea').innerHTML = `
     <div style="text-align:center;padding:40px">
       <div class="spinner" style="margin:0 auto 16px"></div>
-      <p>Antworten werden ausgewertet…</p>
+      <p>${penalty ? 'Tab-Wechsel erkannt. Wird als Note 6 gewertet…' : 'Antworten werden ausgewertet…'}</p>
     </div>`;
 
-  const results = await evaluateAnswers(questions, answers, timeMinutes);
-  const total   = results.reduce((s,r) => s+(r.points||0), 0);
-  const max     = results.reduce((s,r) => s+(r.maxPoints||0), 0);
-  const grade   = calcGrade(total, max);
+  const results = await evaluateAnswers(questions, effectiveAns, timeMinutes);
+  const rawTotal = results.reduce((s,r) => s+(r.points||0), 0);
+  const max      = results.reduce((s,r) => s+(r.maxPoints||0), 0);
+  const total    = penalty ? 0 : rawTotal;
+  const grade    = penalty
+    ? { grade: 6, label: 'Ungenügend (Tab-Wechsel)', color: '#7f1d1d' }
+    : calcGrade(total, max);
 
-  // Note speichern
   if (currentUser) {
     userData = userData || {};
     userData.grades = userData.grades || {};
@@ -1046,9 +1193,13 @@ window.LF.submitTest = async () => {
     await saveGrade(currentUser.uid, subjectId, yearId, topicId, {
       grade: grade.grade, points: total, maxPoints: max
     }).catch(console.error);
+    await updateLeaderboard(
+      currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
+      subjectId, yearId, topicId, grade.grade
+    ).catch(console.error);
   }
 
-  renderResults(questions, answers, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes });
+  renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty });
 };
 
 function renderResults(questions, answers, results, grade, total, max, timeUsed, meta) {
@@ -1098,6 +1249,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
 
       <!-- Bildschirm-Ansicht -->
       <div class="no-print">
+        ${meta.penalty ? `<div class="penalty-banner">Tab-Wechsel während des Tests erkannt — automatisch Note 6 (Ungenügend)</div>` : ''}
         <div class="grade-display">
           <div class="grade-circle" style="background:${grade.color}">${grade.grade}</div>
           <div class="grade-label">${grade.label}</div>
