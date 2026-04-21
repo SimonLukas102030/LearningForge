@@ -685,7 +685,49 @@ input, textarea, select { font-family: var(--font); }
   transition: width 0.4s ease;
 }
 
-/* ── 20. Responsive ─────────────────────── */
+/* ── 20. Einstellungen ──────────────────── */
+.settings-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.settings-section-title {
+  font-size: 15px; font-weight: 700; margin-bottom: 6px;
+}
+.settings-hint {
+  font-size: 13px; color: var(--text-muted); margin-bottom: 20px;
+}
+.settings-color-list { display: flex; flex-direction: column; gap: 4px; }
+.settings-color-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.settings-color-row:last-child { border-bottom: none; }
+.settings-subject-info { display: flex; align-items: center; gap: 10px; }
+.settings-icon { font-size: 20px; }
+.settings-name { font-size: 15px; font-weight: 500; }
+.settings-color-right { display: flex; align-items: center; gap: 10px; }
+.settings-color-preview {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--border); flex-shrink: 0;
+  transition: background var(--transition);
+}
+.color-picker {
+  width: 36px; height: 36px; border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border); cursor: pointer;
+  padding: 2px; background: var(--bg-input);
+}
+.settings-actions {
+  display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;
+}
+
+/* ── 21. Responsive ─────────────────────── */
+@media (max-width: 600px) {
+  .settings-color-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .settings-color-right { width: 100%; justify-content: flex-start; }
+}
+
 @media (max-width: 768px) {
   .page { padding: 72px 16px 32px; }
   .subjects-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }

@@ -61,6 +61,8 @@ function route() {
     else           renderSubject(subject);
   } else if (parts[0] === 'profil') {
     renderProfile();
+  } else if (parts[0] === 'einstellungen') {
+    renderSettings();
   } else {
     renderDashboard();
   }
@@ -97,6 +99,7 @@ function renderNav(breadcrumbs = []) {
           <span class="uname">${currentUser.displayName?.split(' ')[0] || 'Nutzer'}</span>
           <div class="user-dropdown">
             <a onclick="location.hash='#/profil'">👤 Profil</a>
+            <a onclick="location.hash='#/einstellungen'">⚙️ Einstellungen</a>
             <div class="divider"></div>
             <button class="danger" onclick="window.LF.doLogout()">Abmelden</button>
           </div>
@@ -328,6 +331,76 @@ function renderTestStart(questions, prevGrade, subjectId, yearId, topicId, subje
     </div>`;
 }
 
+// ── Fachfarbe abrufen (Nutzer > Standard) ─
+export function getSubjectColor(subjectId) {
+  const custom = userData?.settings?.subjectColors?.[subjectId];
+  return custom || structure?.[subjectId]?.color || '#6366f1';
+}
+
+// ── Einstellungen-Seite ──────────────────
+function renderSettings() {
+  const subjects = Object.values(structure || {});
+
+  const colorRows = subjects.map(s => {
+    const current = getSubjectColor(s.id);
+    return `
+      <div class="settings-color-row">
+        <div class="settings-subject-info">
+          <span class="settings-icon">${s.icon}</span>
+          <span class="settings-name">${s.name}</span>
+        </div>
+        <div class="settings-color-right">
+          <span class="settings-color-preview" id="preview_${s.id}"
+                style="background:${current}"></span>
+          <input type="color" class="color-picker" id="color_${s.id}"
+                 value="${current}"
+                 oninput="document.getElementById('preview_${s.id}').style.background=this.value">
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.resetColor('${s.id}','${s.color}')">
+            Zurücksetzen
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Einstellungen' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>⚙️ Einstellungen</h1>
+        <div class="sub">Passe LearningForge nach deinen Wünschen an.</div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-section-title">🎨 Fächerfarben</div>
+        <p class="settings-hint">Die Farben werden nur für dein Konto gespeichert.</p>
+        <div class="settings-color-list">
+          ${subjects.length === 0
+            ? '<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden.</div>'
+            : colorRows}
+        </div>
+        ${subjects.length > 0 ? `
+          <div class="settings-actions">
+            <button class="btn btn-primary" onclick="window.LF.saveColors()">Farben speichern</button>
+            <button class="btn btn-secondary" onclick="window.LF.resetAllColors()">Alle zurücksetzen</button>
+          </div>` : ''}
+      </div>
+
+      <div class="settings-card" style="margin-top:16px">
+        <div class="settings-section-title">🌗 Darstellung</div>
+        <div class="settings-color-row">
+          <div class="settings-subject-info">
+            <span class="settings-name">Dark / Light Mode</span>
+          </div>
+          <div class="settings-color-right">
+            <button class="btn btn-secondary" onclick="window.LF.toggleTheme()">
+              ${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
 // ── Profil-Seite ─────────────────────────
 function renderProfile() {
   const grades   = userData?.grades || {};
@@ -403,6 +476,41 @@ window.LF = {
     const { loginWithGoogle } = await import('./auth.js');
     try { await loginWithGoogle(); }
     catch(e) { console.error(e); }
+  },
+  saveColors: async () => {
+    const subjects = Object.values(structure || {});
+    const colors = {};
+    subjects.forEach(s => {
+      const input = document.getElementById(`color_${s.id}`);
+      if (input) colors[s.id] = input.value;
+    });
+    userData = userData || {};
+    userData.settings = userData.settings || {};
+    userData.settings.subjectColors = colors;
+    // In Firestore speichern
+    await db().collection('users').doc(currentUser.uid).update({
+      'settings.subjectColors': colors
+    }).catch(console.error);
+    // Struktur-Cache aktualisieren
+    subjects.forEach(s => { if (structure[s.id]) structure[s.id].color = colors[s.id]; });
+    showToast('Farben gespeichert! ✓', 'success');
+  },
+  resetColor: (subjectId, defaultColor) => {
+    const input   = document.getElementById(`color_${subjectId}`);
+    const preview = document.getElementById(`preview_${subjectId}`);
+    if (input)   input.value             = defaultColor;
+    if (preview) preview.style.background = defaultColor;
+  },
+  resetAllColors: async () => {
+    const subjects = Object.values(structure || {});
+    subjects.forEach(s => window.LF.resetColor(s.id, s.color));
+    if (userData?.settings?.subjectColors) {
+      userData.settings.subjectColors = {};
+      await db().collection('users').doc(currentUser.uid).update({
+        'settings.subjectColors': {}
+      }).catch(console.error);
+    }
+    showToast('Alle Farben zurückgesetzt.', 'info');
   },
   selectTime: (t) => {
     selectedTime = t;
