@@ -103,10 +103,15 @@ export async function updateLeaderboard(uid, displayName, photoURL, subjectId, y
 }
 
 export async function resetLeaderboard(uid) {
-  await _db.collection('leaderboard').doc(uid).delete();
+  await _db.collection('leaderboard').doc(uid).set({
+    scores: {},
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
 }
 
 export async function getLeaderboard() {
-  const snap = await _db.collection('leaderboard').get();
-  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  const snap = await _db.collection('leaderboard').get({ source: 'server' });
+  return snap.docs
+    .map(d => ({ uid: d.id, ...d.data() }))
+    .filter(e => Object.keys(e.scores || {}).length > 0);
 }
