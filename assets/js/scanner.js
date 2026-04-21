@@ -9,8 +9,8 @@ const RAW = () =>
 const API = () =>
   `https://api.github.com/repos/${CONFIG.github.owner}/${CONFIG.github.repo}`;
 
-const CACHE_KEY     = 'lf_structure_v2';
-const CACHE_SHA_KEY = 'lf_structure_sha_v2';
+const CACHE_KEY     = 'lf_structure_v3';
+const CACHE_SHA_KEY = 'lf_structure_sha_v3';
 
 export async function getStructure(forceRefresh = false) {
   if (CONFIG.github.owner === 'DEIN_GITHUB_USERNAME') {
