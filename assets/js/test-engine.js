@@ -275,14 +275,26 @@ export async function generateQuestionsWithGemini(htmlContent, timeMinutes) {
 
   const cfg        = TIME_CONFIG[timeMinutes] || TIME_CONFIG[15];
   const totalCount = cfg.maxQuestions === Infinity ? 20 : Math.min(cfg.maxQuestions, 20);
-  const mcCount    = Math.max(1, Math.round(totalCount * 0.55));
-  const textCount  = Math.max(1, totalCount - mcCount);
+
+  const mcRatio  = timeMinutes <= 5 ? 1.0 : timeMinutes <= 10 ? 0.5 : 0.0;
+  const mcCount  = Math.round(totalCount * mcRatio);
+  const textCount = totalCount - mcCount;
 
   const content = htmlContent
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 3500);
+
+  const typeLines = [
+    mcCount   > 0 ? `- ${mcCount} Multiple-Choice-Fragen (4 Optionen, genau eine richtig, "correct": Index 0–3, "points": 2)`   : '',
+    textCount > 0 ? `- ${textCount} Freitext-Fragen ("maxPoints": 4–8 je nach Schwierigkeit, "sampleAnswer" pflegen)` : ''
+  ].filter(Boolean).join('\n');
+
+  const exampleLines = [
+    mcCount   > 0 ? `  {"type":"multiple_choice","difficulty":"easy","question":"...","options":["...","...","...","..."],"correct":0,"points":2}` : '',
+    textCount > 0 ? `  {"type":"free_text","difficulty":"medium","question":"...","maxPoints":4,"sampleAnswer":"..."}` : ''
+  ].filter(Boolean).join(',\n');
 
   const prompt =
 `Du bist ein Lehrer. Erstelle abwechslungsreiche Testfragen zum folgenden Lerninhalt.
@@ -292,8 +304,7 @@ LERNINHALT:
 ${content}
 
 ANFORDERUNGEN:
-- ${mcCount} Multiple-Choice-Fragen (4 Optionen, genau eine richtig, "correct": Index 0–3)
-- ${textCount} Freitext-Fragen
+${typeLines}
 - Schwierigkeiten: ${cfg.difficulties.map(d => `"${d}"`).join(', ')}
 - Freitext-Erwartung: ${cfg.textExpectation}
 - Sprache: Deutsch
@@ -301,8 +312,7 @@ ANFORDERUNGEN:
 
 Antworte AUSSCHLIESSLICH mit diesem JSON-Array, ohne weitere Zeichen:
 [
-  {"type":"multiple_choice","difficulty":"easy","question":"...","options":["...","...","...","..."],"correct":0,"points":2},
-  {"type":"free_text","difficulty":"medium","question":"...","maxPoints":4,"sampleAnswer":"..."}
+${exampleLines}
 ]`;
 
   try {
