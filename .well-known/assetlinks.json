@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "de.simonsstudios.learningforge",
-    "sha256_cert_fingerprints": ["E5:38:CC:E2:82:6C:3C:8C:4A:A4:20:3B:D3:8D:B2:3C:DD:E2:E3:52:F7:2B:09:FD:6A:00:49:BC:3C:C4:8F:5E"]
+    "sha256_cert_fingerprints": ["F4:63:2C:34:63:F1:07:6E:20:89:9F:E8:02:33:57:CC:C0:D6:05:0C:B1:FD:3F:4D:6B:56:81:D4:D6:B9:0C:E8"]
   }
 }]
