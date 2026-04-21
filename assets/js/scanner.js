@@ -1,7 +1,5 @@
 // ══════════════════════════════════════════
 //  LearningForge — GitHub Struktur-Scanner
-//  Liest die Fächer/Jahre/Themen-Struktur
-//  automatisch aus dem GitHub Repository.
 // ══════════════════════════════════════════
 
 import { CONFIG } from './config.js';
@@ -11,88 +9,95 @@ const RAW = () =>
 const API = () =>
   `https://api.github.com/repos/${CONFIG.github.owner}/${CONFIG.github.repo}`;
 
-const CACHE_KEY     = 'lf_structure_v1';
-const CACHE_SHA_KEY = 'lf_structure_sha';
+const CACHE_KEY     = 'lf_structure_v2';
+const CACHE_SHA_KEY = 'lf_structure_sha_v2';
 
-// ── Öffentlicher Einstiegspunkt ─────────
 export async function getStructure(forceRefresh = false) {
+  if (CONFIG.github.owner === 'DEIN_GITHUB_USERNAME') {
+    return { _configError: 'GitHub owner nicht konfiguriert.' };
+  }
+
   if (!forceRefresh) {
     const cached = tryLoadCache();
-    if (cached) return cached;
+    if (cached && !cached._configError) return cached;
   }
 
   try {
-    // Aktuellsten Commit prüfen (Cache-Invalidierung)
-    const shaRes = await fetch(`${API()}/commits/${CONFIG.github.branch}`);
-    const shaData = await shaRes.json();
-    const currentSha = shaData.sha;
+    // Aktuellsten Commit für Cache-Invalidierung
+    let currentSha = null;
+    try {
+      const shaRes  = await fetch(`${API()}/commits/${CONFIG.github.branch}`);
+      const shaData = await shaRes.json();
+      currentSha = shaData.sha || null;
+    } catch { /* ignore — SHA-Check optional */ }
 
     const cachedSha = sessionStorage.getItem(CACHE_SHA_KEY);
-    if (!forceRefresh && cachedSha === currentSha) {
+    if (!forceRefresh && currentSha && cachedSha === currentSha) {
       const cached = tryLoadCache();
       if (cached) return cached;
     }
 
-    // Gesamten Verzeichnisbaum in einem einzigen API-Call laden
-    const treeRes = await fetch(`${API()}/git/trees/${CONFIG.github.branch}?recursive=1`);
+    // Gesamten Baum in einem Call laden
+    const treeRes  = await fetch(`${API()}/git/trees/${CONFIG.github.branch}?recursive=1`);
     const treeData = await treeRes.json();
 
-    if (!treeData.tree) throw new Error('Kein Verzeichnisbaum gefunden.');
+    if (!treeData.tree) {
+      console.error('[Scanner] Kein Tree gefunden. Branch korrekt?', CONFIG.github.branch);
+      return { _configError: `Branch "${CONFIG.github.branch}" nicht gefunden.` };
+    }
 
-    // Fächer-Konfiguration laden (Farben, Icons)
     const subjectsConfig = await fetchSubjectsConfig();
+    const structure      = buildStructure(treeData.tree, subjectsConfig);
 
-    const structure = buildStructure(treeData.tree, subjectsConfig);
-
-    // Cachen
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(structure));
-    sessionStorage.setItem(CACHE_SHA_KEY, currentSha);
+    if (currentSha) sessionStorage.setItem(CACHE_SHA_KEY, currentSha);
 
     return structure;
   } catch (err) {
-    console.warn('[Scanner] Fehler beim Laden:', err);
-    // Veralteten Cache als Fallback zurückgeben
-    return tryLoadCache() || {};
+    console.error('[Scanner] Fehler:', err);
+    return tryLoadCache() || { _configError: err.message };
   }
 }
 
-// ── Thema-Metadaten (lazy geladen) ──────
 export async function getTopicMeta(subjectId, yearId, topicId) {
-  const url = `${RAW()}/Fächer/${subjectId}/${yearId}/${topicId}/meta.json`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(`${RAW()}/F%C3%A4cher/${subjectId}/${yearId}/${topicId}/meta.json`);
     if (!res.ok) return {};
     return await res.json();
   } catch { return {}; }
 }
 
-// ── Fragen für einen Test ───────────────
 export async function getTopicQuestions(subjectId, yearId, topicId) {
-  const url = `${RAW()}/Fächer/${subjectId}/${yearId}/${topicId}/questions.json`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(`${RAW()}/F%C3%A4cher/${subjectId}/${yearId}/${topicId}/questions.json`);
     if (!res.ok) return [];
     const data = await res.json();
     return data.questions || [];
   } catch { return []; }
 }
 
-// ── Interne Hilfsfunktionen ─────────────
-
 async function fetchSubjectsConfig() {
-  const url = `${RAW()}/Fächer/subjects-config.json`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(`${RAW()}/F%C3%A4cher/subjects-config.json`);
     if (!res.ok) return {};
     return await res.json();
   } catch { return {}; }
 }
 
 function buildStructure(tree, subjectsConfig) {
-  // Nur Ordner innerhalb von Fächer/, max 3 Ebenen tief
+  // GitHub gibt Pfade mit ä als UTF-8-Zeichen zurück
+  // Beide Varianten abfangen: direkt und URL-kodiert
+  const isFaecher = (path) =>
+    path.startsWith('Fächer/') ||
+    path.startsWith('F\u00e4cher/') ||
+    path.startsWith('F%C3%A4cher/');
+
+  const stripPrefix = (path) =>
+    path.replace(/^F(%C3%A4|\u00e4|ä)cher\//, '');
+
   const dirs = tree
-    .filter(item => item.type === 'tree' && item.path.startsWith('Fächer/'))
-    .map(item => item.path.split('/').slice(1)); // 'Fächer/' entfernen
+    .filter(item => item.type === 'tree' && isFaecher(item.path))
+    .map(item => stripPrefix(item.path).split('/'));
 
   const subjects = {};
 
@@ -100,7 +105,6 @@ function buildStructure(tree, subjectsConfig) {
     const [subjectId, yearId, topicId] = parts;
     if (!subjectId) continue;
 
-    // Fach initialisieren
     if (!subjects[subjectId]) {
       const cfg = subjectsConfig[subjectId] || {};
       subjects[subjectId] = {
@@ -111,24 +115,15 @@ function buildStructure(tree, subjectsConfig) {
         years: {}
       };
     }
-
     if (!yearId) continue;
 
-    // Schuljahr initialisieren
     if (!subjects[subjectId].years[yearId]) {
-      subjects[subjectId].years[yearId] = {
-        id:     yearId,
-        name:   idToName(yearId),
-        topics: {}
-      };
+      subjects[subjectId].years[yearId] = { id: yearId, name: idToName(yearId), topics: {} };
     }
-
     if (!topicId) continue;
 
-    // Thema initialisieren
     subjects[subjectId].years[yearId].topics[topicId] = {
-      id:   topicId,
-      name: idToName(topicId)
+      id: topicId, name: idToName(topicId)
     };
   }
 
@@ -142,17 +137,16 @@ function tryLoadCache() {
   } catch { return null; }
 }
 
-// Ordner-ID → Anzeigename: "Zahlen-und-Mengen" → "Zahlen und Mengen"
 export function idToName(id) {
-  return id.replace(/[-_]/g, ' ');
+  return decodeURIComponent(id).replace(/[-_]/g, ' ');
 }
 
-// Stabile Farbe aus dem Fach-Namen ableiten (Fallback)
 const FALLBACK_COLORS = [
   '#3b82f6','#ef4444','#8b5cf6','#f59e0b',
   '#10b981','#14b8a6','#6366f1','#84cc16',
   '#06b6d4','#ec4899','#f97316','#eab308'
 ];
+
 function defaultColor(id) {
   let hash = 0;
   for (const c of id) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;

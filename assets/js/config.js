@@ -10,7 +10,7 @@ export const CONFIG = {
   github: {
     owner:  'SimonLukas102030',
     repo:   'LearningForge',
-    branch: 'main'
+    branch: 'master'
   },
 
   // ── Firebase ───────────────────────────

@@ -66,6 +66,8 @@ function route() {
     renderProfile();
   } else if (parts[0] === 'einstellungen') {
     renderSettings();
+  } else if (parts[0] === 'statistiken') {
+    renderStatistics();
   } else {
     renderDashboard();
   }
@@ -102,6 +104,7 @@ function renderNav(breadcrumbs = []) {
           <span class="uname">${currentUser.displayName?.split(' ')[0] || 'Nutzer'}</span>
           <div class="user-dropdown">
             <a onclick="location.hash='#/profil'">👤 Profil</a>
+            <a onclick="location.hash='#/statistiken'">📊 Statistiken</a>
             <a onclick="location.hash='#/einstellungen'">⚙️ Einstellungen</a>
             <div class="divider"></div>
             <button class="danger" onclick="window.LF.doLogout()">Abmelden</button>
@@ -161,46 +164,116 @@ function renderLogin() {
 
 // ── Dashboard ────────────────────────────
 function renderDashboard() {
-  const subjects  = Object.values(structure || {});
-  const grades    = userData?.grades || {};
-  const totalTests = Object.keys(grades).length;
-  const avgGrade  = totalTests > 0
-    ? (Object.values(grades).reduce((s, g) => s + (g.grade || 0), 0) / totalTests).toFixed(1)
-    : '–';
+  if (structure?._configError) {
+    document.getElementById('app').innerHTML = `
+      ${renderNav()}
+      <div class="page">
+        <div class="setup-banner">
+          <div class="setup-icon">⚙️</div>
+          <h2>Setup erforderlich</h2>
+          <p>${structure._configError}</p>
+          <p>Bearbeite <code>assets/js/config.js</code> und trage deinen GitHub-Username und den Branch ein.</p>
+        </div>
+      </div>`;
+    return;
+  }
 
+  const subjects   = Object.values(structure || {});
+  const grades     = userData?.grades || {};
+  const totalTests = Object.keys(grades).length;
+  const gradeVals  = Object.values(grades).map(g => g.grade).filter(Boolean);
+  const avgGrade   = gradeVals.length ? (gradeVals.reduce((a,b)=>a+b,0)/gradeVals.length).toFixed(1) : '–';
+  const streak     = calcStreak();
+  const attention  = getNeedsAttention();
+  const recent     = getRecentTests();
+
+  // Subject cards mit Fortschrittsring
   const subjectCards = subjects.length === 0
     ? `<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden.<br>Füge Ordner unter <code>Fächer/</code> hinzu.</div>`
     : subjects.map(s => {
-        const sGrades  = Object.entries(grades).filter(([k]) => k.startsWith(s.id));
-        const lastGrade = sGrades.length > 0
-          ? sGrades.sort((a,b) => (b[1].date?.seconds||0)-(a[1].date?.seconds||0))[0][1]
-          : null;
-        const yearCount  = Object.keys(s.years || {}).length;
-        const topicCount = Object.values(s.years || {}).reduce((n, y) => n + Object.keys(y.topics||{}).length, 0);
+        const prog   = getSubjectProgress(s.id);
+        const pct    = prog.total > 0 ? prog.tested / prog.total : 0;
+        const circ   = 100.48; // Umfang r=16
+        const dash   = pct * circ;
+        const gi     = prog.avgGrade ? calcGrade(0,1) : null; // only for color
+        const avgInfo = prog.avgGrade ? calcGrade(Math.max(0,7-prog.avgGrade),6) : null;
         return `
-          <div class="subject-card" style="--subject-color:${s.color}"
+          <div class="subject-card" style="--subject-color:${getSubjectColor(s.id)}"
                onclick="location.hash='#/fach/${s.id}'">
-            <div class="s-icon">${s.icon}</div>
-            <div class="s-name">${s.name}</div>
-            <div class="s-meta">${yearCount} Klassen · ${topicCount} Themen</div>
-            ${lastGrade ? `<div class="s-grade" style="background:${calcGrade(lastGrade.points||0,lastGrade.maxPoints||1).color}">${lastGrade.grade}</div>` : ''}
+            <div class="s-card-top">
+              <div>
+                <div class="s-icon">${s.icon}</div>
+                <div class="s-name">${s.name}</div>
+                <div class="s-meta">${Object.keys(s.years||{}).length} Klassen · ${prog.total} Themen</div>
+              </div>
+              <svg class="progress-ring" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" stroke-width="3"/>
+                <circle cx="18" cy="18" r="16" fill="none" stroke="${getSubjectColor(s.id)}"
+                  stroke-width="3" stroke-linecap="round"
+                  stroke-dasharray="${dash.toFixed(1)} ${circ}"
+                  transform="rotate(-90 18 18)"/>
+                <text x="18" y="22" text-anchor="middle" font-size="9"
+                  fill="${getSubjectColor(s.id)}" font-weight="700">${prog.total>0?Math.round(pct*100)+'%':'–'}</text>
+              </svg>
+            </div>
+            ${prog.avgGrade ? `<div class="s-avg-grade" style="background:${calcGrade(0,1) && avgGradeColor(prog.avgGrade)}">${prog.avgGrade.toFixed(1)}</div>` : ''}
           </div>`;
       }).join('');
+
+  // Braucht Aufmerksamkeit
+  const attentionHtml = attention.length === 0 ? '' : `
+    <div class="section-title" style="margin-top:32px">⚠️ Braucht Aufmerksamkeit</div>
+    <div class="attention-list">
+      ${attention.map(a => `
+        <div class="attention-item" onclick="location.hash='#/fach/${a.subjectId}/${a.yearId}/${a.topicId}'"
+             style="--subject-color:${getSubjectColor(a.subjectId)}">
+          <span class="att-icon">${a.subject.icon}</span>
+          <div class="att-info">
+            <div class="att-name">${a.topic.name}</div>
+            <div class="att-sub">${a.subject.name} · ${a.subject.years[a.yearId]?.name || a.yearId}</div>
+          </div>
+          <div class="att-grade" style="background:${calcGrade(0,1) && gradeColor(a.g.grade)}">${a.g.grade}</div>
+        </div>`).join('')}
+    </div>`;
+
+  // Letzte Tests
+  const recentHtml = recent.length === 0 ? '' : `
+    <div class="section-title" style="margin-top:32px">🕐 Letzte Tests</div>
+    <div class="recent-list">
+      ${recent.map(r => `
+        <div class="recent-item" onclick="location.hash='#/fach/${r.subjectId}/${r.yearId}/${r.topicId}'"
+             style="--subject-color:${getSubjectColor(r.subjectId)}">
+          <span class="recent-icon">${r.subject.icon}</span>
+          <div class="recent-info">
+            <div class="recent-name">${r.topic.name}</div>
+            <div class="recent-sub">${r.subject.name} · ${r.g.points}/${r.g.maxPoints} Pkt</div>
+          </div>
+          <div class="recent-grade" style="background:${gradeColor(r.g.grade)}">${r.g.grade}</div>
+        </div>`).join('')}
+    </div>`;
 
   document.getElementById('app').innerHTML = `
     ${renderNav()}
     <div class="page">
-      <div class="page-header">
-        <h1>Willkommen zurück, ${currentUser.displayName?.split(' ')[0] || 'Lernender'}! 👋</h1>
-        <div class="sub">Wähle ein Fach und starte deine Lernsession.</div>
+      <div class="dash-header">
+        <div>
+          <h1>Willkommen zurück, ${currentUser.displayName?.split(' ')[0] || 'Lernender'}! 👋</h1>
+          <div class="sub">Wähle ein Fach und starte deine Lernsession.</div>
+        </div>
+        ${streak > 1 ? `<div class="streak-badge">🔥 ${streak} Tage Streak</div>` : ''}
       </div>
       <div class="stats-bar">
         <div class="stat-chip"><span class="stat-val">${subjects.length}</span><span class="stat-lbl">Fächer</span></div>
         <div class="stat-chip"><span class="stat-val">${totalTests}</span><span class="stat-lbl">Tests gemacht</span></div>
         <div class="stat-chip"><span class="stat-val">${avgGrade}</span><span class="stat-lbl">Ø Note</span></div>
+        <div class="stat-chip" onclick="location.hash='#/statistiken'" style="cursor:pointer">
+          <span class="stat-val">📊</span><span class="stat-lbl">Statistiken</span>
+        </div>
       </div>
-      <div class="section-title">Fächer</div>
+      ${attentionHtml}
+      <div class="section-title" style="margin-top:${attention.length?'32px':'0'}">📚 Fächer</div>
       <div class="subjects-grid">${subjectCards}</div>
+      ${recentHtml}
     </div>`;
 }
 
@@ -334,6 +407,71 @@ function renderTestStart(questions, prevGrade, subjectId, yearId, topicId, subje
     </div>`;
 }
 
+// ── Hilfsfunktionen für Stats & Dashboard ─
+
+function calcStreak() {
+  const grades = userData?.grades || {};
+  const datestrs = [...new Set(
+    Object.values(grades)
+      .filter(g => g.date?.seconds)
+      .map(g => new Date(g.date.seconds * 1000).toDateString())
+  )].sort((a, b) => new Date(b) - new Date(a));
+
+  if (!datestrs.length) return 0;
+  const today     = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 864e5).toDateString();
+  if (!datestrs.includes(today) && !datestrs.includes(yesterday)) return 0;
+
+  let streak = 0;
+  let check  = datestrs.includes(today) ? new Date() : new Date(Date.now() - 864e5);
+  while (datestrs.includes(check.toDateString())) {
+    streak++;
+    check = new Date(check - 864e5);
+  }
+  return streak;
+}
+
+function getNeedsAttention() {
+  const grades = userData?.grades || {};
+  return Object.entries(grades)
+    .filter(([, g]) => g.grade >= 4)
+    .map(([key, g]) => {
+      const [subjectId, yearId, topicId] = key.split('__');
+      const subject = structure?.[subjectId];
+      const topic   = subject?.years?.[yearId]?.topics?.[topicId];
+      return subject && topic ? { subjectId, yearId, topicId, subject, topic, g } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.g.grade - a.g.grade)
+    .slice(0, 5);
+}
+
+function getRecentTests() {
+  const grades = userData?.grades || {};
+  return Object.entries(grades)
+    .filter(([, g]) => g.date?.seconds)
+    .sort((a, b) => b[1].date.seconds - a[1].date.seconds)
+    .slice(0, 5)
+    .map(([key, g]) => {
+      const [subjectId, yearId, topicId] = key.split('__');
+      const subject = structure?.[subjectId];
+      const topic   = subject?.years?.[yearId]?.topics?.[topicId];
+      return subject && topic ? { subjectId, yearId, topicId, subject, topic, g } : null;
+    })
+    .filter(Boolean);
+}
+
+function getSubjectProgress(subjectId) {
+  const subject    = structure?.[subjectId];
+  const grades     = userData?.grades || {};
+  const allTopics  = Object.values(subject?.years || {})
+    .flatMap(y => Object.keys(y.topics || {}).map(tid => `${subjectId}__${y.id}__${tid}`));
+  const tested     = allTopics.filter(k => grades[k]);
+  const gradeVals  = tested.map(k => grades[k].grade).filter(Boolean);
+  const avgGrade   = gradeVals.length ? gradeVals.reduce((a, b) => a + b, 0) / gradeVals.length : null;
+  return { total: allTopics.length, tested: tested.length, avgGrade };
+}
+
 // ── Fachfarbe abrufen (Nutzer > Standard) ─
 export function getSubjectColor(subjectId) {
   const custom = userData?.settings?.subjectColors?.[subjectId];
@@ -401,6 +539,135 @@ function renderSettings() {
           </div>
         </div>
       </div>
+    </div>`;
+}
+
+// ── Statistik-Seite ──────────────────────
+function renderStatistics() {
+  const grades   = userData?.grades || {};
+  const subjects = Object.values(structure || {});
+  const allGrades = Object.values(grades).filter(g => g.grade);
+  const totalTests = allGrades.length;
+  const avgGrade   = totalTests ? (allGrades.reduce((s,g)=>s+g.grade,0)/totalTests).toFixed(2) : null;
+  const bestGrade  = totalTests ? Math.min(...allGrades.map(g=>g.grade)) : null;
+  const worstGrade = totalTests ? Math.max(...allGrades.map(g=>g.grade)) : null;
+  const streak     = calcStreak();
+
+  // Übersicht-Karten
+  const overviewCards = `
+    <div class="stats-overview-grid">
+      <div class="stat-overview-card">
+        <div class="soc-val">${totalTests}</div>
+        <div class="soc-lbl">Tests insgesamt</div>
+      </div>
+      <div class="stat-overview-card">
+        <div class="soc-val" style="color:${avgGrade ? gradeColor(Math.round(parseFloat(avgGrade))) : 'inherit'}">${avgGrade || '–'}</div>
+        <div class="soc-lbl">Ø Note gesamt</div>
+      </div>
+      <div class="stat-overview-card">
+        <div class="soc-val" style="color:${bestGrade ? gradeColor(bestGrade) : 'inherit'}">${bestGrade || '–'}</div>
+        <div class="soc-lbl">Beste Note</div>
+      </div>
+      <div class="stat-overview-card">
+        <div class="soc-val">${streak}</div>
+        <div class="soc-lbl">🔥 Tage Streak</div>
+      </div>
+    </div>`;
+
+  // Fächer-Balken
+  const subjectBars = subjects.map(s => {
+    const prog = getSubjectProgress(s.id);
+    if (prog.total === 0) return '';
+    const color = getSubjectColor(s.id);
+    const pct   = prog.total > 0 ? Math.round(prog.tested / prog.total * 100) : 0;
+    const avgInfo = prog.avgGrade ? ` · Ø Note ${prog.avgGrade.toFixed(1)}` : '';
+    return `
+      <div class="subj-bar-row">
+        <div class="subj-bar-label">
+          <span>${s.icon} ${s.name}</span>
+          <span class="subj-bar-meta">${prog.tested}/${prog.total} Themen${avgInfo}</span>
+        </div>
+        <div class="subj-bar-track">
+          <div class="subj-bar-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <div class="subj-bar-pct" style="color:${color}">${pct}%</div>
+      </div>`;
+  }).join('');
+
+  // Letzte 10 Tests als Tabelle
+  const allTestsSorted = Object.entries(grades)
+    .filter(([,g]) => g.date?.seconds)
+    .sort((a,b) => b[1].date.seconds - a[1].date.seconds)
+    .slice(0, 10);
+
+  const testRows = allTestsSorted.map(([key, g]) => {
+    const [subjectId, yearId, topicId] = key.split('__');
+    const subject = structure?.[subjectId];
+    const topic   = subject?.years?.[yearId]?.topics?.[topicId];
+    if (!subject || !topic) return '';
+    const date = new Date(g.date.seconds * 1000).toLocaleDateString('de-DE');
+    const info = calcGrade(g.points||0, g.maxPoints||1);
+    return `
+      <tr onclick="location.hash='#/fach/${subjectId}/${yearId}/${topicId}'" style="cursor:pointer">
+        <td>${subject.icon} ${subject.name}</td>
+        <td>${topic.name}</td>
+        <td><span class="grade-pill" style="background:${gradeColor(g.grade)}">${g.grade}</span></td>
+        <td>${g.points}/${g.maxPoints}</td>
+        <td>${date}</td>
+      </tr>`;
+  }).join('');
+
+  // Notenverteilung (1-6)
+  const gradeCounts = [1,2,3,4,5,6].map(n => ({
+    grade: n,
+    count: allGrades.filter(g => g.grade === n).length
+  }));
+  const maxCount = Math.max(...gradeCounts.map(g=>g.count), 1);
+  const gradeDistribution = gradeCounts.map(({grade, count}) => `
+    <div class="grade-dist-col">
+      <div class="grade-dist-bar-wrap">
+        <div class="grade-dist-count">${count || ''}</div>
+        <div class="grade-dist-bar" style="height:${Math.round(count/maxCount*80)+8}px;background:${gradeColor(grade)}"></div>
+      </div>
+      <div class="grade-dist-label">${grade}</div>
+    </div>`).join('');
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Statistiken' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>📊 Statistiken</h1>
+        <div class="sub">Dein Lernfortschritt auf einen Blick.</div>
+      </div>
+
+      ${totalTests === 0 ? `
+        <div class="empty-state"><div class="empty-icon">📊</div>Noch keine Tests gemacht.<br>Starte einen Test um Statistiken zu sehen!</div>
+      ` : `
+        ${overviewCards}
+
+        <div class="stats-section-grid">
+          <div class="stats-card">
+            <div class="stats-card-title">📈 Fortschritt nach Fach</div>
+            <div class="subj-bars">${subjectBars || '<div class="empty-state" style="padding:16px">Keine Daten</div>'}</div>
+          </div>
+          <div class="stats-card">
+            <div class="stats-card-title">📊 Notenverteilung</div>
+            <div class="grade-distribution">${gradeDistribution}</div>
+            <div class="grade-dist-legend">Note 1 (sehr gut) → Note 6 (ungenügend)</div>
+          </div>
+        </div>
+
+        <div class="stats-card" style="margin-top:16px">
+          <div class="stats-card-title">🕐 Letzte 10 Tests</div>
+          ${testRows ? `
+            <div class="table-wrap">
+              <table class="stats-table">
+                <thead><tr><th>Fach</th><th>Thema</th><th>Note</th><th>Punkte</th><th>Datum</th></tr></thead>
+                <tbody>${testRows}</tbody>
+              </table>
+            </div>` : '<div class="empty-state" style="padding:16px">Keine Tests</div>'}
+        </div>
+      `}
     </div>`;
 }
 
@@ -717,6 +984,15 @@ function showToast(msg, type = 'info') {
 }
 
 // ── Hilfsfunktionen ───────────────────────
+function gradeColor(grade) {
+  const colors = { 1:'#10b981',2:'#22d3ee',3:'#f59e0b',4:'#f97316',5:'#ef4444',6:'#7f1d1d' };
+  return colors[Math.round(grade)] || '#6366f1';
+}
+
+function avgGradeColor(avg) {
+  return gradeColor(Math.round(avg));
+}
+
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60).toString().padStart(2,'0');
   const s = (seconds % 60).toString().padStart(2,'0');

@@ -684,7 +684,154 @@ input, textarea, select { font-family: var(--font); }
   transition: width 0.4s ease;
 }
 
-/* ── 20. Einstellungen ──────────────────── */
+/* ── 20. Dashboard Extras ───────────────── */
+.dash-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+.streak-badge {
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: #fff; font-weight: 700; font-size: 14px;
+  padding: 8px 16px; border-radius: var(--radius-pill);
+  box-shadow: 0 4px 12px rgba(249,115,22,0.4);
+  white-space: nowrap;
+}
+
+/* Subject card with progress ring */
+.s-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.progress-ring { width: 48px; height: 48px; flex-shrink: 0; }
+.s-avg-grade {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  font-size: 12px; font-weight: 700; color: #fff;
+  margin-top: 10px;
+}
+
+/* Needs attention */
+.attention-list { display: flex; flex-direction: column; gap: 8px; }
+.attention-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-color, var(--accent));
+  border-radius: var(--radius-sm); padding: 12px 16px;
+  cursor: pointer; transition: transform var(--transition), box-shadow var(--transition);
+}
+.attention-item:hover { transform: translateX(3px); box-shadow: var(--shadow-sm); }
+.att-icon { font-size: 20px; }
+.att-info { flex: 1; }
+.att-name { font-size: 14px; font-weight: 600; }
+.att-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.att-grade {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+
+/* Recent tests */
+.recent-list { display: flex; flex-direction: column; gap: 8px; }
+.recent-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 16px;
+  cursor: pointer; transition: transform var(--transition);
+}
+.recent-item:hover { transform: translateX(3px); }
+.recent-icon { font-size: 20px; }
+.recent-info { flex: 1; }
+.recent-name { font-size: 14px; font-weight: 600; }
+.recent-sub  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.recent-grade {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+
+/* Setup banner */
+.setup-banner {
+  background: var(--bg-card); border: 1px solid #f59e0b;
+  border-radius: var(--radius); padding: 32px; text-align: center;
+}
+.setup-banner .setup-icon { font-size: 40px; margin-bottom: 12px; }
+.setup-banner h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.setup-banner p { color: var(--text-muted); margin-bottom: 8px; }
+.setup-banner code { background: var(--bg-input); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+/* ── 21. Statistiken ────────────────────── */
+.stats-overview-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px; margin-bottom: 20px;
+}
+.stat-overview-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 16px; text-align: center;
+}
+.soc-val { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+.soc-lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.stats-section-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0;
+}
+@media(max-width: 700px) { .stats-section-grid { grid-template-columns: 1fr; } }
+
+.stats-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.stats-card-title {
+  font-size: 14px; font-weight: 700; margin-bottom: 16px;
+}
+
+/* Subject bars */
+.subj-bars { display: flex; flex-direction: column; gap: 12px; }
+.subj-bar-row { display: flex; align-items: center; gap: 10px; }
+.subj-bar-label {
+  width: 150px; flex-shrink: 0;
+  font-size: 13px; font-weight: 500;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.subj-bar-meta { font-size: 11px; color: var(--text-muted); }
+.subj-bar-track {
+  flex: 1; height: 8px; background: var(--border);
+  border-radius: var(--radius-pill); overflow: hidden;
+}
+.subj-bar-fill { height: 100%; border-radius: var(--radius-pill); transition: width 0.6s ease; }
+.subj-bar-pct { width: 36px; text-align: right; font-size: 12px; font-weight: 700; }
+
+/* Grade distribution */
+.grade-distribution {
+  display: flex; align-items: flex-end; justify-content: space-around;
+  height: 100px; gap: 4px; margin-bottom: 8px;
+}
+.grade-dist-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.grade-dist-bar-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 88px; }
+.grade-dist-count { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; min-height: 14px; }
+.grade-dist-bar { width: 80%; min-height: 8px; border-radius: 4px 4px 0 0; transition: height 0.5s ease; }
+.grade-dist-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 4px; }
+.grade-dist-legend { font-size: 11px; color: var(--text-light); text-align: center; }
+
+/* Stats table */
+.table-wrap { overflow-x: auto; }
+.stats-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+}
+.stats-table th {
+  text-align: left; padding: 8px 12px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+}
+.stats-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+}
+.stats-table tr:last-child td { border-bottom: none; }
+.stats-table tr:hover td { background: var(--bg-input); }
+.grade-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 12px; font-weight: 700; color: #fff;
+}
+
+/* ── 22. Einstellungen ──────────────────── */
 .settings-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -721,7 +868,7 @@ input, textarea, select { font-family: var(--font); }
   display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;
 }
 
-/* ── 21. Responsive ─────────────────────── */
+/* ── 23. Responsive ─────────────────────── */
 @media (max-width: 600px) {
   .settings-color-row { flex-direction: column; align-items: flex-start; gap: 8px; }
   .settings-color-right { width: 100%; justify-content: flex-start; }
