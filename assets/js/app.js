@@ -16,6 +16,7 @@ let structure          = null;
 let testState          = null;
 let tabSwitchPenalty   = false;
 let visibilityHandler  = null;
+let calcExpr           = '';
 
 // ── Theme ────────────────────────────────
 export function initTheme() {
@@ -52,6 +53,7 @@ export function startApp() {
 
 // ── Router ───────────────────────────────
 function route() {
+  unmountCalculator();
   const hash  = location.hash.replace('#/', '') || '';
   const parts = hash.split('/').filter(Boolean);
 
@@ -389,6 +391,8 @@ async function renderTopic(subjectId, yearId, topicId) {
   const topic   = year?.topics?.[topicId];
   if (!topic) { location.hash = `#/fach/${subjectId}/${yearId}`; return; }
 
+  if (subjectId === 'Mathematik') mountCalculator();
+
   document.getElementById('app').innerHTML = `
     ${renderNav([
       { label: subject.name, href: `#/fach/${subjectId}` },
@@ -428,9 +432,14 @@ async function renderTopic(subjectId, yearId, topicId) {
         ${TIME_OPTIONS.map(t => `<button class="time-btn ${t===15?'active':''}" onclick="window.LF.selectTime(${t})" id="timeBtn${t}">${t} min</button>`).join('')}
       </div>
       <div class="time-hint" id="timeHint">Zwei bis drei Sätze mit kurzer Begründung.</div>
-      <button class="btn btn-primary btn-lg" onclick="window.LF.startTest('${subjectId}','${yearId}','${topicId}')">
-        Test beginnen
-      </button>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+        <button class="btn btn-primary btn-lg" onclick="window.LF.startTest('${subjectId}','${yearId}','${topicId}')">
+          Test beginnen
+        </button>
+        <button class="btn btn-secondary btn-lg" onclick="window.LF.downloadTestPDF('${subjectId}','${yearId}','${topicId}')">
+          Als PDF herunterladen
+        </button>
+      </div>
     </div>` : `<div class="empty-state" style="padding:40px">Keine Testfragen vorhanden.</div>`;
 
   document.getElementById('topicBody').innerHTML = `
@@ -1365,3 +1374,227 @@ function translateFirebaseError(code) {
   };
   return map[code] || 'Fehler: ' + code;
 }
+
+// ── Taschenrechner ────────────────────────
+function mountCalculator() {
+  if (document.getElementById('calcWidget')) return;
+  const el = document.createElement('div');
+  el.id = 'calcWidget';
+  el.className = 'calc-widget';
+  el.innerHTML = `
+    <button class="calc-toggle-btn" onclick="window.LF.toggleCalc()">
+      Taschenrechner <span id="calcArrow">▲</span>
+    </button>
+    <div class="calc-panel" id="calcPanel">
+      <div class="calc-display">
+        <div class="calc-expr-disp" id="calcExprDisp">0</div>
+        <div class="calc-result-disp" id="calcResultDisp"></div>
+      </div>
+      <div class="calc-grid">
+        <button class="calc-btn calc-clear" onclick="window.LF.calcClear()">C</button>
+        <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('(')">( </button>
+        <button class="calc-btn calc-fn"    onclick="window.LF.calcInput(')')"> )</button>
+        <button class="calc-btn calc-op"    onclick="window.LF.calcBack()">⌫</button>
+        <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('sqrt(')">√x</button>
+        <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('π')">π</button>
+        <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('^')">xⁿ</button>
+        <button class="calc-btn calc-op"    onclick="window.LF.calcInput('/')">÷</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('7')">7</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('8')">8</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('9')">9</button>
+        <button class="calc-btn calc-op"    onclick="window.LF.calcInput('*')">×</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('4')">4</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('5')">5</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('6')">6</button>
+        <button class="calc-btn calc-op"    onclick="window.LF.calcInput('-')">−</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('1')">1</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('2')">2</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('3')">3</button>
+        <button class="calc-btn calc-op"    onclick="window.LF.calcInput('+')">+</button>
+        <button class="calc-btn calc-zero"  onclick="window.LF.calcInput('0')">0</button>
+        <button class="calc-btn"            onclick="window.LF.calcInput('.')">.</button>
+        <button class="calc-btn calc-eq"    onclick="window.LF.calcEval()">=</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+}
+
+function unmountCalculator() {
+  document.getElementById('calcWidget')?.remove();
+  calcExpr = '';
+}
+
+function safeCalcEval(expr) {
+  if (!expr) return '';
+  let e = expr
+    .replace(/\^/g, '**')
+    .replace(/π/g, 'Math.PI')
+    .replace(/sqrt\(/g, 'Math.sqrt(');
+  const stripped = e.replace(/Math\.(sqrt|PI)/g, '');
+  if (/[^0-9+\-*/.() \s]/.test(stripped)) return 'Fehler';
+  try {
+    const r = Function('"use strict"; return (' + e + ')')();
+    if (typeof r !== 'number' || !isFinite(r)) return 'Fehler';
+    return String(Math.round(r * 1e10) / 1e10);
+  } catch {
+    return '';
+  }
+}
+
+function updateCalcDisplay() {
+  const disp = document.getElementById('calcExprDisp');
+  const res  = document.getElementById('calcResultDisp');
+  if (disp) disp.textContent = calcExpr || '0';
+  if (res)  {
+    const r = safeCalcEval(calcExpr);
+    res.textContent = r && r !== calcExpr ? '= ' + r : '';
+  }
+}
+
+window.LF.toggleCalc = () => {
+  const panel = document.getElementById('calcPanel');
+  const arrow = document.getElementById('calcArrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▲' : '▼';
+};
+
+window.LF.calcInput = (val) => {
+  if (calcExpr === '' && /^\d$/.test(val)) calcExpr = val;
+  else calcExpr += val;
+  updateCalcDisplay();
+};
+
+window.LF.calcClear = () => {
+  calcExpr = '';
+  updateCalcDisplay();
+};
+
+window.LF.calcBack = () => {
+  calcExpr = calcExpr.slice(0, -1);
+  updateCalcDisplay();
+};
+
+window.LF.calcEval = () => {
+  const r = safeCalcEval(calcExpr);
+  if (r && r !== 'Fehler') {
+    calcExpr = r;
+    updateCalcDisplay();
+  } else {
+    const res = document.getElementById('calcResultDisp');
+    if (res) res.textContent = '= Fehler';
+  }
+};
+
+// ── Test als PDF herunterladen ────────────
+window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
+  const subject   = structure?.[subjectId];
+  const year      = subject?.years?.[yearId];
+  const topic     = year?.topics?.[topicId];
+  const allQ      = await getTopicQuestions(subjectId, yearId, topicId);
+  const questions = selectQuestions(allQ, selectedTime);
+
+  const totalPts = questions.reduce((s, q) =>
+    s + (q.type === 'multiple_choice' ? (q.points || 2) : (q.maxPoints || 4)), 0);
+
+  const questionBlocks = questions.map((q, i) => {
+    const pts = q.type === 'multiple_choice' ? (q.points || 2) : (q.maxPoints || 4);
+    if (q.type === 'multiple_choice') {
+      const opts = (q.shuffledOptions || q.options || []).map((opt, j) =>
+        `<div class="pdf-mc-opt">
+           <span class="pdf-mc-box"></span>
+           <span>${String.fromCharCode(65 + j)}) ${opt}</span>
+         </div>`
+      ).join('');
+      return `
+        <div class="pdf-question">
+          <div class="pdf-q-header">
+            <span class="pdf-q-num">Aufgabe ${i + 1}</span>
+            <span class="pdf-q-pts">${pts} Punkt${pts !== 1 ? 'e' : ''}</span>
+          </div>
+          <div class="pdf-q-text">${q.question}</div>
+          <div class="pdf-mc-options">${opts}</div>
+        </div>`;
+    } else {
+      const lines = Math.max(4, Math.ceil(pts * 1.8));
+      const lineHtml = Array(lines).fill('<div class="pdf-answer-line"></div>').join('');
+      return `
+        <div class="pdf-question">
+          <div class="pdf-q-header">
+            <span class="pdf-q-num">Aufgabe ${i + 1}</span>
+            <span class="pdf-q-pts">${pts} Punkt${pts !== 1 ? 'e' : ''}</span>
+          </div>
+          <div class="pdf-q-text">${q.question}</div>
+          <div class="pdf-answer-lines">${lineHtml}</div>
+        </div>`;
+    }
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Testbogen</title>
+<style>
+  @page { size: A4; margin: 20mm 20mm 20mm 20mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #111; line-height: 1.5; }
+  .pdf-header { border-bottom: 2.5px solid #111; padding-bottom: 10px; margin-bottom: 14px; }
+  .pdf-title  { font-size: 20pt; font-weight: 800; }
+  .pdf-subtitle { font-size: 12pt; color: #444; margin-top: 3px; }
+  .pdf-meta-row { display: flex; gap: 20px; margin: 12px 0 6px; }
+  .pdf-meta-field { flex: 1; }
+  .pdf-meta-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; color: #777; margin-bottom: 4px; }
+  .pdf-meta-line  { border-bottom: 1px solid #333; height: 20px; }
+  .pdf-score-row  { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 10.5pt; }
+  .pdf-score-box  { border: 1.5px solid #555; padding: 4px 14px; border-radius: 4px; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 16px 0; }
+  .pdf-question   { margin-bottom: 22px; page-break-inside: avoid; }
+  .pdf-q-header   { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .pdf-q-num      { font-weight: 700; font-size: 11.5pt; }
+  .pdf-q-pts      { font-size: 10pt; color: #555; border: 1px solid #bbb; padding: 1px 8px; border-radius: 3px; }
+  .pdf-q-text     { font-size: 11pt; margin-bottom: 10px; }
+  .pdf-mc-options { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .pdf-mc-opt     { display: flex; align-items: center; gap: 10px; font-size: 10.5pt; }
+  .pdf-mc-box     { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #444; border-radius: 50%; flex-shrink: 0; }
+  .pdf-answer-lines { margin-top: 4px; }
+  .pdf-answer-line  { border-bottom: 1px solid #aaa; height: 28px; margin-bottom: 0; }
+  .pdf-footer { margin-top: 32px; text-align: center; font-size: 8pt; color: #999; border-top: 1px solid #eee; padding-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="pdf-header">
+    <div class="pdf-title">Testbogen</div>
+    <div class="pdf-subtitle">${subject?.name || subjectId} &middot; ${year?.name || yearId} &middot; ${topic?.name || topicId}</div>
+  </div>
+  <div class="pdf-meta-row">
+    <div class="pdf-meta-field">
+      <div class="pdf-meta-label">Name</div>
+      <div class="pdf-meta-line"></div>
+    </div>
+    <div class="pdf-meta-field">
+      <div class="pdf-meta-label">Datum</div>
+      <div class="pdf-meta-line"></div>
+    </div>
+    <div class="pdf-meta-field" style="max-width:110px">
+      <div class="pdf-meta-label">Klasse</div>
+      <div class="pdf-meta-line"></div>
+    </div>
+  </div>
+  <div class="pdf-score-row">
+    <span>Testzeit: ${selectedTime} Minuten</span>
+    <div class="pdf-score-box">Punkte: _____ / ${totalPts} &nbsp;&nbsp;&nbsp; Note: _____</div>
+  </div>
+  <hr>
+  ${questionBlocks}
+  <div class="pdf-footer">LearningForge &middot; ${new Date().toLocaleDateString('de-DE')}</div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { showToast('Pop-up blockiert. Bitte Pop-ups erlauben.', 'error'); return; }
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 400);
+};

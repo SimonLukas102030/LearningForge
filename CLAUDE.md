@@ -404,6 +404,27 @@ Browser-Cache leeren mit **Strg+Shift+R**.
 
 8. **Keine Emojis** im JS-Code, HTML-Templates oder JSON (außer `subjects-config.json`-Icons und `meta.json`-Inhalte).
 
+9. **Taschenrechner-Widget (Mathematik):** Beim Aufruf einer Mathematik-Thema-Seite wird automatisch
+   ein floating Taschenrechner (unten rechts, fixed position) eingeblendet. Er unterstützt:
+   `+`, `-`, `*`, `/`, `^` (Potenzen), `sqrt()`, `π`, Klammern, Dezimalzahlen.
+   Kein Gleichungslöser. Nur für `subjectId === 'Mathematik'` gemountet.
+   Implementiert via `mountCalculator()` / `unmountCalculator()` in `app.js`.
+   CSS: Section 32 in `main.css`.
+
+10. **Tafelwerk (Chemie — noch nicht gebaut):** Wenn das Fach Chemie angelegt wird,
+    soll analog zum Taschenrechner ein Tafelwerk-Widget (floating, aufklappbar) eingebunden werden.
+    Anforderungen:
+    - Durchsuchbar per Suchfeld (filtert Einträge live)
+    - Inhalt: periodisches System, wichtige Konstanten, Formeln, Einheiten
+    - Datenstruktur: JSON-Datei `Fächer/Chemie/tafelwerk.json` empfohlen
+    - Nur für `subjectId === 'Chemie'` anzeigen (analog zu `mountCalculator`)
+    - CSS-Klasse: `.tafelwerk-widget` (Section 33 anlegen)
+
+11. **Test-PDF-Download (vor dem Test):** Im Test-Tab kann der Testbogen vor dem Start
+    als druckbares A4-PDF heruntergeladen werden (`window.LF.downloadTestPDF()`).
+    Format: Testbogen-Header, Name/Datum/Klasse-Felder, Punkte-Box, Fragen mit Platz zum Ausfüllen
+    (MC: Kreise, Freitext: Linien). Öffnet in neuem Fenster und triggert `window.print()`.
+
 ---
 
 ## Lerninhalt-Format (meta.json) — Visuelles Lernen
