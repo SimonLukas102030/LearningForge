@@ -28,6 +28,7 @@ Dark/Light Mode, Statistiken, anpassbare Fächerfarben.
 | Styling | Reines CSS (keine Frameworks) |
 | JS | ES Modules (`type="module"`), kein Build-Step |
 | Struktur-Scan | GitHub Trees API (1 Call für den ganzen Baum) |
+| Android-App | TWA (Trusted Web Activity), verteilt als APK via GitHub Releases |
 
 ---
 
@@ -36,11 +37,21 @@ Dark/Light Mode, Statistiken, anpassbare Fächerfarben.
 ```
 LearningForge/
 ├── index.html                        # App-Shell (alles wird per JS gerendert)
+├── manifest.json                     # PWA-Manifest (für TWA benötigt)
 ├── CLAUDE.md                         # Diese Datei
 ├── ADDING_TOPICS.md                  # Kurzanleitung für neue Inhalte
+├── .nojekyll                         # Verhindert Jekyll, damit .well-known/ ausgeliefert wird
+├── .well-known/
+│   └── assetlinks.json               # Digital Asset Links (TWA-Verknüpfung App ↔ Domain)
+├── .github/
+│   └── workflows/
+│       └── android-release.yml       # CI: baut APK und lädt es in GitHub Releases hoch
 ├── assets/
 │   ├── css/
 │   │   └── main.css                  # Alle Styles (kein externes CSS)
+│   ├── icons/
+│   │   ├── icon.svg                  # App-Icon (Blitz, Indigo)
+│   │   └── icon-maskable.svg         # Maskable-Variante (mehr Padding)
 │   └── js/
 │       ├── config.js                 # GitHub + Firebase + Gemini Config
 │       ├── main.js                   # Einstiegspunkt (init + start)
@@ -48,6 +59,18 @@ LearningForge/
 │       ├── scanner.js                # GitHub Trees API → Struktur
 │       ├── app.js                    # Router + alle Seiten-Renderer
 │       └── test-engine.js            # Test-Logik, Bewertung, Noten
+├── android/                          # Android TWA-Projekt (Gradle)
+│   ├── build.gradle
+│   ├── settings.gradle
+│   ├── gradle.properties             # android.useAndroidX=true
+│   └── app/
+│       ├── build.gradle
+│       └── src/main/
+│           ├── AndroidManifest.xml
+│           └── res/
+│               ├── drawable/         # Vektorgrafiken für das Launcher-Icon
+│               ├── mipmap-anydpi-v26/# Adaptive Icons (Android 8+)
+│               └── values/           # strings.xml, colors.xml
 └── Fächer/
     ├── subjects-config.json          # Farben + Icons pro Fach
     └── [Fach]/
@@ -524,3 +547,103 @@ Die Fallzeit hängt <span class="lf-hl">nicht</span> von der Horizontalgeschwind
   "content": "<div class='lf-key'><div class='lf-key-title'>Kernaussage</div><div class='lf-key-body'>Mehrere Bewegungen laufen <span class='lf-hl'>unabhängig voneinander</span> ab und überlagern sich.</div></div><div class='lf-box lf-formula'>sₓ = vₓ · t &nbsp;|&nbsp; s_y = ½ · g · t²</div><ol class='lf-steps'><li>Horizontal: gleichförmig — keine Beschleunigung</li><li>Vertikal: freier Fall — g = 9,81 m/s²</li><li>Zeit t ist für beide Richtungen identisch</li></ol><div class='lf-box lf-tip'>💡 Ein senkrecht fallen gelassenes und ein waagerecht abgeschossenes Objekt landen gleichzeitig!</div>"
 }
 ```
+
+---
+
+## Android-App (TWA)
+
+### Konzept
+
+Die Android-App ist eine **Trusted Web Activity (TWA)** — eine native Android-Hülle,
+die exakt die bestehende Web-App unter `https://learning-forge.simonsstudios.de` anzeigt.
+Kein doppelter Code. Änderungen an der Web-App gelten sofort auch in der App.
+
+Die APK wird automatisch per GitHub Actions gebaut und als Asset an einen GitHub Release angehängt.
+Nutzer laden die APK direkt herunter und installieren sie (Sideloading).
+
+**Mindest-Android-Version:** 5.0 (API 21) — deckt alle Geräte der letzten ~10 Jahre ab.
+
+### Wie ein neues Release erstellt wird
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Der Workflow `.github/workflows/android-release.yml` startet automatisch, baut die APK
+und hängt sie als `LearningForge-1.2.3.apk` an den GitHub Release. Dauert ca. 3 Minuten.
+Alternativ: Actions-Tab → "Build Android APK" → "Run workflow".
+
+### Was der Workflow macht
+
+1. JDK 17 + Gradle 8.9 einrichten
+2. `librsvg2-bin` installieren und PNG-Icons aus den SVGs generieren
+   (in alle `mipmap-*`-Verzeichnisse für verschiedene Bildschirmdichten)
+3. Debug-APK bauen (`assembleDebug` — kein Keystore nötig)
+4. APK umbenennen und als Release-Asset hochladen
+
+### Android-Projektstruktur
+
+```
+android/
+├── build.gradle              # AGP-Version (8.3.2)
+├── settings.gradle           # Projektname + Repositories
+├── gradle.properties         # android.useAndroidX=true, android.enableJetifier=true
+└── app/
+    ├── build.gradle          # App-Konfiguration, Dependencies
+    └── src/main/
+        ├── AndroidManifest.xml
+        └── res/
+            ├── drawable/
+            │   ├── ic_launcher_background.xml   # Indigo-Hintergrund (#6366f1)
+            │   └── ic_launcher_foreground.xml   # Blitz-Vektorgrafik (weiß)
+            ├── mipmap-anydpi-v26/
+            │   ├── ic_launcher.xml              # Adaptive Icon (Android 8+)
+            │   └── ic_launcher_round.xml
+            └── values/
+                ├── strings.xml                  # app_name
+                └── colors.xml                   # colorPrimary, colorPrimaryDark, backgroundColor
+```
+
+### Wichtige Konfigurationswerte
+
+| Was | Wert |
+|-----|------|
+| Package-Name | `de.simonsstudios.learningforge` |
+| Default-URL | `https://learning-forge.simonsstudios.de/` |
+| Theme (Activity) | `Theme.AppCompat.NoActionBar` |
+| Status-/Navbar-Farbe | `#6366f1` (Indigo, `colorPrimary`) |
+| minSdk | 21 (Android 5.0) |
+| targetSdk | 34 (Android 14) |
+| AGP | 8.3.2 |
+| Gradle | 8.9 |
+
+### PWA-Manifest (`manifest.json`)
+
+Liegt im Root des Repos. Wird von `index.html` eingebunden (`<link rel="manifest">`).
+Referenziert die SVG-Icons in `assets/icons/`. Pflichtfeld für TWA: `"display": "standalone"`.
+
+### Digital Asset Links (`.well-known/assetlinks.json`)
+
+Verknüpft die Android-App mit der Domain — notwendig damit Chrome die App als
+"vertrauenswürdig" erkennt (kein Adressbalken). Enthält den SHA-256-Fingerabdruck
+des Signing-Keys der APK.
+
+Da die App mit dem automatisch generierten Debug-Key gebaut wird (wechselt bei jedem
+Build-Runner), stimmt der Fingerabdruck aktuell nicht überein. Die App funktioniert
+trotzdem vollständig, zeigt aber beim Start kurz eine Adressleiste.
+Für vollständige TWA-Verifikation muss ein fester Keystore verwendet werden.
+
+### Bekannte Eigenheiten
+
+- **Debug-Key:** Der Debug-Signing-Key ändert sich bei jedem CI-Runner. Deshalb kann
+  `assetlinks.json` keinen festen Fingerabdruck enthalten. Für produktive Nutzung
+  wäre ein fester Release-Keystore nötig (Keystore als GitHub Secret hinterlegen,
+  `assembleRelease` statt `assembleDebug` verwenden).
+
+- **Icon-Generierung in CI:** Die `mipmap-*`-Bitmap-Icons existieren nicht im Repo,
+  sondern werden erst im Workflow aus den SVGs erzeugt. Lokal ist kein Gradle-Build
+  ohne vorherige Icon-Generierung möglich.
+
+- **Internet-Pflicht:** Die App lädt alles von der Live-URL. Offline-Modus nicht
+  unterstützt (kein Service Worker).
