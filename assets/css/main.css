@@ -134,6 +134,18 @@ input, textarea, select { font-family: var(--font); }
 .nav-breadcrumb .sep { color: var(--text-light); }
 .nav-breadcrumb .crumb.active { color: var(--text); font-weight: 500; }
 
+.nav-links {
+  display: flex; align-items: center; gap: 2px; margin-left: 16px;
+}
+.nav-link {
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; color: var(--text-muted);
+  cursor: pointer; transition: background var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+.nav-link:hover { background: var(--bg-input); color: var(--text); }
+.nav-link.active { background: var(--accent-subtle); color: var(--accent); font-weight: 600; }
+
 .nav-right {
   display: flex; align-items: center; gap: 12px;
 }
@@ -878,6 +890,7 @@ input, textarea, select { font-family: var(--font); }
   .page { padding: 72px 16px 32px; }
   .subjects-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   .nav-center { display: none; }
+  .nav-links { display: none; }
   .login-card { padding: 28px 20px; }
   .test-topbar { flex-direction: column; gap: 8px; text-align: center; }
 }

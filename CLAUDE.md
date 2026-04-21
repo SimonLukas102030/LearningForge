@@ -273,6 +273,12 @@ Dark Mode: `[data-theme="dark"]` überschreibt alle Variablen.
 Theme wird in Cookie `lf_theme` gespeichert und sofort in `index.html` angewendet
 (verhindert Flackern beim Laden).
 
+### Keine Emojis
+
+Im gesamten Code, in HTML-Templates und in JSON-Dateien (außer `subjects-config.json`
+für Fach-Icons und `meta.json` für Lerninhalte) werden **keine Emojis** verwendet.
+Buttons, Labels, Überschriften und Fehlermeldungen im JS bleiben emoji-frei.
+
 ### Klassen-Konventionen
 
 | Klasse | Verwendung |

@@ -91,6 +91,12 @@ function renderNav(breadcrumbs = []) {
                   style="${b.href ? 'cursor:pointer' : 'cursor:default'}">${b.label}</span>
           `).join('')}
         </div>
+        <div class="nav-links">
+          <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
+          <a class="nav-link ${breadcrumbs[0]?.label==='Statistiken' ? 'active' : ''}" onclick="location.hash='#/statistiken'">Statistiken</a>
+          <a class="nav-link ${breadcrumbs[0]?.label==='Profil' ? 'active' : ''}" onclick="location.hash='#/profil'">Profil</a>
+          <a class="nav-link ${breadcrumbs[0]?.label==='Einstellungen' ? 'active' : ''}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
+        </div>
       </div>
       <div class="nav-right">
         <button class="btn-icon" id="themeBtn" onclick="window.LF.toggleTheme()" title="Theme wechseln">
