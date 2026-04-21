@@ -1103,7 +1103,7 @@ window.LF = {
 
   resetAllGrades: async () => {
     if (!confirm('Alle Statistiken und Noten wirklich löschen?')) return;
-    userData.grades = {};
+    if (userData) userData.grades = {};
     try {
       await db().collection('users').doc(currentUser.uid).update({ grades: {} });
       await resetLeaderboard(currentUser.uid);
