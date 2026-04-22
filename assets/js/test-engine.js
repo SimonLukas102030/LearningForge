@@ -12,35 +12,35 @@ const TIME_CONFIG = {
     difficulties:    ['easy'],
     maxQuestions:    6,
     textExpectation: 'Ein kurzer Satz reicht für volle Punktzahl.',
-    pointFactor:     0.5,
+    pointFactor:     1.0,
     label:           '5 Minuten — Schnelltest'
   },
   10: {
     difficulties:    ['easy', 'medium'],
     maxQuestions:    10,
     textExpectation: 'Ein bis zwei vollständige Sätze werden erwartet.',
-    pointFactor:     0.75,
+    pointFactor:     1.5,
     label:           '10 Minuten — Kurz-Test'
   },
   15: {
     difficulties:    ['easy', 'medium'],
     maxQuestions:    15,
     textExpectation: 'Zwei bis drei Sätze mit kurzer Begründung.',
-    pointFactor:     1.0,
+    pointFactor:     2.0,
     label:           '15 Minuten — Standard-Test'
   },
   30: {
     difficulties:    ['easy', 'medium', 'hard'],
     maxQuestions:    25,
     textExpectation: 'Mehrere Sätze mit Begründung und ggf. Beispielen.',
-    pointFactor:     1.5,
+    pointFactor:     2.5,
     label:           '30 Minuten — Ausführlicher Test'
   },
   90: {
     difficulties:    ['easy', 'medium', 'hard'],
     maxQuestions:    Infinity,
     textExpectation: 'Ausführliche Antwort mit Fachbegriffen, Beispielen und vollständigen Erklärungen erforderlich. Ein einzelner Satz ist nicht ausreichend für volle Punktzahl.',
-    pointFactor:     2.5,
+    pointFactor:     4.0,
     label:           '90 Minuten — Klassenarbeit-Simulation'
   }
 };
@@ -63,7 +63,8 @@ export function selectQuestions(allQuestions, timeMinutes) {
 
   return selected.map(q => {
     if (q.type === 'multiple_choice' && q.options) {
-      return { ...q, ...shuffleOptions(q.options, q.correct), timeConfig: cfg };
+      const pts = Math.round((q.points || 2) * cfg.pointFactor);
+      return { ...q, ...shuffleOptions(q.options, q.correct), timeConfig: cfg, points: pts };
     }
     return {
       ...q,
@@ -136,7 +137,7 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Format, ohne weitere Zeichen:
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${CONFIG.gemini.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
       {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,8 +146,9 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Format, ohne weitere Zeichen:
     );
     const data    = await res.json();
     const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    const cleaned = raw.replace(/```json\n?|\n?```/g, '').trim();
-    const parsed  = JSON.parse(cleaned);
+    const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
+    const jsonStr = cleaned.startsWith('{') ? cleaned : cleaned.slice(cleaned.indexOf('{'));
+    const parsed  = JSON.parse(jsonStr);
     return {
       points:   Math.min(Math.max(0, Math.round(parsed.points ?? 0)), maxPoints),
       feedback: parsed.feedback || 'Keine Rückmeldung verfügbar.'
@@ -317,7 +319,7 @@ ${exampleLines}
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${CONFIG.gemini.apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
       {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -326,8 +328,9 @@ ${exampleLines}
     );
     const data    = await res.json();
     const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-    const cleaned = raw.replace(/```json\n?|\n?```/g, '').trim();
-    const arr     = JSON.parse(cleaned);
+    const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
+    const jsonStr = cleaned.startsWith('[') ? cleaned : cleaned.slice(cleaned.indexOf('['));
+    const arr     = JSON.parse(jsonStr);
 
     if (!Array.isArray(arr) || arr.length === 0) return [];
 

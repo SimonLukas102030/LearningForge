@@ -235,7 +235,7 @@ function renderDashboard() {
                onclick="location.hash='#/fach/${s.id}'">
             <div class="s-card-top">
               <div>
-                <div class="s-icon">${s.icon}</div>
+                <div class="s-icon">${getSubjectIcon(s.id)}</div>
                 <div class="s-name">${s.name}</div>
                 <div class="s-meta">${Object.keys(s.years||{}).length} Klassen · ${prog.total} Themen</div>
               </div>
@@ -260,7 +260,7 @@ function renderDashboard() {
       ${attention.map(a => `
         <div class="attention-item" onclick="location.hash='#/fach/${a.subjectId}/${a.yearId}/${a.topicId}'"
              style="--subject-color:${getSubjectColor(a.subjectId)}">
-          <span class="att-icon">${a.subject.icon}</span>
+          <span class="att-icon">${getSubjectIcon(a.subjectId)}</span>
           <div class="att-info">
             <div class="att-name">${a.topic.name}</div>
             <div class="att-sub">${a.subject.name} · ${a.subject.years[a.yearId]?.name || a.yearId}</div>
@@ -276,10 +276,10 @@ function renderDashboard() {
       ${recent.map(r => `
         <div class="recent-item" onclick="location.hash='#/fach/${r.subjectId}/${r.yearId}/${r.topicId}'"
              style="--subject-color:${getSubjectColor(r.subjectId)}">
-          <span class="recent-icon">${r.subject.icon}</span>
+          <span class="recent-icon">${getSubjectIcon(r.subjectId)}</span>
           <div class="recent-info">
             <div class="recent-name">${r.topic.name}</div>
-            <div class="recent-sub">${r.subject.name} · ${r.g.points}/${r.g.maxPoints} Pkt</div>
+            <div class="recent-sub">${r.subject.name} · ${r.g.totalPoints ?? r.g.points}/${r.g.totalMaxPoints ?? r.g.maxPoints} Pkt</div>
           </div>
           <div class="recent-grade" style="background:${gradeColor(r.g.grade)}">${r.g.grade}</div>
         </div>`).join('')}
@@ -335,7 +335,7 @@ function renderSubject(subjectId) {
     <div class="page">
       <div class="subject-color-bar" style="--subject-color:${subject.color}"></div>
       <div class="page-header">
-        <h1>${subject.icon} ${subject.name}</h1>
+        <h1>${getSubjectIcon(subjectId)} ${subject.name}</h1>
         <div class="sub">Wähle eine Klasse</div>
       </div>
       <div class="section-title">Schuljahre</div>
@@ -356,12 +356,12 @@ function renderYear(subjectId, yearId) {
     ? `<div class="empty-state"><div class="empty-icon">📝</div>Noch keine Themen vorhanden.</div>`
     : topics.map(t => {
         const g = grades[`${subjectId}__${yearId}__${t.id}`];
-        const gradeInfo = g ? calcGrade(g.points||0, g.maxPoints||1) : null;
+        const gradeInfo = g ? calcGrade(g.totalPoints || g.points || 0, g.totalMaxPoints || g.maxPoints || 1) : null;
         return `
           <div class="topic-card" onclick="location.hash='#/fach/${subjectId}/${yearId}/${t.id}'">
             <div class="t-info">
               <div class="t-name">${t.name}</div>
-              ${g ? `<div class="t-desc">Letzte Note: ${g.grade} · ${g.points}/${g.maxPoints} Pkt.</div>` : '<div class="t-desc">Noch nicht getestet</div>'}
+              ${g ? `<div class="t-desc">Note: ${g.grade} · ${g.totalPoints ?? g.points}/${g.totalMaxPoints ?? g.maxPoints} Pkt. gesamt</div>` : '<div class="t-desc">Noch nicht getestet</div>'}
             </div>
             <div class="t-right">
               ${gradeInfo ? `<div class="t-grade" style="background:${gradeInfo.color}">${g.grade}</div>` : ''}
@@ -378,7 +378,7 @@ function renderYear(subjectId, yearId) {
     <div class="page">
       <div class="subject-color-bar" style="--subject-color:${subject.color}"></div>
       <div class="page-header">
-        <h1>${subject.icon} ${year.name}</h1>
+        <h1>${getSubjectIcon(subjectId)} ${year.name}</h1>
         <div class="sub">${subject.name} · ${topics.length} Themen</div>
       </div>
       <div class="section-title">Themen</div>
@@ -403,7 +403,7 @@ async function renderTopic(subjectId, yearId, topicId) {
     ])}
     <div class="page topic-page">
       <div class="topic-header" style="--subject-color:${subject.color}">
-        <span class="badge">${subject.icon} ${subject.name} · ${year.name}</span>
+        <span class="badge">${getSubjectIcon(subjectId)} ${subject.name} · ${year.name}</span>
         <h1>${topic.name}</h1>
       </div>
       <div id="topicBody"><div class="spinner" style="margin:40px auto"></div></div>
@@ -431,12 +431,12 @@ async function renderTopic(subjectId, yearId, topicId) {
     ? renderUebenStart(questions, subjectId, yearId, topicId)
     : `<div class="empty-state" style="padding:40px">Keine Übungsaufgaben vorhanden.</div>`;
 
-  const gradeInfo = prevGrade ? calcGrade(prevGrade.points||0, prevGrade.maxPoints||1) : null;
+  const gradeInfo = prevGrade ? calcGrade(prevGrade.totalPoints || prevGrade.points || 0, prevGrade.totalMaxPoints || prevGrade.maxPoints || 1) : null;
   const testTab = questions.length > 0 ? `
     <div class="test-start" id="testArea">
       <h2>Test starten</h2>
       ${gradeInfo
-        ? `<p>Letzte Note: <strong>${prevGrade.grade} – ${gradeInfo.label}</strong> (${prevGrade.points}/${prevGrade.maxPoints} Punkte)</p>`
+        ? `<p>Note: <strong>${gradeInfo.grade} – ${gradeInfo.label}</strong> (${prevGrade.totalPoints ?? prevGrade.points}/${prevGrade.totalMaxPoints ?? prevGrade.maxPoints} Punkte gesamt)</p>`
         : '<p>Noch kein Test gemacht. Wie lange möchtest du testen?</p>'}
       <div class="time-selector">
         ${TIME_OPTIONS.map(t => `<button class="time-btn ${t===15?'active':''}" onclick="window.LF.selectTime(${t})" id="timeBtn${t}">${t} min</button>`).join('')}
@@ -559,6 +559,12 @@ export function getSubjectColor(subjectId) {
   return custom || structure?.[subjectId]?.color || '#6366f1';
 }
 
+// ── Fach-Icon abrufen (Nutzer > Standard) ─
+function getSubjectIcon(subjectId) {
+  const custom = userData?.settings?.customIcons?.[subjectId];
+  return custom || structure?.[subjectId]?.icon || '📚';
+}
+
 // ── Einstellungen-Seite ──────────────────
 function renderSettings() {
   const subjects = Object.values(structure || {});
@@ -568,7 +574,7 @@ function renderSettings() {
     return `
       <div class="settings-color-row">
         <div class="settings-subject-info">
-          <span class="settings-icon">${s.icon}</span>
+          <span class="settings-icon">${getSubjectIcon(s.id)}</span>
           <span class="settings-name">${s.name}</span>
         </div>
         <div class="settings-color-right">
@@ -578,6 +584,25 @@ function renderSettings() {
                  value="${current}"
                  oninput="document.getElementById('preview_${s.id}').style.background=this.value">
           <button class="btn btn-ghost btn-sm" onclick="window.LF.resetColor('${s.id}','${s.color}')">
+            Zurücksetzen
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+
+  const iconRows = subjects.map(s => {
+    const current = getSubjectIcon(s.id);
+    return `
+      <div class="settings-color-row">
+        <div class="settings-subject-info">
+          <span class="settings-icon" id="iconPreview_${s.id}">${current}</span>
+          <span class="settings-name">${s.name}</span>
+        </div>
+        <div class="settings-color-right">
+          <input type="text" class="form-input" id="icon_${s.id}"
+                 value="${current}" maxlength="2" style="width:60px;text-align:center;font-size:20px"
+                 oninput="document.getElementById('iconPreview_${s.id}').textContent=this.value||'${s.icon}'">
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.resetIcon('${s.id}','${s.icon}')">
             Zurücksetzen
           </button>
         </div>
@@ -604,6 +629,20 @@ function renderSettings() {
           <div class="settings-actions">
             <button class="btn btn-primary" onclick="window.LF.saveColors()">Farben speichern</button>
             <button class="btn btn-secondary" onclick="window.LF.resetAllColors()">Alle zurücksetzen</button>
+          </div>` : ''}
+      </div>
+
+      <div class="settings-card" style="margin-top:16px">
+        <div class="settings-section-title">Fach-Icons</div>
+        <p class="settings-hint">Emoji-Icon pro Fach anpassen (1–2 Zeichen).</p>
+        <div class="settings-color-list">
+          ${subjects.length === 0
+            ? '<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden.</div>'
+            : iconRows}
+        </div>
+        ${subjects.length > 0 ? `
+          <div class="settings-actions">
+            <button class="btn btn-primary" onclick="window.LF.saveIcons()">Icons speichern</button>
           </div>` : ''}
       </div>
 
@@ -665,7 +704,7 @@ function renderStatistics() {
     return `
       <div class="subj-bar-row">
         <div class="subj-bar-label">
-          <span>${s.icon} ${s.name}</span>
+          <span>${getSubjectIcon(s.id)} ${s.name}</span>
           <span class="subj-bar-meta">${prog.tested}/${prog.total} Themen${avgInfo}</span>
         </div>
         <div class="subj-bar-track">
@@ -687,13 +726,13 @@ function renderStatistics() {
     const topic   = subject?.years?.[yearId]?.topics?.[topicId];
     if (!subject || !topic) return '';
     const date = new Date(g.date.seconds * 1000).toLocaleDateString('de-DE');
-    const info = calcGrade(g.points||0, g.maxPoints||1);
+    const info = calcGrade(g.totalPoints || g.points || 0, g.totalMaxPoints || g.maxPoints || 1);
     return `
       <tr onclick="location.hash='#/fach/${subjectId}/${yearId}/${topicId}'" style="cursor:pointer">
-        <td>${subject.icon} ${subject.name}</td>
+        <td>${getSubjectIcon(subjectId)} ${subject.name}</td>
         <td>${topic.name}</td>
         <td><span class="grade-pill" style="background:${gradeColor(g.grade)}">${g.grade}</span></td>
-        <td>${g.points}/${g.maxPoints}</td>
+        <td>${g.totalPoints ?? g.points}/${g.totalMaxPoints ?? g.maxPoints}</td>
         <td>${date}</td>
       </tr>`;
   }).join('');
@@ -766,7 +805,7 @@ function renderProfile() {
     const gi = calcGrade(Math.max(0, 7 - avg), 6);
     return `
       <div class="grade-row">
-        <span>${s.icon} ${s.name}</span>
+        <span>${getSubjectIcon(s.id)} ${s.name}</span>
         <div class="grade-badge" style="background:${gi.color}">${avg.toFixed(1)}</div>
       </div>`;
   }).filter(Boolean).join('') || '<div class="empty-state" style="padding:16px">Noch keine Noten vorhanden.</div>';
@@ -805,7 +844,7 @@ async function renderLeaderboard() {
     <div class="page">
       <div class="page-header">
         <h1>🏆 Rangliste</h1>
-        <div class="sub">Note 1 = 15 Pkt · Note 2 = 12 Pkt · … · Note 6 = 0 Pkt (Sekundarstufe)</div>
+        <div class="sub">Gesamte Testpunkte aller Themen summiert</div>
       </div>
       <div id="lbContent"><div class="spinner" style="margin:40px auto"></div></div>
     </div>`;
@@ -837,28 +876,27 @@ async function renderLeaderboard() {
   const subjects = Object.values(structure || {});
   const users = data.map(u => {
     const sc = u.scores || {};
-    const subjectAvgs = {};
+    const subjectTotals = {};
     subjects.forEach(s => {
       const vals = Object.entries(sc).filter(([k]) => k.startsWith(s.id + '__')).map(([,v]) => v);
-      if (vals.length) subjectAvgs[s.id] = { avg: vals.reduce((a,b)=>a+b,0)/vals.length, count: vals.length };
+      if (vals.length) subjectTotals[s.id] = { total: vals.reduce((a,b)=>a+b,0), count: vals.length };
     });
     const all = Object.values(sc);
-    return { ...u, subjectAvgs, overall: all.length ? all.reduce((a,b)=>a+b,0)/all.length : null, testCount: all.length };
-  }).filter(u => u.overall !== null);
+    return { ...u, subjectTotals, overall: all.reduce((a,b)=>a+b,0), testCount: all.length };
+  }).filter(u => u.testCount > 0);
 
   const renderRow = (rank, u, score, count, isMe) => {
     const medal = rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${rank}</span>`;
     const av = u.photoURL
       ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
       : (u.displayName || '?')[0].toUpperCase();
-    const col = score>=12?'#10b981':score>=9?'#22d3ee':score>=6?'#f59e0b':score>=3?'#f97316':'#ef4444';
     return `
       <div class="lb-row${isMe?' lb-me':''}">
         <div class="lb-rank">${medal}</div>
         <div class="lb-avatar">${av}</div>
         <div class="lb-name">${u.displayName||'Unbekannt'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
         <div class="lb-meta">${count} Test${count!==1?'s':''}</div>
-        <div class="lb-score" style="color:${col}">${score.toFixed(1)}</div>
+        <div class="lb-score" style="color:var(--accent)">${score}</div>
       </div>`;
   };
 
@@ -866,13 +904,13 @@ async function renderLeaderboard() {
   const top10Html = top10.map((u,i)=>renderRow(i+1,u,u.overall,u.testCount,u.uid===currentUser?.uid)).join('');
 
   const subjectGridHtml = subjects.map(s => {
-    const ranked = users.filter(u=>u.subjectAvgs[s.id]).sort((a,b)=>b.subjectAvgs[s.id].avg-a.subjectAvgs[s.id].avg).slice(0,5);
+    const ranked = users.filter(u=>u.subjectTotals[s.id]).sort((a,b)=>b.subjectTotals[s.id].total-a.subjectTotals[s.id].total).slice(0,5);
     if (!ranked.length) return '';
     const color = getSubjectColor(s.id);
     return `
       <div class="lb-card">
-        <div class="lb-card-head" style="border-top:3px solid ${color}">${s.icon} ${s.name}</div>
-        ${ranked.map((u,i)=>renderRow(i+1,u,u.subjectAvgs[s.id].avg,u.subjectAvgs[s.id].count,u.uid===currentUser?.uid)).join('')}
+        <div class="lb-card-head" style="border-top:3px solid ${color}">${getSubjectIcon(s.id)} ${s.name}</div>
+        ${ranked.map((u,i)=>renderRow(i+1,u,u.subjectTotals[s.id].total,u.subjectTotals[s.id].count,u.uid===currentUser?.uid)).join('')}
       </div>`;
   }).filter(Boolean).join('');
 
@@ -1004,8 +1042,6 @@ window.LF = {
     await db().collection('users').doc(currentUser.uid).update({
       'settings.subjectColors': colors
     }).catch(console.error);
-    // Struktur-Cache aktualisieren
-    subjects.forEach(s => { if (structure[s.id]) structure[s.id].color = colors[s.id]; });
     showToast('Farben gespeichert! ✓', 'success');
   },
   resetColor: (subjectId, defaultColor) => {
@@ -1024,6 +1060,27 @@ window.LF = {
       }).catch(console.error);
     }
     showToast('Alle Farben zurückgesetzt.', 'info');
+  },
+  saveIcons: async () => {
+    const subjects = Object.values(structure || {});
+    const icons = {};
+    subjects.forEach(s => {
+      const input = document.getElementById(`icon_${s.id}`);
+      if (input && input.value.trim()) icons[s.id] = input.value.trim();
+    });
+    userData = userData || {};
+    userData.settings = userData.settings || {};
+    userData.settings.customIcons = icons;
+    await db().collection('users').doc(currentUser.uid).update({
+      'settings.customIcons': icons
+    }).catch(console.error);
+    showToast('Icons gespeichert! ✓', 'success');
+  },
+  resetIcon: (subjectId, defaultIcon) => {
+    const input   = document.getElementById(`icon_${subjectId}`);
+    const preview = document.getElementById(`iconPreview_${subjectId}`);
+    if (input)   input.value         = defaultIcon;
+    if (preview) preview.textContent = defaultIcon;
   },
   selectTime: (t) => {
     selectedTime = t;
@@ -1274,15 +1331,23 @@ window.LF.submitTest = async () => {
   if (currentUser) {
     userData = userData || {};
     userData.grades = userData.grades || {};
+    const existing       = userData.grades[`${subjectId}__${yearId}__${topicId}`];
+    const totalPoints    = (existing?.totalPoints    || 0) + total;
+    const totalMaxPoints = (existing?.totalMaxPoints || 0) + max;
+    const cumulGrade     = penalty
+      ? grade
+      : calcGrade(totalPoints, totalMaxPoints);
     userData.grades[`${subjectId}__${yearId}__${topicId}`] = {
-      grade: grade.grade, points: total, maxPoints: max
+      grade: cumulGrade.grade, points: total, maxPoints: max,
+      totalPoints, totalMaxPoints
     };
     await saveGrade(currentUser.uid, subjectId, yearId, topicId, {
-      grade: grade.grade, points: total, maxPoints: max
+      grade: cumulGrade.grade, points: total, maxPoints: max,
+      totalPoints, totalMaxPoints
     }).catch(console.error);
     await updateLeaderboard(
       currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
-      subjectId, yearId, topicId, grade.grade
+      subjectId, yearId, topicId, cumulGrade.grade, totalPoints
     ).catch(console.error);
   }
 

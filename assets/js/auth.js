@@ -90,14 +90,12 @@ export function onAuthStateChanged(callback) {
 }
 
 // ── Rangliste ────────────────────────────
-const GRADE_TO_PTS = { 1: 15, 2: 12, 3: 9, 4: 6, 5: 3, 6: 0 };
-
-export async function updateLeaderboard(uid, displayName, photoURL, subjectId, yearId, topicId, gradeNum) {
-  const points = GRADE_TO_PTS[Math.round(gradeNum)] ?? 0;
+export async function updateLeaderboard(uid, displayName, photoURL, subjectId, yearId, topicId, gradeNum, totalPoints) {
+  const pts = typeof totalPoints === 'number' ? totalPoints : 0;
   await _db.collection('leaderboard').doc(uid).set({
     displayName,
     photoURL: photoURL || null,
-    scores: { [`${subjectId}__${yearId}__${topicId}`]: points },
+    scores: { [`${subjectId}__${yearId}__${topicId}`]: pts },
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 }
