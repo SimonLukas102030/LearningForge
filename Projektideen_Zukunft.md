@@ -56,3 +56,30 @@ Das Klassensystem ermöglicht es Nutzern, sich in geschlossenen Gruppen zu organ
 ## 6.3 Interface und Gamification
 * **Tab "Gruppe X":** Jede Gruppe erhält einen eigenen Reiter in der Benutzeroberfläche.
 * **Leaderboards:** Interne Ranglisten basierend auf der Aktivität (wer hat bereits wie viel erledigt).
+
+# 7. Vokabeltrainer
+
+Das Modul "Vokabeltrainer" dient als spezialisierter Bereich für Fremdsprachen (z. B. Latein, Englisch), um systematisches Lernen und Abprüfen von Wortschatz und Grammatik zu ermöglichen.
+
+## 7.1 Konfiguration und Struktur
+* **Aktivierung:** Der Trainer ist als separater Bereich neben der Jahresübersicht verfügbar. Die Aktivierung erfolgt pro Fach über die `Fächer/subjects-config.json`.
+* **Datenstruktur:** * Fächer enthalten verschiedene **Lektionen** in dem Thema Vokabeln.
+    * Jede Lektion basiert auf einer dedizierten `.json`-Datei, die folgende Kategorien umfasst:
+        * **Vokabel:** Das Wort in der Fremdsprache und die Zielübersetzung.
+        * **Grammatik:** Zusatzinformationen (z. B. Genus, Kasus, Stammformen).
+        * **Übersetzung:** Kontextuelle Beispielsätze oder alternative Bedeutungen.
+
+## 7.2 Lern- und Testmodus
+* **Lernmodus:** Nutzer können Vokabeln der gewählten Lektion Schritt für Schritt durchgehen.
+* **Testmodus:**
+    * Dynamische Abfrage einer Stichprobe (Anzahl abhängig von der Gesamtlänge der Lektion).
+    * **Eingabemethode:** Ausschließlich Freitextfelder (kein Multiple-Choice).
+    * **Sprachspezifische Logik:**
+        * *Englisch:* Direkte Abfrage der Übersetzung.
+        * *Latein:* Kombinierte Abfrage von Übersetzung und Grammatik (Beispiel: `Senatoris` -> Antwort: `Hausherr, Gen. Sg. m.`).
+    * **Validierung:** Der Abgleich erfolgt automatisiert gegen die hinterlegten Werte in der Lektions-JSON.
+
+## 7.3 Auswertung und Export
+* **Benotung:** Nach Abschluss des Tests wird basierend auf der Fehlerquote automatisch eine Note generiert.
+* **PDF-Export:** Der Test (entweder blanko als Übungsblatt oder das Ergebnis) kann zur physischen Bearbeitung oder Archivierung als **PDF** gedruckt werden. Es kann auch vorm Test gedruckt werden, um als Physischer Test zu fungieren.
+
