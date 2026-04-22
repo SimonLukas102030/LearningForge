@@ -30,7 +30,7 @@ export const CONFIG = {
   // Kostenloser API-Key: https://console.groq.com
   // 14.400 Anfragen/Tag, 30/Min — deutlich mehr als Gemini
   groq: {
-    apiKey: ''
+    apiKey: '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'
   },
 
   // ── Gemini KI (Fallback) ────────────────
