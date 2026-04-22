@@ -113,3 +113,12 @@ export async function getLeaderboard() {
     .map(d => ({ uid: d.id, ...d.data() }))
     .filter(e => Object.keys(e.scores || {}).length > 0);
 }
+
+export async function getAllUsers() {
+  const snap = await _db.collection('users').get({ source: 'server' });
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+export async function setBanStatus(uid, banned) {
+  await _db.collection('users').doc(uid).set({ isBanned: banned }, { merge: true });
+}

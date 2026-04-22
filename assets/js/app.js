@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -12,6 +12,8 @@ import {
 } from './test-engine.js';
 
 // ── Globaler State ───────────────────────
+const ADMIN_EMAIL = 'simonkoper27@gmail.com';
+
 let currentUser        = null;
 let userData           = null;
 let structure          = null;
@@ -21,6 +23,8 @@ let visibilityHandler  = null;
 let calcExpr           = '';
 let currentSubtopics   = null;
 let vocabState         = null;
+let builderState       = null;
+let loginBanError      = false;
 
 // ── Theme ────────────────────────────────
 export function initTheme() {
@@ -42,7 +46,15 @@ export function startApp() {
   onAuthStateChanged(async user => {
     currentUser = user;
     if (user) {
-      userData  = await getUserData(user.uid);
+      userData = await getUserData(user.uid);
+      if (userData?.isBanned) {
+        await logout();
+        currentUser = null;
+        userData    = null;
+        loginBanError = true;
+        route();
+        return;
+      }
       structure = await getStructure();
     }
     route();
@@ -79,6 +91,11 @@ function route() {
     renderStatistics();
   } else if (parts[0] === 'rangliste') {
     renderLeaderboard();
+  } else if (parts[0] === 'admin') {
+    if (currentUser?.email === ADMIN_EMAIL) renderAdmin();
+    else location.hash = '#/';
+  } else if (parts[0] === 'builder') {
+    renderBuilder();
   } else {
     renderDashboard();
   }
@@ -108,8 +125,10 @@ function renderNav(breadcrumbs = []) {
           <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
           <a class="nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken'">Statistiken</a>
           <a class="nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste'">Rangliste</a>
+          <a class="nav-link ${act('Builder')}"      onclick="location.hash='#/builder'">Builder</a>
           <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
           <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
+          ${currentUser?.email === ADMIN_EMAIL ? `<a class="nav-link nav-link-admin ${act('Admin')}" onclick="location.hash='#/admin'">Admin</a>` : ''}
         </div>
       </div>
       <div class="nav-right">
@@ -131,7 +150,9 @@ function renderNav(breadcrumbs = []) {
             <a onclick="location.hash='#/profil'">Profil</a>
             <a onclick="location.hash='#/statistiken'">Statistiken</a>
             <a onclick="location.hash='#/rangliste'">Rangliste</a>
+            <a onclick="location.hash='#/builder'">Builder</a>
             <a onclick="location.hash='#/einstellungen'">Einstellungen</a>
+            ${currentUser?.email === ADMIN_EMAIL ? `<a onclick="location.hash='#/admin'" style="color:var(--accent);font-weight:600">Admin-Panel</a>` : ''}
             <div class="divider"></div>
             <button class="danger" onclick="window.LF.doLogout()">Abmelden</button>
           </div>
@@ -142,8 +163,10 @@ function renderNav(breadcrumbs = []) {
       <a class="mobile-nav-link ${!breadcrumbs.length ? 'mnl-active' : ''}" onclick="location.hash='#/';window.LF.closeMobileMenu()">Start</a>
       <a class="mobile-nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken';window.LF.closeMobileMenu()">Statistiken</a>
       <a class="mobile-nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste';window.LF.closeMobileMenu()">Rangliste</a>
+      <a class="mobile-nav-link ${act('Builder')}"      onclick="location.hash='#/builder';window.LF.closeMobileMenu()">Builder</a>
       <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
       <a class="mobile-nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">Einstellungen</a>
+      ${currentUser?.email === ADMIN_EMAIL ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">Admin-Panel</a>` : ''}
       <div class="mobile-nav-sep"></div>
       <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">Abmelden</a>
     </div>`;
@@ -164,6 +187,7 @@ function renderLogin() {
           <h1>LearningForge</h1>
           <p>Dein persönlicher Lernhub</p>
         </div>
+        ${loginBanError ? `<div class="error-msg" style="margin-bottom:12px">Dein Konto wurde gesperrt. Wende dich an den Administrator.</div>` : ''}
         <div id="authError"></div>
         <div id="loginForm">
           <div id="nameGroup" style="display:none" class="form-group">
@@ -1021,6 +1045,267 @@ async function renderLeaderboard() {
     ${subjectGridHtml ? `<div class="section-title" style="margin-top:32px;margin-bottom:16px">Nach Fach</div><div class="lb-grid">${subjectGridHtml}</div>` : ''}`;
 }
 
+// ── Admin-Panel ──────────────────────────
+async function renderAdmin() {
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Admin' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>Admin-Panel</h1>
+        <div class="sub">Nur für ${ADMIN_EMAIL}</div>
+      </div>
+      <div id="adminContent"><div class="spinner" style="margin:40px auto"></div></div>
+    </div>`;
+
+  let users = [];
+  try { users = await getAllUsers(); } catch(e) {
+    document.getElementById('adminContent').innerHTML = `<div class="error-msg">Fehler beim Laden der Nutzer: ${e.message}</div>`;
+    return;
+  }
+
+  const rows = users
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    .map(u => {
+      const testCount = Object.keys(u.grades || {}).length;
+      const joined = u.createdAt?.seconds
+        ? new Date(u.createdAt.seconds * 1000).toLocaleDateString('de-DE') : '–';
+      return `
+        <div class="admin-user-row ${u.isBanned ? 'admin-user-banned' : ''}">
+          <div class="admin-user-avatar">${(u.name || '?')[0].toUpperCase()}</div>
+          <div class="admin-user-info">
+            <div class="admin-user-name">${u.name || 'Unbekannt'} ${u.isBanned ? '<span class="admin-ban-badge">GESPERRT</span>' : ''}</div>
+            <div class="admin-user-meta">${u.email || '–'} · ${testCount} Tests · beigetreten ${joined}</div>
+          </div>
+          <div class="admin-user-actions">
+            ${u.isBanned
+              ? `<button class="btn btn-secondary btn-sm" onclick="window.LF.adminUnban('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Entsperren</button>`
+              : `<button class="btn btn-danger btn-sm" onclick="window.LF.adminBan('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Sperren</button>`
+            }
+            <button class="btn btn-ghost btn-sm" onclick="window.LF.adminResetLb('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Rangliste reset</button>
+          </div>
+        </div>`;
+    }).join('');
+
+  document.getElementById('adminContent').innerHTML = `
+    <div class="admin-stats-bar">
+      <span>${users.length} Nutzer gesamt</span>
+      <span>${users.filter(u=>u.isBanned).length} gesperrt</span>
+      <span>${users.reduce((s,u)=>s+Object.keys(u.grades||{}).length,0)} Tests gesamt</span>
+    </div>
+    <div class="admin-user-list">${rows || '<div class="empty-state">Keine Nutzer gefunden.</div>'}</div>`;
+}
+
+// ── Content-Builder ───────────────────────
+const BUILDER_SNIPPETS = {
+  p:       '<p>Text hier schreiben.</p>',
+  h3:      '<h3>Überschrift</h3>',
+  info:    '<div class="lf-box lf-info">💡 Hinweis hier</div>',
+  tip:     '<div class="lf-box lf-tip">✅ Tipp hier</div>',
+  warn:    '<div class="lf-box lf-warn">⚠️ Warnung hier</div>',
+  danger:  '<div class="lf-box lf-danger">🚨 Denkfehler hier</div>',
+  formula: '<div class="lf-box lf-formula">Formel hier</div>',
+  key:     '<div class="lf-key"><div class="lf-key-title">Kernaussage</div><div class="lf-key-body">Inhalt hier — nutze <span class="lf-hl">Hervorhebungen</span> für wichtige Begriffe.</div></div>',
+  steps:   '<ol class="lf-steps"><li>Schritt 1</li><li>Schritt 2</li><li>Schritt 3</li></ol>',
+  twocol:  '<div class="lf-two-col"><div><strong>Links</strong><p>Text links</p></div><div><strong>Rechts</strong><p>Text rechts</p></div></div>',
+  def:     '<dl class="lf-def"><dt>Begriff</dt><dd>Definition des Begriffs.</dd></dl>',
+  table:   '<table class="lf-table"><thead><tr><th>Spalte A</th><th>Spalte B</th></tr></thead><tbody><tr><td>Wert 1</td><td>Wert 2</td></tr></tbody></table>',
+};
+
+function renderBuilder() {
+  if (!builderState) {
+    builderState = { step: 1, fach: '', klasse: '', thema: '', description: '', content: '', questions: [] };
+  }
+  const { step } = builderState;
+
+  const steps = ['Info', 'Inhalt', 'Fragen', 'Export'];
+  const stepBar = steps.map((s, i) => `
+    <div class="builder-step ${i + 1 === step ? 'active' : i + 1 < step ? 'done' : ''}">
+      <div class="builder-step-num">${i + 1 < step ? '✓' : i + 1}</div>
+      <div class="builder-step-label">${s}</div>
+    </div>`).join('<div class="builder-step-connector"></div>');
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Builder' }])}
+    <div class="page builder-page">
+      <div class="page-header">
+        <h1>Thema erstellen</h1>
+        <div class="sub">Erstelle eigene Lernmaterialien und reiche sie ein.</div>
+      </div>
+      <div class="builder-steps">${stepBar}</div>
+      <div class="builder-body" id="builderBody">
+        ${renderBuilderStep(step)}
+      </div>
+    </div>`;
+}
+
+function renderBuilderStep(step) {
+  const s = builderState;
+  if (step === 1) return `
+    <div class="builder-card">
+      <h2>Thema-Informationen</h2>
+      <div class="form-group">
+        <label class="form-label">Fach</label>
+        <input class="form-input" id="bFach" placeholder="z.B. Geschichte" value="${s.fach}"
+               list="bFachList" oninput="builderState.fach=this.value">
+        <datalist id="bFachList">${Object.values(structure||{}).map(s=>`<option value="${s.name}">`).join('')}</datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Klasse</label>
+        <input class="form-input" id="bKlasse" placeholder="z.B. Klasse-9" value="${s.klasse}"
+               oninput="builderState.klasse=this.value">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Thema-Name</label>
+        <input class="form-input" id="bThema" placeholder="z.B. Erster Weltkrieg" value="${s.thema}"
+               oninput="builderState.thema=this.value">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kurzbeschreibung (optional)</label>
+        <input class="form-input" id="bDesc" placeholder="Was lernst du hier?" value="${s.description}"
+               oninput="builderState.description=this.value">
+      </div>
+      <div class="builder-nav">
+        <span></span>
+        <button class="btn btn-primary" onclick="window.LF.builderNext()">Weiter: Inhalt</button>
+      </div>
+    </div>`;
+
+  if (step === 2) return `
+    <div class="builder-card builder-card-wide">
+      <h2>Lerninhalt erstellen</h2>
+      <div class="builder-snippet-bar">
+        ${Object.entries({p:'Absatz',h3:'Überschrift',info:'Info-Box',tip:'Tipp-Box',warn:'Warnung',danger:'Denkfehler',formula:'Formel',key:'Kernkonzept',steps:'Schritte',twocol:'2 Spalten',def:'Definition',table:'Tabelle'})
+          .map(([k,l])=>`<button class="builder-snippet-btn" onclick="window.LF.builderInsert('${k}')">${l}</button>`).join('')}
+      </div>
+      <div class="builder-split">
+        <div class="builder-split-left">
+          <label class="form-label">HTML-Inhalt</label>
+          <textarea class="form-input builder-textarea" id="builderContentInput"
+                    oninput="builderState.content=this.value;window.LF.builderPreview()"
+                    placeholder="Klicke auf einen Baustein oben oder tippe HTML...">${s.content}</textarea>
+        </div>
+        <div class="builder-split-right">
+          <label class="form-label">Vorschau</label>
+          <div class="builder-preview content-body" id="builderPreviewDiv">${s.content || '<span style="color:var(--text-muted)">Vorschau erscheint hier…</span>'}</div>
+        </div>
+      </div>
+      <div class="builder-nav">
+        <button class="btn btn-secondary" onclick="window.LF.builderPrev()">Zurück</button>
+        <button class="btn btn-primary"   onclick="window.LF.builderNext()">Weiter: Fragen</button>
+      </div>
+    </div>`;
+
+  if (step === 3) return `
+    <div class="builder-card builder-card-wide">
+      <h2>Fragen hinzufügen</h2>
+      <div class="builder-qform">
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">Fragentyp</label>
+          <select class="form-input" id="bQType" onchange="window.LF.builderQTypeChange()" style="max-width:220px">
+            <option value="multiple_choice">Multiple Choice</option>
+            <option value="free_text">Freitext</option>
+            <option value="vocabulary">Vokabel</option>
+          </select>
+        </div>
+        <div id="bQFields">${renderBuilderQFields('multiple_choice')}</div>
+        <button class="btn btn-secondary" onclick="window.LF.builderAddQuestion()">Frage hinzufügen</button>
+      </div>
+      <div class="builder-qlist" id="builderQList">
+        ${renderBuilderQList()}
+      </div>
+      <div class="builder-nav">
+        <button class="btn btn-secondary" onclick="window.LF.builderPrev()">Zurück</button>
+        <button class="btn btn-primary"   onclick="window.LF.builderNext()">Weiter: Export</button>
+      </div>
+    </div>`;
+
+  if (step === 4) {
+    const fachFolder  = builderState.fach.replace(/\s+/g, '-');
+    const klasseFolder = builderState.klasse.replace(/\s+/g, '-');
+    const themaFolder = builderState.thema.replace(/\s+/g, '-');
+    return `
+      <div class="builder-card">
+        <h2>Fertig! Einreichen</h2>
+        <div class="builder-export-info">
+          <div class="builder-export-row"><span class="builder-export-lbl">Fach:</span> <strong>${builderState.fach}</strong></div>
+          <div class="builder-export-row"><span class="builder-export-lbl">Klasse:</span> <strong>${builderState.klasse}</strong></div>
+          <div class="builder-export-row"><span class="builder-export-lbl">Thema:</span> <strong>${builderState.thema}</strong></div>
+          <div class="builder-export-row"><span class="builder-export-lbl">Fragen:</span> <strong>${builderState.questions.length}</strong></div>
+          <div class="builder-export-row"><span class="builder-export-lbl">Ordnerpfad:</span> <code>Fächer/${fachFolder}/${klasseFolder}/${themaFolder}/</code></div>
+        </div>
+        <div class="builder-export-steps">
+          <div class="builder-export-step"><span class="builder-export-num">1</span> ZIP herunterladen</div>
+          <div class="builder-export-step"><span class="builder-export-num">2</span> ZIP per Mail an <strong>simonkoper27@gmail.com</strong> schicken</div>
+          <div class="builder-export-step"><span class="builder-export-num">3</span> Betreff: <code>${builderState.fach} / ${builderState.klasse} / ${builderState.thema}</code></div>
+        </div>
+        <div class="builder-nav">
+          <button class="btn btn-secondary" onclick="window.LF.builderPrev()">Zurück</button>
+          <button class="btn btn-primary btn-lg" onclick="window.LF.builderExport()">ZIP herunterladen</button>
+        </div>
+        <div id="builderExportMsg" style="margin-top:16px"></div>
+      </div>`;
+  }
+}
+
+function renderBuilderQFields(type) {
+  if (type === 'multiple_choice') return `
+    <div class="form-group"><label class="form-label">Frage</label>
+      <input class="form-input" id="bQQuestion" placeholder="Fragetext?"></div>
+    <div class="builder-mc-options">
+      ${[0,1,2,3].map(i=>`
+        <div class="builder-mc-row">
+          <input type="radio" name="bCorrect" value="${i}" id="bCorrect${i}" ${i===0?'checked':''}>
+          <label for="bCorrect${i}">Option ${String.fromCharCode(65+i)}</label>
+          <input class="form-input" id="bOpt${i}" placeholder="Option ${String.fromCharCode(65+i)}">
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="form-group" style="flex:1;min-width:120px"><label class="form-label">Schwierigkeit</label>
+        <select class="form-input" id="bQDiff"><option value="easy">Leicht</option><option value="medium" selected>Mittel</option><option value="hard">Schwer</option></select></div>
+      <div class="form-group" style="flex:1;min-width:100px"><label class="form-label">Punkte</label>
+        <input class="form-input" id="bQPoints" type="number" value="2" min="1" max="10"></div>
+    </div>`;
+
+  if (type === 'free_text') return `
+    <div class="form-group"><label class="form-label">Frage</label>
+      <input class="form-input" id="bQQuestion" placeholder="Erkläre..."></div>
+    <div class="form-group"><label class="form-label">Musterantwort (für KI-Auswertung)</label>
+      <textarea class="form-input" id="bQSample" rows="2" placeholder="Vollständige Musterantwort"></textarea></div>
+    <div class="form-group"><label class="form-label">Schlüsselwörter (kommagetrennt, Fallback)</label>
+      <input class="form-input" id="bQKeywords" placeholder="Begriff1, Begriff2, Begriff3"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="form-group" style="flex:1;min-width:120px"><label class="form-label">Schwierigkeit</label>
+        <select class="form-input" id="bQDiff"><option value="easy">Leicht</option><option value="medium" selected>Mittel</option><option value="hard">Schwer</option></select></div>
+      <div class="form-group" style="flex:1;min-width:100px"><label class="form-label">Max. Punkte</label>
+        <input class="form-input" id="bQPoints" type="number" value="4" min="1" max="20"></div>
+    </div>`;
+
+  if (type === 'vocabulary') return `
+    <div class="form-group"><label class="form-label">Wort / Ausdruck</label>
+      <input class="form-input" id="bQWord" placeholder="z.B. der Hund"></div>
+    <div class="form-group"><label class="form-label">Akzeptierte Antworten (kommagetrennt)</label>
+      <input class="form-input" id="bQAnswers" placeholder="dog, the dog"></div>
+    <div class="form-group"><label class="form-label">Richtung (optional)</label>
+      <input class="form-input" id="bQDirection" placeholder="DE → EN"></div>
+    <div class="form-group"><label class="form-label">Tipp (optional)</label>
+      <input class="form-input" id="bQHint" placeholder="Tier, bellt"></div>`;
+}
+
+function renderBuilderQList() {
+  if (!builderState.questions.length) return '<div class="empty-state" style="padding:16px;font-size:14px">Noch keine Fragen hinzugefügt.</div>';
+  return builderState.questions.map((q, i) => {
+    const label = q.type === 'multiple_choice' ? `MC: ${q.question}`
+                : q.type === 'free_text'       ? `Freitext: ${q.question}`
+                : `Vokabel: ${q.word} → ${q.answers?.join(', ')}`;
+    return `
+      <div class="builder-q-item">
+        <span class="builder-q-num">${i+1}</span>
+        <span class="builder-q-label">${label}</span>
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.builderDeleteQ(${i})">Entfernen</button>
+      </div>`;
+  }).join('');
+}
+
 // ── Üben-Ablauf ───────────────────────────
 let uebenState = null;
 
@@ -1215,6 +1500,145 @@ window.LF = {
     } else {
       document.getElementById('tabVokabeln').innerHTML = renderVocabCard();
       document.getElementById('vocabInput')?.focus();
+    }
+  },
+
+  // ── Admin ────────────────────────────────
+  adminBan: async (uid, name) => {
+    if (!confirm(`${name} wirklich sperren?`)) return;
+    await setBanStatus(uid, true);
+    await resetLeaderboard(uid);
+    showToast(`${name} gesperrt.`, 'success');
+    renderAdmin();
+  },
+  adminUnban: async (uid, name) => {
+    await setBanStatus(uid, false);
+    showToast(`${name} entsperrt.`, 'success');
+    renderAdmin();
+  },
+  adminResetLb: async (uid, name) => {
+    if (!confirm(`Rangliste von ${name} wirklich zurücksetzen?`)) return;
+    await resetLeaderboard(uid);
+    showToast(`Rangliste von ${name} zurückgesetzt.`, 'success');
+  },
+
+  // ── Builder ──────────────────────────────
+  builderNext: () => {
+    const s = builderState;
+    if (s.step === 1) {
+      if (!s.fach.trim() || !s.klasse.trim() || !s.thema.trim()) {
+        showToast('Bitte Fach, Klasse und Thema ausfüllen.', 'error'); return;
+      }
+    }
+    builderState.step++;
+    renderBuilder();
+  },
+  builderPrev: () => { builderState.step--; renderBuilder(); },
+
+  builderInsert: (type) => {
+    const ta = document.getElementById('builderContentInput');
+    if (!ta) return;
+    const snippet = '\n' + BUILDER_SNIPPETS[type] + '\n';
+    const pos = ta.selectionStart;
+    ta.value = ta.value.slice(0, pos) + snippet + ta.value.slice(ta.selectionEnd);
+    ta.selectionStart = ta.selectionEnd = pos + snippet.length;
+    builderState.content = ta.value;
+    ta.focus();
+    window.LF.builderPreview();
+  },
+  builderPreview: () => {
+    const div = document.getElementById('builderPreviewDiv');
+    if (div) div.innerHTML = builderState.content || '<span style="color:var(--text-muted)">Vorschau erscheint hier…</span>';
+  },
+
+  builderQTypeChange: () => {
+    const type = document.getElementById('bQType')?.value;
+    const container = document.getElementById('bQFields');
+    if (container && type) container.innerHTML = renderBuilderQFields(type);
+  },
+  builderAddQuestion: () => {
+    const type = document.getElementById('bQType')?.value;
+    let q = null;
+    const id = `q${Date.now()}`;
+    if (type === 'multiple_choice') {
+      const question = document.getElementById('bQQuestion')?.value.trim();
+      if (!question) { showToast('Bitte Frage eingeben.', 'error'); return; }
+      const options  = [0,1,2,3].map(i => document.getElementById(`bOpt${i}`)?.value.trim() || `Option ${i+1}`);
+      const correct  = parseInt(document.querySelector('input[name="bCorrect"]:checked')?.value ?? 0);
+      const diff     = document.getElementById('bQDiff')?.value || 'medium';
+      const points   = parseInt(document.getElementById('bQPoints')?.value) || 2;
+      q = { id, type, question, options, correct, difficulty: diff, points };
+    } else if (type === 'free_text') {
+      const question = document.getElementById('bQQuestion')?.value.trim();
+      if (!question) { showToast('Bitte Frage eingeben.', 'error'); return; }
+      const sample   = document.getElementById('bQSample')?.value.trim();
+      const kwRaw    = document.getElementById('bQKeywords')?.value.trim();
+      const keywords = kwRaw ? kwRaw.split(',').map(k=>k.trim()).filter(Boolean) : [];
+      const diff     = document.getElementById('bQDiff')?.value || 'medium';
+      const maxPoints = parseInt(document.getElementById('bQPoints')?.value) || 4;
+      q = { id, type, question, sampleAnswer: sample, keywords, difficulty: diff, maxPoints };
+    } else if (type === 'vocabulary') {
+      const word = document.getElementById('bQWord')?.value.trim();
+      const answersRaw = document.getElementById('bQAnswers')?.value.trim();
+      if (!word || !answersRaw) { showToast('Bitte Wort und Antworten eingeben.', 'error'); return; }
+      const answers   = answersRaw.split(',').map(a=>a.trim()).filter(Boolean);
+      const direction = document.getElementById('bQDirection')?.value.trim();
+      const hint      = document.getElementById('bQHint')?.value.trim();
+      q = { id, type: 'vocabulary', word, answers, ...(direction && {direction}), ...(hint && {hint}), points: 1 };
+    }
+    if (q) {
+      builderState.questions.push(q);
+      document.getElementById('builderQList').innerHTML = renderBuilderQList();
+      // Reset fields
+      ['bQQuestion','bQSample','bQKeywords','bOpt0','bOpt1','bOpt2','bOpt3','bQWord','bQAnswers','bQDirection','bQHint']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      showToast('Frage hinzugefügt.', 'success');
+    }
+  },
+  builderDeleteQ: (i) => {
+    builderState.questions.splice(i, 1);
+    document.getElementById('builderQList').innerHTML = renderBuilderQList();
+  },
+
+  builderExport: async () => {
+    const s = builderState;
+    const fach   = s.fach.replace(/\s+/g, '-');
+    const klasse = s.klasse.replace(/\s+/g, '-');
+    const thema  = s.thema.replace(/\s+/g, '-');
+    const folder = `Fächer/${fach}/${klasse}/${thema}/`;
+
+    const meta = { name: s.thema, description: s.description, content: s.content };
+    const questions = { questions: s.questions };
+
+    const msg = document.getElementById('builderExportMsg');
+    if (msg) msg.innerHTML = '<div class="spinner" style="margin:0 auto"></div>';
+
+    try {
+      const zip = new JSZip();
+      zip.file(folder + 'meta.json', JSON.stringify(meta, null, 2));
+      zip.file(folder + 'questions.json', JSON.stringify(questions, null, 2));
+      zip.file('ANLEITUNG.txt',
+        `LearningForge — Thema-Einreichung\n` +
+        `=====================================\n\n` +
+        `Thema:  ${s.thema}\n` +
+        `Fach:   ${s.fach}\n` +
+        `Klasse: ${s.klasse}\n\n` +
+        `Bitte diese ZIP-Datei per E-Mail an:\n` +
+        `  simonkoper27@gmail.com\n\n` +
+        `Betreff: ${s.fach} / ${s.klasse} / ${s.thema}\n\n` +
+        `Der Ordnerpfad im Repository wird sein:\n` +
+        `  ${folder}\n`
+      );
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `${fach}_${klasse}_${thema}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      if (msg) msg.innerHTML = `<div class="success-msg">ZIP heruntergeladen! Bitte per Mail an <strong>simonkoper27@gmail.com</strong> schicken.</div>`;
+    } catch(e) {
+      if (msg) msg.innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
     }
   },
 
