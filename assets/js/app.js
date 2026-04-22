@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics } from './auth.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
@@ -36,6 +36,7 @@ let pomodoroState      = null;
 let _notesSaveTimer    = null;
 let srsState           = null;
 let dailyChallengeState = null;
+let _commentTopicKey   = null;
 
 // ── Online/Offline-Banner (F-11) ─────────
 function updateOnlineStatus(isOnline) {
@@ -193,6 +194,10 @@ function route() {
     renderDailyChallenge();
   } else if (parts[0] === 'hilfe') {
     renderHelp();
+  } else if (parts[0] === 'freunde') {
+    renderFriends();
+  } else if (parts[0] === 'feed') {
+    renderFeed();
   } else {
     renderDashboard();
   }
@@ -223,6 +228,7 @@ function renderNav(breadcrumbs = []) {
           <a class="nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken'">Statistiken</a>
           <a class="nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste'">Rangliste</a>
           <a class="nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen'">Gruppen</a>
+          <a class="nav-link ${act('Freunde')}"        onclick="location.hash='#/freunde'">Freunde${(() => { const reqs = Object.keys(userData?.friendRequests || {}).length; return reqs ? `<span class="nav-badge">${reqs}</span>` : ''; })()}</a>
           <a class="nav-link ${act('Meine Inhalte')}" onclick="location.hash='#/meine-inhalte'">Meine Inhalte</a>
           <a class="nav-link ${act('Builder')}"        onclick="location.hash='#/builder'">Builder</a>
           <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
@@ -256,6 +262,8 @@ function renderNav(breadcrumbs = []) {
             <a onclick="location.hash='#/statistiken'">Statistiken</a>
             <a onclick="location.hash='#/rangliste'">Rangliste</a>
             <a onclick="location.hash='#/gruppen'">Gruppen</a>
+            <a onclick="location.hash='#/freunde'">Freunde</a>
+            <a onclick="location.hash='#/feed'">Feed</a>
             <a onclick="location.hash='#/builder'">Builder</a>
             <a onclick="location.hash='#/einstellungen'">Einstellungen</a>
             ${currentUser?.email === ADMIN_EMAIL ? `<a onclick="location.hash='#/admin'" style="color:var(--accent);font-weight:600">Admin-Panel</a>` : ''}
@@ -270,6 +278,8 @@ function renderNav(breadcrumbs = []) {
       <a class="mobile-nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken';window.LF.closeMobileMenu()">Statistiken</a>
       <a class="mobile-nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste';window.LF.closeMobileMenu()">Rangliste</a>
       <a class="mobile-nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">Gruppen</a>
+      <a class="mobile-nav-link ${act('Freunde')}"        onclick="location.hash='#/freunde';window.LF.closeMobileMenu()">Freunde${(() => { const reqs = Object.keys(userData?.friendRequests || {}).length; return reqs ? ` (${reqs})` : ''; })()}</a>
+      <a class="mobile-nav-link ${act('Feed')}"           onclick="location.hash='#/feed';window.LF.closeMobileMenu()">Feed</a>
       <a class="mobile-nav-link ${act('Meine Inhalte')}" onclick="location.hash='#/meine-inhalte';window.LF.closeMobileMenu()">Meine Inhalte</a>
       <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">Builder</a>
       <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
@@ -678,6 +688,7 @@ async function renderTopic(subjectId, yearId, topicId) {
   // F-15: Karteikarten
   const hasFlashcards = questions.length > 0;
   const topicKey = `${subjectId}__${yearId}__${topicId}`;
+  _commentTopicKey = topicKey;
   flashcardState = null;
 
   // F-19: Lesezeichen
@@ -752,12 +763,22 @@ async function renderTopic(subjectId, yearId, topicId) {
       <button class="tab-btn"        id="tabBtnTest"    onclick="window.LF.switchTab('Test')">Test</button>
       ${hasFlashcards ? `<button class="tab-btn" id="tabBtnKarten" onclick="window.LF.switchTab('Karten')">🃏 Karten</button>` : ''}
       ${hasVocab ? `<button class="tab-btn" id="tabBtnVokabeln" onclick="window.LF.switchTab('Vokabeln')">Vokabeln</button>` : ''}
+      <button class="tab-btn" id="tabBtnKommentare" onclick="window.LF.switchTab('Kommentare')">Kommentare</button>
     </div>
     <div id="tabLernen"  class="tab-panel">${lernenTabFull}</div>
     <div id="tabUeben"   class="tab-panel" style="display:none">${uebenTab}</div>
     <div id="tabTest"    class="tab-panel" style="display:none">${testTab}</div>
     ${hasFlashcards ? `<div id="tabKarten"  class="tab-panel" style="display:none">${flashcardTab}</div>` : ''}
     ${hasVocab ? `<div id="tabVokabeln" class="tab-panel" style="display:none">${renderVocabStart(vocabQuestions)}</div>` : ''}
+    <div id="tabKommentare" class="tab-panel" style="display:none">
+      <div class="comments-section">
+        <div class="comment-input-area">
+          <textarea class="form-input comments-textarea" id="commentInput" placeholder="Kommentar schreiben…" rows="3" maxlength="500"></textarea>
+          <button class="btn btn-primary btn-sm" onclick="window.LF.submitComment()">Senden</button>
+        </div>
+        <div id="commentsList"><div class="comments-loading">Lade Kommentare…</div></div>
+      </div>
+    </div>
     <div class="notes-panel" id="notesPanel">
       <button class="notes-toggle" onclick="window.LF.toggleNotes()">
         📝 Notizen <span id="notesArrow">▼</span>
@@ -4096,10 +4117,11 @@ window.LF = {
   },
 
   switchTab: (name) => {
-    ['Lernen','Ueben','Test','Karten','Vokabeln'].forEach(t => {
+    ['Lernen','Ueben','Test','Karten','Vokabeln','Kommentare'].forEach(t => {
       document.getElementById(`tab${t}`)?.style.setProperty('display', t === name ? 'block' : 'none');
       document.getElementById(`tabBtn${t}`)?.classList.toggle('active', t === name);
     });
+    if (name === 'Kommentare') window.LF.loadComments();
   },
 
   startUeben: async (subjectId, yearId, topicId) => {
@@ -4334,6 +4356,10 @@ window.LF.submitTest = async () => {
     };
     userData.grades[key] = gradeEntry;
     await saveGrade(currentUser.uid, subjectId, yearId, topicId, gradeEntry).catch(console.error);
+    writeFeedEntry(currentUser.uid, 'test', {
+      name: currentUser.displayName || 'Nutzer',
+      subject: subjectId, topic: topicId, grade: bestInfo.grade
+    }).catch(() => {});
     await updateLeaderboard(
       currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
       subjectId, yearId, topicId, bestInfo.grade, bestRun.points
@@ -4962,4 +4988,281 @@ window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
   win.document.write(html);
   win.document.close();
   setTimeout(() => win.print(), 400);
+};
+
+// ══════════════════════════════════════════
+//  Phase 4 — Soziale Features
+// ══════════════════════════════════════════
+
+// ── Hilfsfunktionen ──────────────────────
+function _relTime(date) {
+  const diff = (Date.now() - date.getTime()) / 1000;
+  if (diff < 60)    return 'gerade eben';
+  if (diff < 3600)  return `vor ${Math.floor(diff / 60)} Min.`;
+  if (diff < 86400) return `vor ${Math.floor(diff / 3600)} Std.`;
+  return `vor ${Math.floor(diff / 86400)} Tagen`;
+}
+
+function _avatar(photo, name) {
+  return photo
+    ? `<img src="${photo}" alt="" class="comment-avatar-img">`
+    : `<span class="comment-avatar-letter">${(name || '?')[0].toUpperCase()}</span>`;
+}
+
+// ── F-30: Freunde ─────────────────────────
+async function renderFriends() {
+  const app = document.getElementById('app');
+  app.innerHTML = renderNav([{ label: 'Freunde' }]) + `
+    <div class="page">
+      ${[1,2,3].map(() => '<div class="sk-block" style="height:80px;margin-bottom:12px"></div>').join('')}
+    </div>`;
+  initNavCollapse();
+
+  const myFriendIds = userData?.friendIds || [];
+  const myRequests  = Object.entries(userData?.friendRequests || {});
+  const friends     = await getFriendsData(myFriendIds);
+
+  const reqHtml = myRequests.length ? `
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title" style="margin-bottom:16px">Anfragen (${myRequests.length})</div>
+      ${myRequests.map(([fromUid, req]) => `
+        <div class="friend-request-card">
+          <div class="friend-avatar">${_avatar(req.photo, req.name)}</div>
+          <div class="friend-info">
+            <div class="friend-name">${req.name}</div>
+            <div class="friend-sub">Möchte dein Freund sein</div>
+          </div>
+          <div class="friend-btns">
+            <button class="btn btn-primary btn-sm"
+              onclick="window.LF.acceptFriend('${fromUid}','${req.name.replace(/'/g,"\\'")}','${req.photo||''}')">Annehmen</button>
+            <button class="btn btn-secondary btn-sm"
+              onclick="window.LF.rejectFriend('${fromUid}')">Ablehnen</button>
+          </div>
+        </div>`).join('')}
+    </div>` : '';
+
+  const friendsHtml = friends.length
+    ? friends.map(f => {
+        const lv = calcLevel(f.xp || 0);
+        return `
+          <div class="friend-card">
+            <div class="friend-avatar">${_avatar(f.photo, f.name)}</div>
+            <div class="friend-info">
+              <div class="friend-name">${f.name}</div>
+              <div class="friend-sub">Lv. ${lv.level} — ${lv.title}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm"
+              onclick="window.LF.unfriendUser('${f.uid}','${f.name.replace(/'/g,"\\'")}')">Entfreunden</button>
+          </div>`;
+      }).join('')
+    : `<div class="empty-state" style="padding:20px 0"><p>Noch keine Freunde hinzugefügt.</p></div>`;
+
+  app.innerHTML = renderNav([{ label: 'Freunde' }]) + `
+    <div class="page">
+      <h1 class="page-title">Freunde</h1>
+      ${reqHtml}
+      <div class="card" style="margin-bottom:20px">
+        <div class="section-title" style="margin-bottom:14px">Nutzer suchen</div>
+        <input class="form-input" type="search" id="friendSearch" placeholder="Name eingeben…"
+          oninput="window.LF.searchFriends(this.value)" autocomplete="off">
+        <div id="friendSearchResults"></div>
+      </div>
+      <div class="card">
+        <div class="section-title" style="margin-bottom:16px">Meine Freunde (${friends.length})</div>
+        <div class="friends-list">${friendsHtml}</div>
+      </div>
+    </div>`;
+  initNavCollapse();
+}
+
+// ── F-31: Aktivitäts-Feed ─────────────────
+async function renderFeed() {
+  const app = document.getElementById('app');
+  app.innerHTML = renderNav([{ label: 'Feed' }]) + `
+    <div class="page">
+      ${[1,2,3,4].map(() => '<div class="sk-block" style="height:70px;margin-bottom:10px"></div>').join('')}
+    </div>`;
+  initNavCollapse();
+
+  const friendIds = userData?.friendIds || [];
+  if (!friendIds.length) {
+    app.innerHTML = renderNav([{ label: 'Feed' }]) + `
+      <div class="page">
+        <h1 class="page-title">Aktivitäts-Feed</h1>
+        <div class="card">
+          <div class="empty-state">
+            <p>Füge Freunde hinzu, um ihren Aktivitäts-Feed zu sehen.</p>
+            <button class="btn btn-primary" onclick="location.hash='#/freunde'">Freunde hinzufügen</button>
+          </div>
+        </div>
+      </div>`;
+    initNavCollapse();
+    return;
+  }
+
+  let entries = [];
+  try { entries = await getFeedForFriends(friendIds); } catch { /* ignore */ }
+
+  const entriesHtml = entries.length
+    ? entries.map(e => {
+        const time = e.createdAt?.toDate ? _relTime(e.createdAt.toDate()) : 'gerade eben';
+        const icon = e.type === 'test' ? '📝' : e.type === 'achievement' ? '🏅' : e.type === 'content' ? '📚' : '⚡';
+        const text = e.type === 'test'
+          ? `<strong>${e.payload?.name}</strong> hat <em>${e.payload?.topic}</em> mit Note <strong>${e.payload?.grade}</strong> abgeschlossen`
+          : e.type === 'achievement'
+          ? `<strong>${e.payload?.name}</strong> hat das Achievement <em>${e.payload?.title}</em> erhalten`
+          : e.type === 'content'
+          ? `<strong>${e.payload?.name}</strong> hat neuen Inhalt hochgeladen: <em>${e.payload?.topic}</em>`
+          : `<strong>${e.payload?.name}</strong> war aktiv`;
+        return `
+          <div class="feed-entry">
+            <div class="feed-icon">${icon}</div>
+            <div class="feed-body">
+              <div class="feed-text">${text}</div>
+              <div class="feed-time">${time}</div>
+            </div>
+          </div>`;
+      }).join('')
+    : `<div class="empty-state" style="padding:20px 0"><p>Noch keine Aktivitäten von deinen Freunden.</p></div>`;
+
+  app.innerHTML = renderNav([{ label: 'Feed' }]) + `
+    <div class="page">
+      <h1 class="page-title">Aktivitäts-Feed</h1>
+      <div class="card">${entriesHtml}</div>
+    </div>`;
+  initNavCollapse();
+}
+
+// ── F-34: Kommentare ──────────────────────
+window.LF.loadComments = async () => {
+  const area = document.getElementById('commentsList');
+  if (!area || !_commentTopicKey) return;
+  area.innerHTML = '<div class="comments-loading">Lade Kommentare…</div>';
+  let comments = [];
+  try { comments = await getComments(_commentTopicKey); } catch { /* ignore */ }
+
+  if (!comments.length) {
+    area.innerHTML = '<div class="empty-state" style="padding:20px 0"><p>Noch keine Kommentare. Sei der Erste!</p></div>';
+    return;
+  }
+  area.innerHTML = comments.map(c => {
+    const time      = c.createdAt?.toDate ? _relTime(c.createdAt.toDate()) : 'gerade eben';
+    const likeCount = Object.keys(c.likes || {}).length;
+    const liked     = !!(c.likes?.[currentUser?.uid]);
+    const canDel    = c.uid === currentUser?.uid || currentUser?.email === ADMIN_EMAIL;
+    const safeText  = c.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `
+      <div class="comment-card" id="cmt_${c.id}">
+        <div class="comment-avatar">${_avatar(c.photo, c.name)}</div>
+        <div class="comment-body">
+          <div class="comment-header">
+            <span class="comment-author">${c.name}</span>
+            <span class="comment-time">${time}</span>
+          </div>
+          <div class="comment-text">${safeText}</div>
+          <div class="comment-actions">
+            <button class="comment-like-btn ${liked ? 'liked' : ''}"
+              onclick="window.LF.likeComment('${c.id}')">♥ ${likeCount || ''}</button>
+            ${canDel ? `<button class="comment-delete-btn" onclick="window.LF.deleteCommentBtn('${c.id}')">Löschen</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+};
+
+window.LF.submitComment = async () => {
+  const input = document.getElementById('commentInput');
+  const text  = input?.value?.trim();
+  if (!text || !_commentTopicKey) return;
+  input.disabled = true;
+  try {
+    await addComment(_commentTopicKey, currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, text);
+    input.value = '';
+    await window.LF.loadComments();
+  } catch (e) {
+    showToast('Fehler beim Senden.', 'error');
+  }
+  input.disabled = false;
+};
+
+window.LF.likeComment = async (commentId) => {
+  if (!_commentTopicKey) return;
+  const btn = document.querySelector(`#cmt_${commentId} .comment-like-btn`);
+  try {
+    const nowLiked = await toggleCommentLike(_commentTopicKey, commentId, currentUser.uid);
+    await window.LF.loadComments();
+  } catch { showToast('Fehler.', 'error'); }
+};
+
+window.LF.deleteCommentBtn = async (commentId) => {
+  if (!_commentTopicKey) return;
+  if (!confirm('Kommentar löschen?')) return;
+  try {
+    await deleteComment(_commentTopicKey, commentId);
+    document.getElementById(`cmt_${commentId}`)?.remove();
+  } catch { showToast('Fehler beim Löschen.', 'error'); }
+};
+
+// ── F-30: Freunde — window.LF Handler ─────
+window.LF.searchFriends = async (query) => {
+  const res = document.getElementById('friendSearchResults');
+  if (!res) return;
+  if (!query?.trim()) { res.innerHTML = ''; return; }
+  res.innerHTML = '<div class="text-muted" style="padding:8px 0">Suche…</div>';
+  const results = await searchUsers(query, currentUser.uid);
+  if (!results.length) { res.innerHTML = '<div class="text-muted" style="padding:8px 0">Keine Nutzer gefunden.</div>'; return; }
+  const myFriendIds  = userData?.friendIds || [];
+  const myReqSentTo  = userData?.friendRequestsSent || [];
+  res.innerHTML = results.map(u => {
+    const isFriend  = myFriendIds.includes(u.uid);
+    const isPending = myReqSentTo.includes(u.uid);
+    return `
+      <div class="friend-search-item">
+        <div class="friend-avatar">${_avatar(u.photo, u.name)}</div>
+        <div class="friend-name" style="flex:1">${u.name}</div>
+        ${isFriend
+          ? `<span class="badge badge-success">Freund</span>`
+          : isPending
+          ? `<span class="badge badge-muted">Angefragt</span>`
+          : `<button class="btn btn-primary btn-sm"
+               onclick="window.LF.sendFriendReq('${u.uid}','${u.name.replace(/'/g,"\\'")}','${u.photo||''}')">Hinzufügen</button>`}
+      </div>`;
+  }).join('');
+};
+
+window.LF.sendFriendReq = async (toUid, toName, toPhoto) => {
+  try {
+    await sendFriendRequest(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, toUid);
+    userData.friendRequestsSent = [...(userData.friendRequestsSent || []), toUid];
+    showToast(`Anfrage an ${toName} gesendet.`, 'success');
+    await window.LF.searchFriends(document.getElementById('friendSearch')?.value || '');
+  } catch { showToast('Fehler beim Senden.', 'error'); }
+};
+
+window.LF.acceptFriend = async (fromUid, fromName, fromPhoto) => {
+  try {
+    await acceptFriendRequest(currentUser.uid, fromUid);
+    userData.friendIds = [...(userData.friendIds || []), fromUid];
+    if (userData.friendRequests) delete userData.friendRequests[fromUid];
+    showToast(`${fromName} ist jetzt dein Freund!`, 'success');
+    renderFriends();
+  } catch { showToast('Fehler.', 'error'); }
+};
+
+window.LF.rejectFriend = async (fromUid) => {
+  try {
+    await rejectFriendRequest(currentUser.uid, fromUid);
+    if (userData.friendRequests) delete userData.friendRequests[fromUid];
+    renderFriends();
+  } catch { showToast('Fehler.', 'error'); }
+};
+
+window.LF.unfriendUser = async (friendUid, friendName) => {
+  if (!confirm(`${friendName} entfreunden?`)) return;
+  try {
+    await unfriend(currentUser.uid, friendUid);
+    userData.friendIds = (userData.friendIds || []).filter(id => id !== friendUid);
+    showToast(`${friendName} entfernt.`, 'info');
+    renderFriends();
+  } catch { showToast('Fehler.', 'error'); }
 };

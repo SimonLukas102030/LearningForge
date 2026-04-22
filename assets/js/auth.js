@@ -320,3 +320,130 @@ export async function getDailyScores(dateKey) {
 export async function saveFreezeDays(uid, freezeDays) {
   await _db.collection('users').doc(uid).set({ freezeDays }, { merge: true });
 }
+
+// ── Kommentare (F-34) ─────────────────────
+export async function addComment(topicKey, uid, name, photo, text) {
+  await _db.collection('comments').doc(topicKey).collection('entries').add({
+    uid, name, photo: photo || null, text,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    likes: {}
+  });
+}
+
+export async function getComments(topicKey) {
+  const snap = await _db.collection('comments').doc(topicKey)
+    .collection('entries').orderBy('createdAt', 'asc').limit(100).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteComment(topicKey, commentId) {
+  await _db.collection('comments').doc(topicKey).collection('entries').doc(commentId).delete();
+}
+
+export async function toggleCommentLike(topicKey, commentId, uid) {
+  const ref = _db.collection('comments').doc(topicKey).collection('entries').doc(commentId);
+  const doc = await ref.get();
+  const liked = !!(doc.data()?.likes?.[uid]);
+  if (liked) {
+    await ref.update({ [`likes.${uid}`]: firebase.firestore.FieldValue.delete() });
+  } else {
+    await ref.update({ [`likes.${uid}`]: true });
+  }
+  return !liked;
+}
+
+// ── Freunde (F-30) ────────────────────────
+export async function searchUsers(query, currentUid) {
+  if (!query?.trim()) return [];
+  const snap = await _db.collection('users').limit(300).get();
+  const q = query.toLowerCase().trim();
+  return snap.docs
+    .filter(d => d.id !== currentUid && (d.data().name || '').toLowerCase().includes(q))
+    .slice(0, 10)
+    .map(d => ({ uid: d.id, name: d.data().name, photo: d.data().photoURL || null }));
+}
+
+export async function sendFriendRequest(fromUid, fromName, fromPhoto, toUid) {
+  await _db.collection('users').doc(toUid).set({
+    friendRequests: { [fromUid]: { name: fromName, photo: fromPhoto || null, ts: Date.now() } }
+  }, { merge: true });
+}
+
+export async function acceptFriendRequest(uid, fromUid) {
+  const batch = _db.batch();
+  batch.set(_db.collection('users').doc(uid),
+    { friendIds: firebase.firestore.FieldValue.arrayUnion(fromUid) }, { merge: true });
+  batch.set(_db.collection('users').doc(fromUid),
+    { friendIds: firebase.firestore.FieldValue.arrayUnion(uid) }, { merge: true });
+  await batch.commit();
+  await _db.collection('users').doc(uid).update({
+    [`friendRequests.${fromUid}`]: firebase.firestore.FieldValue.delete()
+  }).catch(console.error);
+  const doc = await _db.collection('users').doc(uid).get({ source: 'server' });
+  userData = { ...userData, ...doc.data() };
+}
+
+export async function rejectFriendRequest(uid, fromUid) {
+  await _db.collection('users').doc(uid).update({
+    [`friendRequests.${fromUid}`]: firebase.firestore.FieldValue.delete()
+  });
+}
+
+export async function unfriend(uid, friendUid) {
+  const batch = _db.batch();
+  batch.update(_db.collection('users').doc(uid),
+    { friendIds: firebase.firestore.FieldValue.arrayRemove(friendUid) });
+  batch.update(_db.collection('users').doc(friendUid),
+    { friendIds: firebase.firestore.FieldValue.arrayRemove(uid) });
+  await batch.commit();
+}
+
+export async function getFriendsData(friendIds) {
+  if (!friendIds?.length) return [];
+  const docs = await Promise.all(friendIds.slice(0, 30).map(id =>
+    _db.collection('users').doc(id).get()
+  ));
+  return docs.filter(d => d.exists).map(d => ({
+    uid: d.id, name: d.data().name,
+    photo: d.data().photoURL || null, xp: d.data().xp || 0
+  }));
+}
+
+// ── Aktivitäts-Feed (F-31) ────────────────
+export async function writeFeedEntry(uid, type, payload) {
+  await _db.collection('feed').add({
+    uid, type, payload,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+export async function getFeedForFriends(friendIds) {
+  if (!friendIds?.length) return [];
+  const ids = friendIds.slice(0, 10);
+  const snap = await _db.collection('feed')
+    .where('uid', 'in', ids)
+    .orderBy('createdAt', 'desc')
+    .limit(50)
+    .get({ source: 'server' });
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// ── Peer-Review (F-35) ───────────────────
+export async function submitTopicForReview(topicId) {
+  await _db.collection('customTopics').doc(topicId).update({ status: 'pending', votes: {} });
+}
+
+export async function voteCustomTopic(topicId, uid, vote) {
+  const ref = _db.collection('customTopics').doc(topicId);
+  await ref.set({ votes: { [uid]: vote } }, { merge: true });
+  const doc    = await ref.get({ source: 'server' });
+  const votes  = Object.values(doc.data()?.votes || {});
+  if (votes.filter(v => v === 1).length >= 3) await ref.update({ status: 'public' });
+  if (votes.filter(v => v === -1).length >= 3) await ref.update({ status: 'private' });
+}
+
+export async function getPendingTopics() {
+  const snap = await _db.collection('customTopics')
+    .where('status', '==', 'pending').get({ source: 'server' });
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}

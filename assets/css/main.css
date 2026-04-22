@@ -3136,3 +3136,174 @@ input, textarea, select { font-family: var(--font); }
   .help-row { flex-direction: column; gap: 4px; }
   .help-term { flex: none; }
 }
+
+/* ═══════════════════════════════════════
+   Phase 4 — Soziale Features
+   ═══════════════════════════════════════ */
+
+/* ── Navbar Badge ── */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ── Freunde-Seite ── */
+.friend-card,
+.friend-request-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.friend-card:last-child,
+.friend-request-card:last-child { border-bottom: none; }
+
+.friend-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.comment-avatar-img,
+.friend-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.comment-avatar-letter,
+.friend-avatar span { color: #fff; font-weight: 700; font-size: 15px; }
+
+.friend-info { flex: 1; min-width: 0; }
+.friend-name { font-weight: 600; font-size: 15px; }
+.friend-sub  { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+.friend-btns { display: flex; gap: 8px; flex-shrink: 0; }
+
+.friend-search-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.friend-search-item:last-child { border-bottom: none; }
+#friendSearch { margin-bottom: 8px; }
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.badge-success { background: #10b98122; color: #10b981; }
+.badge-muted   { background: var(--border); color: var(--text-muted); }
+
+/* ── Feed ── */
+.feed-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.feed-entry:last-child { border-bottom: none; }
+
+.feed-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.feed-body { flex: 1; min-width: 0; }
+.feed-text { font-size: 14px; line-height: 1.5; }
+.feed-time { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+/* ── Kommentare ── */
+.comments-section { padding: 16px 0; }
+
+.comment-input-area {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.comments-textarea {
+  flex: 1;
+  resize: vertical;
+  min-height: 60px;
+  font-size: 14px;
+}
+.comments-loading {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+.comment-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.comment-card:last-child { border-bottom: none; }
+
+.comment-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.comment-body  { flex: 1; min-width: 0; }
+.comment-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.comment-author { font-weight: 600; font-size: 13px; }
+.comment-time   { font-size: 11px; color: var(--text-muted); }
+.comment-text   { font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+
+.comment-actions { display: flex; gap: 12px; margin-top: 6px; }
+.comment-like-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+.comment-like-btn:hover,
+.comment-like-btn.liked { color: #ef4444; }
+.comment-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+.comment-delete-btn:hover { color: #ef4444; }
+
+@media (max-width: 600px) {
+  .comment-input-area { flex-direction: column; }
+  .comments-textarea  { width: 100%; }
+  .friend-btns { flex-direction: column; gap: 4px; }
+}
