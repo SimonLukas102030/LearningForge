@@ -5729,7 +5729,8 @@ window.LF.createShareLink = async () => {
     const copyBtn = document.getElementById('copyShareBtn');
     if (copyBtn) copyBtn.style.display = 'inline-flex';
     showToast('Link erstellt!', 'success');
-  } catch {
+  } catch(e) {
+    console.error('[ShareLink]', e);
     showToast('Fehler beim Erstellen.', 'error');
   }
   btn.disabled    = false;
