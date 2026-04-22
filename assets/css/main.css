@@ -1394,3 +1394,147 @@ input, textarea, select { font-family: var(--font); }
   margin-bottom: 20px;
   color: var(--text);
 }
+
+/* ── 34. Vokabeltrainer ─────────────────── */
+.vocab-start {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+.vocab-start-icon { font-size: 48px; }
+.vocab-start h2 { font-size: 24px; font-weight: 700; }
+.vocab-direction-info { color: var(--text-muted); font-size: 14px; }
+
+.vocab-card-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 16px 40px;
+}
+
+.vocab-progress-bar {
+  width: 100%;
+  max-width: 480px;
+  height: 6px;
+  background: var(--border);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.vocab-progress-fill {
+  height: 100%;
+  background: var(--subject-color, var(--accent));
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease;
+}
+.vocab-counter {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.vocab-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.vocab-card--correct { border-color: #10b981; }
+.vocab-card--almost  { border-color: #f59e0b; }
+.vocab-card--wrong   { border-color: #ef4444; }
+
+.vocab-direction {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.vocab-word {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.vocab-hint-btn { margin-top: 4px; }
+.vocab-hint {
+  font-size: 14px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  margin-top: 4px;
+}
+
+.vocab-feedback-icon {
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+}
+.vocab-card--correct .vocab-feedback-icon { color: #10b981; }
+.vocab-card--almost  .vocab-feedback-icon { color: #f59e0b; }
+.vocab-card--wrong   .vocab-feedback-icon { color: #ef4444; }
+
+.vocab-feedback-msg { font-size: 16px; color: var(--text); }
+
+.vocab-input-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+}
+.vocab-input { flex: 1; font-size: 16px; }
+
+/* Results */
+.vocab-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 48px;
+  gap: 8px;
+}
+.vocab-result-score {
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1;
+}
+.vocab-result-score.good  { color: #10b981; }
+.vocab-result-score.ok    { color: #f59e0b; }
+.vocab-result-score.bad   { color: #ef4444; }
+.vocab-result-pct { font-size: 18px; color: var(--text-muted); font-weight: 600; }
+
+.vocab-wrong-list {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.vocab-wrong-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+.vocab-wrong-word   { font-weight: 700; color: var(--text); }
+.vocab-wrong-sep    { color: var(--text-muted); }
+.vocab-wrong-answer { font-weight: 600; color: #10b981; }
+.vocab-wrong-given  { color: var(--text-muted); font-size: 13px; margin-left: auto; }

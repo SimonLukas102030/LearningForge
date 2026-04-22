@@ -262,6 +262,44 @@ export function getTimeConfig(minutes) {
   return TIME_CONFIG[minutes] || TIME_CONFIG[15];
 }
 
+// ── Vokabeltrainer ───────────────────────
+export function selectVocabQuestions(allQuestions) {
+  const vocab = allQuestions.filter(q => q.type === 'vocabulary');
+  for (let i = vocab.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [vocab[i], vocab[j]] = [vocab[j], vocab[i]];
+  }
+  return vocab;
+}
+
+export function evaluateVocabAnswer(question, answer) {
+  if (!answer || !answer.trim()) {
+    return { correct: false, almost: false, points: 0, maxPoints: question.points || 1 };
+  }
+  const norm = s => s.toLowerCase().trim().replace(/\s+/g, ' ');
+  const given    = norm(answer);
+  const accepted = (question.answers || []).map(norm);
+  const correct  = accepted.includes(given);
+  const almost   = !correct && accepted.some(a => a.length > 3 && _lev(given, a) <= 1);
+  return {
+    correct: correct || almost,
+    almost,
+    points:    (correct || almost) ? (question.points || 1) : 0,
+    maxPoints: question.points || 1
+  };
+}
+
+function _lev(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 99;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[a.length][b.length];
+}
+
 // ── KI-Fragengenerierung ─────────────────
 function shuffleArr(arr) {
   const a = [...arr];

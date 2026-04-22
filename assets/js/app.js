@@ -7,7 +7,8 @@ import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLea
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
-  generateQuestionsWithGemini
+  generateQuestionsWithGemini,
+  selectVocabQuestions, evaluateVocabAnswer
 } from './test-engine.js';
 
 // ── Globaler State ───────────────────────
@@ -19,6 +20,7 @@ let tabSwitchPenalty   = false;
 let visibilityHandler  = null;
 let calcExpr           = '';
 let currentSubtopics   = null;
+let vocabState         = null;
 
 // ── Theme ────────────────────────────────
 export function initTheme() {
@@ -431,6 +433,10 @@ async function renderTopic(subjectId, yearId, topicId) {
     ? renderUebenStart(questions, subjectId, yearId, topicId)
     : `<div class="empty-state" style="padding:40px">Keine Übungsaufgaben vorhanden.</div>`;
 
+  const vocabQuestions = selectVocabQuestions(questions);
+  const hasVocab = vocabQuestions.length > 0;
+  if (hasVocab) vocabState = { allCards: vocabQuestions, cards: [], index: 0, correct: 0, wrong: [] };
+
   const gradeInfo = prevGrade ? calcGrade(prevGrade.totalPoints || prevGrade.points || 0, prevGrade.totalMaxPoints || prevGrade.maxPoints || 1) : null;
   const testTab = questions.length > 0 ? `
     <div class="test-start" id="testArea">
@@ -457,10 +463,12 @@ async function renderTopic(subjectId, yearId, topicId) {
       <button class="tab-btn active" id="tabBtnLernen"  onclick="window.LF.switchTab('Lernen')">Lernen</button>
       <button class="tab-btn"        id="tabBtnUeben"   onclick="window.LF.switchTab('Ueben')">Üben</button>
       <button class="tab-btn"        id="tabBtnTest"    onclick="window.LF.switchTab('Test')">Test</button>
+      ${hasVocab ? `<button class="tab-btn" id="tabBtnVokabeln" onclick="window.LF.switchTab('Vokabeln')">Vokabeln</button>` : ''}
     </div>
-    <div id="tabLernen" class="tab-panel">${lernenTab}</div>
-    <div id="tabUeben"  class="tab-panel" style="display:none">${uebenTab}</div>
-    <div id="tabTest"   class="tab-panel" style="display:none">${testTab}</div>`;
+    <div id="tabLernen"  class="tab-panel">${lernenTab}</div>
+    <div id="tabUeben"   class="tab-panel" style="display:none">${uebenTab}</div>
+    <div id="tabTest"    class="tab-panel" style="display:none">${testTab}</div>
+    ${hasVocab ? `<div id="tabVokabeln" class="tab-panel" style="display:none">${renderVocabStart(vocabQuestions)}</div>` : ''}`;
 }
 
 function renderSubtopicGrid(subtopics) {
@@ -474,6 +482,93 @@ function renderSubtopicGrid(subtopics) {
       <div class="subtopic-arrow">›</div>
     </div>`).join('');
   return `<div class="subtopic-grid" id="subtopicGrid">${cards}</div>`;
+}
+
+// ── Vokabeltrainer ───────────────────────
+function renderVocabStart(cards) {
+  const directions = [...new Set(cards.map(c => c.direction).filter(Boolean))];
+  return `
+    <div class="vocab-start" id="vocabArea">
+      <div class="vocab-start-icon">📖</div>
+      <h2>Vokabeltrainer</h2>
+      <p>${cards.length} Karte${cards.length !== 1 ? 'n' : ''} in dieser Einheit</p>
+      ${directions.length ? `<p class="vocab-direction-info">${directions.join(' · ')}</p>` : ''}
+      <button class="btn btn-primary btn-lg" onclick="window.LF.startVocab()">Lernen starten</button>
+    </div>`;
+}
+
+function renderVocabCard() {
+  const { cards, index } = vocabState;
+  const card = cards[index];
+  const progress = Math.round((index / cards.length) * 100);
+  return `
+    <div class="vocab-card-wrap" id="vocabArea">
+      <div class="vocab-progress-bar"><div class="vocab-progress-fill" style="width:${progress}%"></div></div>
+      <div class="vocab-counter">${index + 1} / ${cards.length}</div>
+      <div class="vocab-card">
+        ${card.direction ? `<div class="vocab-direction">${card.direction}</div>` : ''}
+        <div class="vocab-word">${card.word}</div>
+        ${card.hint ? `<button class="btn btn-ghost btn-sm vocab-hint-btn" onclick="window.LF.showVocabHint()" id="vocabHintBtn">Tipp anzeigen</button>
+        <div class="vocab-hint" id="vocabHint" style="display:none">${card.hint}</div>` : ''}
+      </div>
+      <div class="vocab-input-row">
+        <input type="text" class="form-input vocab-input" id="vocabInput"
+               placeholder="Antwort eingeben…"
+               onkeydown="if(event.key==='Enter')window.LF.submitVocabAnswer()">
+        <button class="btn btn-primary" onclick="window.LF.submitVocabAnswer()">Prüfen</button>
+      </div>
+    </div>`;
+}
+
+function renderVocabFeedback(result, card) {
+  const { cards, index, correct, wrong } = vocabState;
+  const isLast = index + 1 >= cards.length;
+  const cls = result.correct ? (result.almost ? 'almost' : 'correct') : 'wrong';
+  const icon = result.correct ? (result.almost ? '~' : '✓') : '✗';
+  const msg  = result.correct
+    ? (result.almost ? 'Fast! Kleiner Tippfehler.' : 'Richtig!')
+    : `Falsch. Richtig: <strong>${card.answers[0]}</strong>`;
+  return `
+    <div class="vocab-card-wrap" id="vocabArea">
+      <div class="vocab-progress-bar"><div class="vocab-progress-fill" style="width:${Math.round(((index+1)/cards.length)*100)}%"></div></div>
+      <div class="vocab-counter">${index + 1} / ${cards.length}</div>
+      <div class="vocab-card vocab-card--${cls}">
+        ${card.direction ? `<div class="vocab-direction">${card.direction}</div>` : ''}
+        <div class="vocab-word">${card.word}</div>
+        <div class="vocab-feedback-icon">${icon}</div>
+        <div class="vocab-feedback-msg">${msg}</div>
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="window.LF.nextVocabCard()">
+        ${isLast ? 'Ergebnis anzeigen' : 'Weiter'}
+      </button>
+    </div>`;
+}
+
+function renderVocabResults() {
+  const { cards, correct, wrong } = vocabState;
+  const pct = Math.round((correct / cards.length) * 100);
+  const wrongList = wrong.map(w => `
+    <div class="vocab-wrong-item">
+      <span class="vocab-wrong-word">${w.card.word}</span>
+      <span class="vocab-wrong-sep">→</span>
+      <span class="vocab-wrong-answer">${w.card.answers[0]}</span>
+      ${w.given ? `<span class="vocab-wrong-given">(du: ${w.given})</span>` : ''}
+    </div>`).join('');
+  return `
+    <div class="vocab-results" id="vocabArea">
+      <div class="vocab-result-score ${pct >= 80 ? 'good' : pct >= 50 ? 'ok' : 'bad'}">
+        ${correct} / ${cards.length}
+      </div>
+      <div class="vocab-result-pct">${pct}% richtig</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin:24px 0">
+        <button class="btn btn-primary" onclick="window.LF.startVocab()">Nochmal (alle)</button>
+        ${wrong.length > 0 ? `<button class="btn btn-secondary" onclick="window.LF.retryVocabWrong()">Falsche wiederholen (${wrong.length})</button>` : ''}
+      </div>
+      ${wrong.length > 0 ? `
+        <div class="section-title" style="margin-top:8px">Falsch beantwortet</div>
+        <div class="vocab-wrong-list">${wrongList}</div>` : `
+        <p style="color:var(--grade-1);font-weight:600;text-align:center">Perfekt! Alle richtig.</p>`}
+    </div>`;
 }
 
 function renderUebenStart(questions, subjectId, yearId, topicId) {
@@ -1082,6 +1177,58 @@ window.LF = {
     if (input)   input.value         = defaultIcon;
     if (preview) preview.textContent = defaultIcon;
   },
+
+  startVocab: () => {
+    const allCards = [...(vocabState?.allCards || [])];
+    for (let i = allCards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allCards[i], allCards[j]] = [allCards[j], allCards[i]];
+    }
+    vocabState = { allCards: vocabState?.allCards || [], cards: allCards, index: 0, correct: 0, wrong: [] };
+    document.getElementById('tabVokabeln').innerHTML = renderVocabCard();
+    document.getElementById('vocabInput')?.focus();
+  },
+
+  showVocabHint: () => {
+    document.getElementById('vocabHint').style.display = 'block';
+    document.getElementById('vocabHintBtn').style.display = 'none';
+  },
+
+  submitVocabAnswer: () => {
+    const input = document.getElementById('vocabInput');
+    if (!input) return;
+    const answer = input.value;
+    const card   = vocabState.cards[vocabState.index];
+    const result = evaluateVocabAnswer(card, answer);
+    if (result.correct) {
+      vocabState.correct++;
+    } else {
+      vocabState.wrong.push({ card, given: answer.trim() });
+    }
+    document.getElementById('tabVokabeln').innerHTML = renderVocabFeedback(result, card);
+  },
+
+  nextVocabCard: () => {
+    vocabState.index++;
+    if (vocabState.index >= vocabState.cards.length) {
+      document.getElementById('tabVokabeln').innerHTML = renderVocabResults();
+    } else {
+      document.getElementById('tabVokabeln').innerHTML = renderVocabCard();
+      document.getElementById('vocabInput')?.focus();
+    }
+  },
+
+  retryVocabWrong: () => {
+    const wrongCards = vocabState.wrong.map(w => w.card);
+    for (let i = wrongCards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [wrongCards[i], wrongCards[j]] = [wrongCards[j], wrongCards[i]];
+    }
+    vocabState = { allCards: vocabState.allCards, cards: wrongCards, index: 0, correct: 0, wrong: [] };
+    document.getElementById('tabVokabeln').innerHTML = renderVocabCard();
+    document.getElementById('vocabInput')?.focus();
+  },
+
   selectTime: (t) => {
     selectedTime = t;
     TIME_OPTIONS.forEach(opt => {
@@ -1118,7 +1265,7 @@ window.LF = {
   },
 
   switchTab: (name) => {
-    ['Lernen','Ueben','Test'].forEach(t => {
+    ['Lernen','Ueben','Test','Vokabeln'].forEach(t => {
       document.getElementById(`tab${t}`)?.style.setProperty('display', t === name ? 'block' : 'none');
       document.getElementById(`tabBtn${t}`)?.classList.toggle('active', t === name);
     });

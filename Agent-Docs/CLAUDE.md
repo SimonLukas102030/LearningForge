@@ -250,6 +250,21 @@ Optionen werden beim Test automatisch gemischt.
 }
 ```
 
+### Vokabeln
+```json
+{
+  "id": "eindeutige-id",
+  "type": "vocabulary",
+  "word": "der Hund",
+  "answers": ["dog", "the dog"],   // Alle akzeptierten Antworten
+  "hint": "Tier, bellt",            // Optional, auf Knopfdruck sichtbar
+  "direction": "DE → EN",           // Optional, z.B. "DE → EN", "EN → DE"
+  "points": 1
+}
+```
+Vokabeln erscheinen nur im **Vokabeltrainer-Tab** (nicht im Test/Üben).
+Auswertung: case-insensitiv, Leerzeichen egal, Tippfehler-Toleranz (1 Zeichen bei Wörtern > 3 Zeichen).
+
 ### Schwierigkeiten & Testzeiten
 
 | difficulty | erscheint bei |
