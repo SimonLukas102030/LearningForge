@@ -62,6 +62,192 @@
       "maxPoints": 8,
       "keywords": ["horizontal", "vertikal", "unabhängig", "gleichförmig", "freier fall", "sₓ = vₓ·t", "s_y = ½·g·t²", "gleichzeitig", "überlagern"],
       "sampleAnswer": "Beim waagerechten Wurf überlagern sich zwei unabhängige Bewegungen: 1) Horizontal: gleichförmige Bewegung mit konstanter Geschwindigkeit vₓ (keine Beschleunigung) → sₓ = vₓ · t. 2) Vertikal: freier Fall mit Erdbeschleunigung g → s_y = ½·g·t². Das Besondere: Beide Bewegungen laufen vollständig unabhängig voneinander ab — die horizontale Bewegung hat keinen Einfluss auf die Fallzeit. Daher landet ein waagerecht abgeschossenes Objekt gleichzeitig mit einem fallen gelassenen, das auf gleicher Höhe startet."
+    },
+    {
+      "id": "sp11", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was ist gleichförmige Bewegung?",
+      "options": ["Bewegung mit konstanter Beschleunigung", "Bewegung mit konstanter Geschwindigkeit (a = 0)", "Bewegung im freien Fall", "Kreisbewegung"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp12", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie lautet die Formel für den Weg bei gleichmäßig beschleunigter Bewegung (ohne Anfangsgeschwindigkeit)?",
+      "options": ["s = v · t", "s = ½ · a · t²", "s = a · t", "s = v² / a"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp13", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie groß ist die Erdbeschleunigung g (gerundet auf zwei Nachkommastellen)?",
+      "options": ["g = 8,81 m/s²", "g = 9,81 m/s²", "g = 10,81 m/s²", "g = 7,50 m/s²"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp14", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was unterscheidet den waagerechten Wurf vom freien Fall?",
+      "options": ["Beim waagerechten Wurf gibt es keine vertikale Beschleunigung", "Beim waagerechten Wurf kommt eine horizontale Anfangsgeschwindigkeit hinzu", "Beim freien Fall gibt es eine horizontale Bewegung", "Es gibt keinen Unterschied"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp15", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre das Superpositionsprinzip mit einem alltäglichen Beispiel (nicht aus dem Lehrbuch).",
+      "maxPoints": 4,
+      "keywords": ["überlagern", "unabhängig", "gleichzeitig", "beide", "addieren", "richtung"],
+      "sampleAnswer": "Beispiel: Ein Schiff auf einem fließenden Fluss. Das Schiff fährt mit eigener Motorgeschwindigkeit quer zum Strom, wird aber gleichzeitig vom Strom mitgetragen. Beide Bewegungen überlagern sich – das Schiff bewegt sich auf einer diagonalen Bahn. Jede Bewegung läuft unabhängig ab, aber ihre Wirkungen addieren sich zur Gesamtbewegung. Ähnlich: Gehen in einem fahrenden Zug."
+    },
+    {
+      "id": "sp16", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie berechnet man die Fallzeit beim waagerechten Wurf aus der Fallhöhe h (g = 10 m/s²)?",
+      "options": ["t = h / g", "t = √(2h / g)", "t = √(h / g)", "t = 2h / g"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp17", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Ein Objekt wird waagerecht von einer 20 m hohen Klippe geworfen (g = 10 m/s²). Wie lange dauert der Fall?",
+      "options": ["1 s", "2 s", "√2 ≈ 1,41 s", "4 s"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp18", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Wie berechnet man die Wurfweite x beim waagerechten Wurf?",
+      "options": ["x = v₀ · g", "x = v₀ · t", "x = ½ · v₀ · t", "x = v₀ / t"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp19", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Welche Form hat die Flugbahn beim waagerechten Wurf?",
+      "options": ["Gerade Linie", "Kreis", "Parabel", "Ellipse"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "sp20", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Wie groß ist die vertikale Geschwindigkeit v_y nach t = 3 s beim waagerechten Wurf? (g = 10 m/s²)",
+      "options": ["10 m/s", "20 m/s", "30 m/s", "3 m/s"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "sp21", "type": "free_text", "difficulty": "medium",
+      "question": "Ein Ball wird waagerecht mit v₀ = 10 m/s von einer 20 m hohen Plattform geworfen (g = 10 m/s²). Berechne Fallzeit und Wurfweite.",
+      "maxPoints": 6,
+      "keywords": ["t = 2 s", "x = 20 m", "√(2h/g)", "v₀ · t", "fallzeit", "wurfweite"],
+      "sampleAnswer": "Fallzeit: h = ½·g·t² → 20 = ½·10·t² → t² = 4 → t = 2 s. Wurfweite: x = v₀·t = 10·2 = 20 m. Das Objekt landet 20 m von der Klippe entfernt."
+    },
+    {
+      "id": "sp22", "type": "multiple_choice", "difficulty": "hard",
+      "question": "Ein Objekt wird waagerecht von 45 m Höhe geworfen (g = 10 m/s²). Wie groß ist v_y beim Aufprall?",
+      "options": ["v_y = 10 m/s", "v_y = 20 m/s", "v_y = 30 m/s", "v_y = 45 m/s"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "sp23", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was gilt an der höchsten Stelle eines senkrecht nach oben geworfenen Objekts?",
+      "options": ["Die Geschwindigkeit ist maximal", "Die Geschwindigkeit ist null, die Beschleunigung g wirkt weiter", "Geschwindigkeit und Beschleunigung sind beide null", "Das Objekt kehrt sofort um"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp24", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wie berechnet man die Steigzeit t_s beim senkrechten Wurf nach oben?",
+      "options": ["t_s = v₀ · g", "t_s = v₀ / g", "t_s = g / v₀", "t_s = √(v₀ / g)"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp25", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Ein Ball wird mit v₀ = 20 m/s senkrecht nach oben geworfen (g = 10 m/s²). Wie hoch steigt er maximal?",
+      "options": ["10 m", "20 m", "40 m", "80 m"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp26", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Ein Ball wird mit v₀ = 20 m/s nach oben geworfen (g = 10 m/s²). Wie lang ist die gesamte Flugzeit?",
+      "options": ["2 s", "4 s", "6 s", "8 s"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp27", "type": "free_text", "difficulty": "hard",
+      "question": "Ein Ball wird senkrecht nach oben mit v₀ = 40 m/s geworfen (g = 10 m/s²). Berechne: a) Steigzeit, b) maximale Höhe, c) Gesamtflugzeit.",
+      "maxPoints": 8,
+      "keywords": ["t_s = 4 s", "h_max = 80 m", "t_gesamt = 8 s", "v₀/g", "v₀²/2g"],
+      "sampleAnswer": "a) Steigzeit: t_s = v₀ / g = 40 / 10 = 4 s. b) Maximale Höhe: h_max = v₀² / (2·g) = 1600 / 20 = 80 m. c) Gesamtflugzeit: t_ges = 2·t_s = 2·4 = 8 s (Auf- und Abstieg dauern gleich lang)."
+    },
+    {
+      "id": "sp28", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Wie lange fällt ein Objekt aus einer Höhe von h = 45 m? (g = 10 m/s²)",
+      "options": ["√4,5 ≈ 2,1 s", "3 s", "4,5 s", "9 s"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp29", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was ist sin(30°)?",
+      "options": ["√3/2 ≈ 0,87", "1/2 = 0,5", "√2/2 ≈ 0,71", "1"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp30", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was ist cos(60°)?",
+      "options": ["√3/2 ≈ 0,87", "1/2 = 0,5", "√2/2 ≈ 0,71", "0"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp31", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Beim schiefen Wurf mit v₀ = 20 m/s und α = 30°: Wie groß ist die horizontale Anfangsgeschwindigkeit v₀ₓ? (cos 30° ≈ 0,87)",
+      "options": ["10 m/s", "17,3 m/s", "14,1 m/s", "20 m/s"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp32", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Bei welchem Abwurfwinkel ist die Wurfweite beim schiefen Wurf auf ebenem Boden maximal?",
+      "options": ["30°", "45°", "60°", "90°"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp33", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Beim schiefen Wurf: Was passiert, wenn der Abwurfwinkel α = 90° beträgt?",
+      "options": ["Maximale Wurfweite", "Senkrechter Wurf nach oben – Wurfweite = 0", "Waagerechter Wurf", "Kürzeste Flugzeit"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp34", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre den schiefen Wurf: Welche zwei Bewegungskomponenten überlagern sich? Nenne die Formeln für beide.",
+      "maxPoints": 6,
+      "keywords": ["horizontal", "vertikal", "v₀ₓ = v₀·cos(α)", "v₀y = v₀·sin(α)", "parabel", "überlagern", "unabhängig", "sₓ = v₀ₓ·t"],
+      "sampleAnswer": "Beim schiefen Wurf überlagern sich: 1) Horizontale Komponente: gleichförmige Bewegung mit v₀ₓ = v₀·cos(α) → sₓ = v₀ₓ·t. 2) Vertikale Komponente: Wurf nach oben mit v₀y = v₀·sin(α), dann Absturz → s_y = v₀y·t − ½·g·t². Die Bahnkurve ist eine Parabel. Beide Komponenten laufen unabhängig ab, teilen aber dieselbe Zeit t."
+    },
+    {
+      "id": "sp35", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Wie berechnet man die resultierende Geschwindigkeit v aus den Komponenten vₓ und v_y?",
+      "options": ["v = vₓ + v_y", "v = √(vₓ² + v_y²)", "v = (vₓ + v_y) / 2", "v = vₓ · v_y"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp36", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Zwei senkrecht aufeinanderstehende Kräfte von 3 N und 4 N wirken auf ein Objekt. Wie groß ist die Resultierende?",
+      "options": ["3,5 N", "5 N", "7 N", "12 N"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp37", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Welchen Winkel hat die resultierende Geschwindigkeit, wenn v_y = v_x = 10 m/s?",
+      "options": ["30°", "45°", "60°", "90°"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp38", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre Vektoraddition am Beispiel des waagerechten Wurfs: Wie berechnet man Betrag und Richtung der Endgeschwindigkeit?",
+      "maxPoints": 6,
+      "keywords": ["v_y = g·t", "v_x = v₀", "betrag", "pythagoras", "winkel", "tan", "resultierende", "v = √(v_x² + v_y²)"],
+      "sampleAnswer": "Beim waagerechten Wurf hat das Objekt beim Aufprall: v_x = v₀ (konstant, da keine horizontale Beschleunigung) und v_y = g·t (wächst durch Erdbeschleunigung). Betrag der Endgeschwindigkeit: v = √(v_x² + v_y²) (Satz des Pythagoras). Beispiel: v₀ = 10 m/s, t = 3 s, g = 10: v_x = 10, v_y = 30, v = √(100+900) = √1000 ≈ 31,6 m/s. Winkel zur Horizontalen: tan(θ) = v_y / v_x."
+    },
+    {
+      "id": "sp39", "type": "multiple_choice", "difficulty": "hard",
+      "question": "Ein Ball wird waagerecht mit v₀ = 15 m/s geworfen. Nach t = 2 s: Wie groß ist die Gesamtgeschwindigkeit? (g = 10 m/s²)",
+      "options": ["17,5 m/s", "25 m/s", "15 m/s", "20 m/s"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "sp40", "type": "free_text", "difficulty": "hard",
+      "question": "Ein Objekt wird waagerecht von einer 80 m hohen Klippe mit v₀ = 20 m/s abgeschossen (g = 10 m/s²). Berechne: a) Fallzeit, b) Wurfweite, c) vertikale Geschwindigkeit beim Aufprall, d) Gesamtgeschwindigkeit beim Aufprall.",
+      "maxPoints": 10,
+      "keywords": ["t = 4 s", "x = 80 m", "v_y = 40 m/s", "v ≈ 44,7 m/s", "√2000", "pythagoras"],
+      "sampleAnswer": "a) Fallzeit: h = ½·g·t² → 80 = 5·t² → t² = 16 → t = 4 s. b) Wurfweite: x = v₀·t = 20·4 = 80 m. c) v_y = g·t = 10·4 = 40 m/s. d) v = √(v_x² + v_y²) = √(20² + 40²) = √(400 + 1600) = √2000 ≈ 44,7 m/s."
     }
   ]
 }

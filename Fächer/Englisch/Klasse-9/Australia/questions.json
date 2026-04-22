@@ -207,6 +207,174 @@
       "maxPoints": 10,
       "keywords": ["anzac", "april 25", "gallipoli", "1915", "wwi", "australia", "new zealand", "army corps", "soldiers", "sacrifice", "mateship", "dawn", "service", "national", "identity", "war", "memorial"],
       "sampleAnswer": "ANZAC Day (April 25) is one of Australia's most important national days. ANZAC stands for Australian and New Zealand Army Corps. It commemorates Australian and New Zealand soldiers who fought in WWI, especially at Gallipoli in 1915, where ANZAC forces suffered heavy casualties in a failed campaign. The day honors sacrifice, courage, and mateship shown by soldiers. Dawn services and marches are held across the country. ANZAC Day is significant because it helped forge Australian national identity — the idea of Australians coming together under extreme adversity, displaying values of mateship, courage, and sacrifice. It's about remembering all Australian soldiers who served and died in wars."
+    },
+    {
+      "id": "aus34", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Which is Australia's largest state by area?",
+      "options": ["New South Wales", "Victoria", "Western Australia", "Queensland"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus35", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is the Murray-Darling Basin?",
+      "options": ["Australia's largest river system, mainly in the southeast, vital for agriculture", "A river in Western Australia", "A coastal lagoon in Queensland", "A mountain range in the Northern Territory"],
+      "correct": 0, "points": 2
+    },
+    {
+      "id": "aus36", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What does 'Down Under' refer to?",
+      "options": ["An underground cave system in the Outback", "Australia and New Zealand, located in the Southern Hemisphere", "The Australian Outback only", "Tasmania"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus37", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What is the emu famous for?",
+      "options": ["Being able to fly at great heights", "Being a large flightless bird that is Australia's national bird (alongside the kangaroo)", "Being a marsupial", "Living in the ocean"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus38", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What is a dingo?",
+      "options": ["A type of marsupial bear", "A wild dog native to Australia", "A type of venomous snake", "A bird of prey"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus39", "type": "free_text", "difficulty": "medium",
+      "question": "Describe Australia's unique wildlife and explain why so many species are found nowhere else on Earth.",
+      "maxPoints": 8,
+      "keywords": ["isolation", "45 million", "marsupials", "monotremes", "endemic", "platypus", "kangaroo", "koala", "evolved", "continent", "80%"],
+      "sampleAnswer": "Australia separated from other continents approximately 45 million years ago. This long isolation allowed animals to evolve independently, creating species found nowhere else. Over 80% of Australian mammals and reptiles are endemic. Marsupials (kangaroos, koalas, wombats, quokkas) thrived here but died out elsewhere. Monotremes (platypus and echidna) are egg-laying mammals surviving only in Australia and New Guinea. Without competition from placental mammals from other continents, unique animals could evolve unchallenged. This makes Australia one of the world's most important biodiversity hotspots."
+    },
+    {
+      "id": "aus40", "type": "multiple_choice", "difficulty": "medium",
+      "question": "When did Australia become a federation (an independent nation)?",
+      "options": ["1788", "1850", "1901", "1931"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus41", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What was the Australian Gold Rush of the 1850s?",
+      "options": ["A failed government program to find gold", "A major gold discovery in Victoria and New South Wales that transformed Australia's population and economy", "A military conflict over gold mines", "A trade deal with Britain for gold"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus42", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What does 'G'day' mean?",
+      "options": ["Good night", "Good day / Hello", "Goodbye", "How are you?"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus43", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What does 'no worries' mean in Australian English?",
+      "options": ["I am very worried about this", "That's fine / Don't worry about it", "No problem but I'm very busy", "I strongly disagree"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus44", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What does 'brekkie' mean?",
+      "options": ["A small snack at lunch", "Breakfast", "A type of biscuit", "A coffee shop"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus45", "type": "free_text", "difficulty": "medium",
+      "question": "Give at least 5 examples of Australian slang and explain their meanings.",
+      "maxPoints": 6,
+      "keywords": ["arvo", "brekkie", "barbie", "thongs", "g'day", "no worries", "mate", "reckon", "servo", "ripper", "bloke"],
+      "sampleAnswer": "1) G'day = Good day / Hello. 2) Arvo = Afternoon. 3) Brekkie = Breakfast. 4) Barbie = Barbecue. 5) Thongs = Flip-flops. 6) No worries = That's fine / Don't worry. 7) Mate = Friend / buddy. 8) Servo = Service station / petrol station. 9) Ripper = Excellent / great. 10) Bloke = A man / guy."
+    },
+    {
+      "id": "aus46", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What system of government does Australia have?",
+      "options": ["Presidential democracy", "Constitutional monarchy and parliamentary democracy", "Republic with a president", "Absolute monarchy"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus47", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What does Australia Day (January 26) officially mark?",
+      "options": ["The day Australia won independence from Britain", "The anniversary of the First Fleet's arrival in Sydney Cove in 1788", "The federation of Australia in 1901", "ANZAC Day"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus48", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Why do many Aboriginal Australians refer to January 26 as 'Invasion Day'?",
+      "options": ["Because of a specific military battle on that day", "Because it marks the beginning of British colonization and the dispossession of Indigenous peoples", "Because of the Gold Rush beginning on that date", "It is an incorrect and unofficial term"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus49", "type": "free_text", "difficulty": "hard",
+      "question": "Explain the controversy around Australia Day (January 26) and the 'Invasion Day' debate. Include both perspectives.",
+      "maxPoints": 10,
+      "keywords": ["january 26", "first fleet", "1788", "colonization", "invasion", "dispossession", "aboriginal", "indigenous", "change", "celebrate", "sovereignty", "stolen", "national identity", "debate"],
+      "sampleAnswer": "Australia Day (January 26) marks the arrival of the First Fleet in 1788. For many Australians, it's a day to celebrate national identity, multiculturalism, and achievements. However, for many Aboriginal and Torres Strait Islander peoples, it marks the start of colonization — the invasion, dispossession of land, forced removal, and destruction of their cultures. They call it 'Invasion Day' or 'Survival Day'. The debate: should Australia change the date to one all Australians can celebrate? Supporters of change argue the current date is deeply painful for Indigenous people. Opponents say it represents national unity and history. Some local councils have already moved events; the national date remains highly controversial and politically charged."
+    },
+    {
+      "id": "aus50", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What is Australia's approximate population?",
+      "options": ["5 million", "15 million", "26 million", "50 million"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus51", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is Australia's most valuable export category?",
+      "options": ["Agricultural products like wheat and beef", "Iron ore and coal from mining", "Tourism and hospitality", "Manufactured goods and technology"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus52", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Approximately what percentage of Australians were born overseas?",
+      "options": ["About 5%", "About 15%", "About 30%", "About 50%"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus53", "type": "free_text", "difficulty": "medium",
+      "question": "Describe Australia's multicultural society. How did it develop and what does it look like today?",
+      "maxPoints": 8,
+      "keywords": ["immigration", "white australia policy", "1973", "multicultural", "asian", "european", "chinese", "indian", "diversity", "policy", "born overseas", "30%", "indigenous"],
+      "sampleAnswer": "Australia is one of the world's most multicultural nations. It developed through waves of immigration: British settlers from 1788, Gold Rush immigrants in the 1850s, post-WWII European migrants, and Asian migration after the White Australia Policy was abolished in 1973. Today, about 30% of Australians were born overseas. Over 300 languages are spoken across the country. Large communities of Chinese, Indian, British, Italian, Greek, and Vietnamese Australians exist. Multiculturalism is official government policy, promoting cultural diversity and inclusion, though racism and Indigenous rights remain ongoing challenges."
+    },
+    {
+      "id": "aus54", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What does the term 'marsupial' mean?",
+      "options": ["An egg-laying mammal", "A mammal that carries its young in a pouch", "A nocturnal mammal", "A flightless bird"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus55", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is Uluru's significance to Aboriginal Australians?",
+      "options": ["It is primarily a tourist attraction with no special significance", "It is a sacred site with deep spiritual and cultural significance to the Anangu people", "It was discovered and named by European explorers", "It is a government-owned national monument"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus56", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is the main threat to the Great Barrier Reef?",
+      "options": ["Overfishing alone", "Coral bleaching caused by rising ocean temperatures due to climate change", "Tourism and visitors", "Oil spills from shipping"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus57", "type": "free_text", "difficulty": "hard",
+      "question": "Explain the significance of the Stolen Generations and the 2008 apology by Prime Minister Kevin Rudd.",
+      "maxPoints": 10,
+      "keywords": ["aboriginal", "stolen generations", "1910", "1970", "forcibly removed", "families", "assimilation", "trauma", "kevin rudd", "2008", "apology", "sorry", "reconciliation", "intergenerational"],
+      "sampleAnswer": "The Stolen Generations refers to Aboriginal and Torres Strait Islander children who were forcibly removed from their families by Australian government policies between approximately 1910 and 1970. The policy's goal was assimilation — to eliminate Aboriginal identity by placing children with white families or in institutions. Many children never saw their families again. This caused severe intergenerational trauma that continues to affect Indigenous communities today. In February 2008, Prime Minister Kevin Rudd delivered a formal apology in parliament, saying 'sorry' for these policies. The apology was an emotionally and historically significant step toward reconciliation, though many argue that practical support for Indigenous communities remains insufficient."
+    },
+    {
+      "id": "aus58", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What does 'mate' mean in Australian English?",
+      "options": ["Enemy", "Stranger", "Friend / buddy", "Boss"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus59", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is the Aboriginal concept of 'Country'?",
+      "options": ["Simply the nation-state of Australia", "A deep spiritual and physical connection to the land, including landscapes, plants, animals, and ancestors", "A term for agricultural farmland", "The Australian federal government"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus60", "type": "free_text", "difficulty": "medium",
+      "question": "Describe the geographic diversity of Australia — from coast to Outback. Give examples of different regions and their characteristics.",
+      "maxPoints": 8,
+      "keywords": ["coast", "outback", "desert", "tropical", "queensland", "reef", "western australia", "tasmania", "alpine", "rainforest", "interior", "population", "85%", "temperate"],
+      "sampleAnswer": "Australia has remarkable geographic diversity. Coastal regions are home to most Australians (85%), with temperate climates, fertile land, and access to water. Queensland's northeast has tropical rainforests and the Great Barrier Reef. The southeast has temperate forests, mountains (Australian Alps), and even alpine areas. Western Australia has diverse landscapes from red desert to a Mediterranean-style coast near Perth. The vast interior (Outback) is arid desert and semi-desert, covering about 70% of the continent, with extreme temperatures and very sparse population. Tasmania (island state) has cool rainforests and unique wildlife. The Northern Territory includes tropical savanna and iconic red rock landscapes like Uluru."
     }
   ]
 }

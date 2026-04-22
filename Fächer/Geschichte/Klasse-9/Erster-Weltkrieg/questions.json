@@ -76,6 +76,241 @@
       "maxPoints": 10,
       "keywords": ["selbstbestimmung", "völkerbund", "meeresfreiheit", "abrüstung", "öffentlich", "frieden", "versailles", "hoffnung"],
       "sampleAnswer": "Wilsons 14 Punkte (Januar 1918) umfassten: 1) Öffentliche Friedensverträge ohne Geheimdiplomatie, 2) Freiheit der Meere, 3) Allgemeine Abrüstung, 4) Selbstbestimmungsrecht der Völker (konkret für Europa), 5) Gründung eines Völkerbundes zur Friedenssicherung. Historische Bedeutung: Sie weckten weltweite Hoffnungen auf eine neue Friedensordnung. Deutschland stützte seinen Waffenstillstandsantrag 1918 auf die 14 Punkte. Im Versailler Vertrag wurden sie jedoch nur teilweise umgesetzt – das schürte Enttäuschung und trug zu späteren Konflikten bei."
+    },
+    {
+      "id": "g13", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was war der Dreibund vor dem Ersten Weltkrieg?",
+      "options": ["Deutschland, Österreich-Ungarn, Russland", "Deutschland, Österreich-Ungarn, Italien", "Deutschland, Frankreich, Italien", "Frankreich, Russland, Großbritannien"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g14", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Die Triple Entente bestand aus welchen Ländern?",
+      "options": ["Frankreich, Russland, Österreich-Ungarn", "Frankreich, Großbritannien, Russland", "Frankreich, Großbritannien, USA", "Frankreich, Russland, Deutschland"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g15", "type": "multiple_choice", "difficulty": "easy",
+      "question": "In welchem Jahr begann der Erste Weltkrieg?",
+      "options": ["1912", "1914", "1916", "1918"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g16", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was bedeutet Militarismus als Ursache des Ersten Weltkriegs?",
+      "options": ["Eine Friedenspolitik durch Stärke", "Die Überbewertung militärischer Stärke und ein Rüstungswettlauf unter europäischen Mächten", "Ein politisches Bündnissystem", "Eine Wirtschaftspolitik"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g17", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wo wurde Erzherzog Franz Ferdinand ermordet?",
+      "options": ["Wien", "Berlin", "Sarajevo", "Belgrad"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "g18", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war die Julikrise 1914?",
+      "options": ["Ein Streik in Deutschland", "Die Wochen zwischen dem Attentat und dem Kriegsausbruch, in denen Diplomatie scheiterte und Bündnisse aktiviert wurden", "Eine Militäroperation", "Eine Wirtschaftskrise"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g19", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was bedeutete das Bündnissystem für den Kriegsausbruch 1914?",
+      "options": ["Es verhinderte den Krieg durch Abschreckung", "Es verwandelte einen regionalen Konflikt in einen gesamteuropäischen Krieg", "Es spielte keine entscheidende Rolle", "Es verlangsamte die Mobilmachung"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g20", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war Imperialismus als Ursache des Ersten Weltkriegs?",
+      "options": ["Der Wunsch nach innenpolitischen Reformen", "Das Streben der Großmächte nach Kolonien, Einfluss und Ressourcen, das zu Rivalitäten und Krisen führte", "Eine religiöse Bewegung", "Eine pazifistische Strömung"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g21", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Durch welches Land wollte Deutschland laut Schlieffenplan Frankreich umgehen?",
+      "options": ["Frankreich direkt", "Belgien", "Niederlande", "Luxemburg"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g22", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Warum scheiterte der Schlieffenplan?",
+      "options": ["Weil Frankreich sofort kapitulierte", "Weil Russland schneller mobilisierte als erwartet und Belgien Widerstand leistete, was Großbritannien eingreifen ließ", "Weil England nicht eingriff", "Wegen schlechten Wetters"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g23", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Wann erstarrte die Westfront zum Stellungskrieg?",
+      "options": ["Im August 1914", "Im Dezember 1914 nach der Marne-Schlacht", "Im Frühjahr 1915", "Im Herbst 1916"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g24", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was sind Schützengräben?",
+      "options": ["Befestigte Kasernierungen hinter der Front", "In die Erde gegrabene Verteidigungsstellungen als Schutz vor Artillerie und Gewehrfeuer", "Offensive Angriffslinien", "Versorgungswege"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g25", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was charakterisierte den Stellungskrieg 1914–1918?",
+      "options": ["Schnelle Gebietsgewinne und bewegliche Front", "Kaum Geländegewinne trotz enormer Verluste – die Front bewegte sich kaum", "Ausschließlich Luftangriffe", "Überwiegend Seekampf"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g26", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre den Schlieffenplan: Was war sein Ziel und warum scheiterte er?",
+      "maxPoints": 6,
+      "keywords": ["zweifrontenkrieg", "frankreich", "russland", "belgien", "marne", "6 wochen", "großbritannien", "scheiterte", "stellungskrieg"],
+      "sampleAnswer": "Der Schlieffenplan sollte den Zweifrontenkrieg vermeiden: Deutschland wollte Frankreich in ca. 6 Wochen durch Belgien besiegen, bevor Russland vollständig mobilisiert war, und danach alle Kräfte gegen Russland wenden. Der Plan scheiterte aus mehreren Gründen: 1) Belgien leistete Widerstand, was Großbritannien veranlasste, in den Krieg einzutreten. 2) Russland mobilisierte schneller als erwartet, sodass Truppen an die Ostfront abgezogen wurden. 3) Deutsche Truppen wurden an der Marne (September 1914) gestoppt. Das Ergebnis war ein jahrelanger Stellungskrieg."
+    },
+    {
+      "id": "g27", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war der Burgfrieden 1914?",
+      "options": ["Ein Waffenstillstand mit Frankreich", "Die innenpolitische Einigung aller deutschen Parteien (auch der SPD) zu Kriegsbeginn – kein innerer Streit für die Kriegsdauer", "Ein Verteidigungsbündnis gegen Russland", "Ein Gefangenenlager"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g28", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Wann und von wem wurde Giftgas erstmals im Ersten Weltkrieg eingesetzt?",
+      "options": ["1914 von Frankreich", "1915 von Deutschland bei Ypern (Belgien)", "1916 von Großbritannien", "1917 von den USA"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g29", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war die Somme-Offensive 1916?",
+      "options": ["Ein britisch-französischer Angriff mit ca. 57.000 britischen Verlusten allein am ersten Tag", "Eine erfolgreiche deutsche Offensive", "Ein Seekampf", "Eine Offensive in Russland"],
+      "correct": 0, "points": 2
+    },
+    {
+      "id": "g30", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was versteht man unter der 'Heimatfront'?",
+      "options": ["Die militärische Frontlinie im Westen", "Die zivile Bevölkerung zu Hause, die die Kriegswirtschaft und Versorgung aufrechterhielt", "Eine geheime Verteidigungslinie", "Soldaten in Reservestellung"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g31", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was ist Kriegspropaganda?",
+      "options": ["Offizielle neutrale Kriegsberichte", "Gezielte Beeinflussung der öffentlichen Meinung zur Unterstützung des Krieges und Aufbau von Feindbildern", "Friedensverhandlungen", "Militärische Taktik"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g32", "type": "free_text", "difficulty": "medium",
+      "question": "Beschreibe den Alltag eines Soldaten im Schützengraben während des Ersten Weltkriegs.",
+      "maxPoints": 6,
+      "keywords": ["schlamm", "ratten", "läuse", "angst", "artillerie", "kälte", "kameradschaft", "propaganda", "realität", "trauma"],
+      "sampleAnswer": "Soldaten lebten wochenlang in engen, schlammigen Schützengräben. Sie litten unter Ratten, Läusen, Kälte, Regen und Schlammfluten. Die ständige Bedrohung durch Artillerie, Scharfschützen und Gasangriffe erzeugte extremen psychischen Stress. Zwischen Kampfphasen gab es lange Warte- und Ruhezeiten. Nahrung war knapp und oft schlecht. Kameradschaft war lebenswichtig. Die Frontreaität widersprach vollständig der patriotischen Kriegspropaganda in der Heimat."
+    },
+    {
+      "id": "g33", "type": "free_text", "difficulty": "medium",
+      "question": "Welche Rolle spielte Propaganda im Ersten Weltkrieg? Erkläre Methoden, Ziele und Wirkung.",
+      "maxPoints": 6,
+      "keywords": ["plakate", "zeitungen", "feindbilder", "mobilisierung", "kriegsbegeisterung", "zensur", "kitchener", "burgfrieden", "kriegsmüdigkeit"],
+      "sampleAnswer": "Propaganda war ein zentrales Kriegsinstrument. Ziele: Kriegsbegeisterung wecken, Rekruten gewinnen, Feindbilder aufbauen, die Heimatfront stärken. Methoden: Plakate (z.B. Kitchener-Poster 'Your Country Needs You'), Zeitungen unter Zensur, patriotische Reden, Filme. Deutschland betonte den 'Verteidigungskrieg', Großbritannien deutsche 'Hunnen'-Gräueltaten in Belgien. Ab 1916/17 verlor Propaganda an Wirkung, weil die Realität des Krieges – Massenverluste, Hunger, Steckrübenwinter – nicht mehr zu verbergen war."
+    },
+    {
+      "id": "g34", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war das Zimmermann-Telegramm (1917)?",
+      "options": ["Ein deutsches Friedensangebot an die USA", "Eine deutsche Geheimbotschaft an Mexiko mit dem Vorschlag, gegen die USA Krieg zu führen (gegen Rückgabe verlorener Gebiete)", "Ein britischer Geheimdienstbericht", "Eine österreichische Kriegserklärung"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g35", "type": "multiple_choice", "difficulty": "easy",
+      "question": "In welchem Jahr traten die USA in den Ersten Weltkrieg ein?",
+      "options": ["1914", "1915", "1917", "1918"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "g36", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war die Oktoberrevolution 1917 in Russland?",
+      "options": ["Ein Militärputsch der Generäle", "Die bolschewistische Revolution unter Lenin, die zur Machtübernahme und zum Ausscheiden Russlands aus dem Krieg führte", "Eine demokratische Wahl", "Ein bäuerlicher Aufstand gegen den Zaren"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g37", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war der uneingeschränkte U-Boot-Krieg, den Deutschland 1917 wieder aufnahm?",
+      "options": ["Angriffe nur auf britische Kriegsschiffe", "Angriffe auf alle Schiffe in der Kriegszone – auch neutrale und zivile Handelsschiffe", "Eine Verteidigungsstrategie gegen die britische Flotte", "Ein Handelsabkommen mit den USA"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g38", "type": "free_text", "difficulty": "medium",
+      "question": "Was machte das Jahr 1917 zum Wendepunkt des Ersten Weltkriegs? Nenne und erkläre mindestens zwei entscheidende Ereignisse.",
+      "maxPoints": 6,
+      "keywords": ["usa", "kriegseintritt", "russland", "revolution", "ressourcen", "soldaten", "erschöpfung", "stellungskrieg", "brest-litowsk"],
+      "sampleAnswer": "1917 gilt als Wendepunkt aus mehreren Gründen: 1) USA erklärten Deutschland den Krieg (April 1917) nach dem uneingeschränkten U-Boot-Krieg und dem Zimmermann-Telegramm – sie brachten 2 Millionen frische Soldaten und enorme Ressourcen. 2) Russland schied nach der bolschewistischen Revolution aus dem Krieg aus (Waffenstillstand, später Brest-Litowsk 1918). 3) Allgemeine Kriegsmüdigkeit auf allen Seiten wuchs nach 3 Jahren Stellungskrieg. Das Gleichgewicht kippte langfristig zugunsten der Alliierten."
+    },
+    {
+      "id": "g39", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Wann und um welche Uhrzeit endete der Erste Weltkrieg offiziell durch Waffenstillstand?",
+      "options": ["1. November 1918", "11. November 1918 um 11 Uhr", "25. Dezember 1918", "28. Juni 1919"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g40", "type": "multiple_choice", "difficulty": "easy",
+      "question": "In welchem Schloss wurde der Friedensvertrag nach dem Ersten Weltkrieg unterzeichnet?",
+      "options": ["Schloss Schönbrunn (Wien)", "Schloss Versailles (Frankreich)", "Buckingham Palace (London)", "Schloss Sanssouci (Potsdam)"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g41", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was ist der Kriegsschuldparagraph (Artikel 231) des Versailler Vertrags?",
+      "options": ["Ein Versprechen Deutschlands für künftigen Frieden", "Die Klausel, die Deutschland und seinen Verbündeten die alleinige Schuld am Krieg zuschrieb und Reparationen begründete", "Ein Handelsvertrag", "Eine Grenzregelung zwischen Polen und Deutschland"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g42", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Welche Gebiete verlor Deutschland durch den Versailler Vertrag?",
+      "options": ["Nur Bayern", "Elsass-Lothringen, alle Kolonien, den Polnischen Korridor (Westpreußen) und weitere Gebiete", "Nur Schlesien", "Keine Gebiete"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g43", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war die Dolchstoßlegende?",
+      "options": ["Ein tatsächlicher Sabotageakt an der Front", "Die falsche Behauptung rechter Kreise, Deutschland sei im Krieg von inneren Feinden (Juden, Sozialisten) verraten worden", "Ein militärischer Rückzug", "Eine Verschwörungstheorie der Alliierten"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g44", "type": "multiple_choice", "difficulty": "hard",
+      "question": "Wie hoch wurden die deutschen Reparationszahlungen im Versailler Vertrag festgesetzt?",
+      "options": ["5 Milliarden Goldmark", "132 Milliarden Goldmark", "50 Milliarden Goldmark", "Unbegrenzt"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g45", "type": "free_text", "difficulty": "medium",
+      "question": "Erkläre die wichtigsten Bestimmungen des Versailler Vertrags (1919) und ihre Auswirkungen auf Deutschland.",
+      "maxPoints": 8,
+      "keywords": ["kriegsschuld", "reparationen", "gebietsabtretungen", "militär", "100000", "kolonien", "elsass", "lothringen", "demütigung", "weimarer", "nationalismus"],
+      "sampleAnswer": "Der Versailler Vertrag (Juni 1919) enthielt für Deutschland harte Bedingungen: 1) Kriegsschuld: Artikel 231 schrieb Deutschland die alleinige Kriegsverantwortung zu. 2) Reparationen: 132 Milliarden Goldmark. 3) Gebietsabtretungen: Elsass-Lothringen an Frankreich, Posen und Westpreußen an Polen, alle Kolonien. 4) Militärbeschränkungen: Heer max. 100.000 Mann, keine Panzer, keine Luftwaffe, keine U-Boote. Auswirkungen: tiefe Demütigung der deutschen Bevölkerung, wirtschaftliche Not durch Reparationen, politische Instabilität der Weimarer Republik – und ein Nährboden für den Aufstieg des Nationalsozialismus."
+    },
+    {
+      "id": "g46", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Was folgte auf das Kaiserreich in Deutschland nach der Niederlage 1918?",
+      "options": ["Die DDR", "Die Weimarer Republik", "Das Dritte Reich", "Die Bundesrepublik Deutschland"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g47", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war die Novemberrevolution 1918 in Deutschland?",
+      "options": ["Ein Militärputsch der Generäle", "Ein Volksaufstand mit Matrosenaufstand, Abdankung des Kaisers Wilhelm II. und Ausrufung der Republik", "Eine kommunistische Revolution wie in Russland", "Ein geordneter demokratischer Regierungswechsel"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "g48", "type": "free_text", "difficulty": "hard",
+      "question": "Vergleiche die Ziele von Wilsons 14 Punkten mit dem tatsächlichen Versailler Vertrag. Was lief anders als erhofft?",
+      "maxPoints": 8,
+      "keywords": ["selbstbestimmung", "reparationen", "kriegsschuld", "14 punkte", "enttäuschung", "wilson", "clemenceau", "lloyd george", "revanche", "dolchstoß"],
+      "sampleAnswer": "Wilson wollte mit seinen 14 Punkten eine gerechte Nachkriegsordnung: öffentliche Verträge, Selbstbestimmungsrecht der Völker, keine Straffrieden, Völkerbund. Deutschland erhoffte sich einen 'Verständigungsfrieden' auf dieser Grundlage. Stattdessen setzten Frankreich (Clemenceau) und Großbritannien (Lloyd George) Vergeltungsmaßnahmen durch: Kriegsschuldparagraph, harte Reparationen (132 Mrd.), massive Gebietsabtretungen, Militärbeschränkungen. Deutsche Bevölkerungsgruppen kamen unter Fremdherrschaft (Sudetenland, Polnischer Korridor). Die Enttäuschung schürte in Deutschland Nationalismus, Revanchismus und letztlich den Aufstieg Hitlers."
+    },
+    {
+      "id": "g49", "type": "free_text", "difficulty": "hard",
+      "question": "Was sind die wichtigsten langfristigen Folgen des Ersten Weltkriegs? Nenne mindestens vier und erkläre ihre Bedeutung.",
+      "maxPoints": 10,
+      "keywords": ["weimar", "versailles", "nationalismus", "wirtschaft", "spanische grippe", "revolution", "osmanisch", "usa", "weltmacht", "hitler", "zweiter weltkrieg", "neue staaten"],
+      "sampleAnswer": "1) Politisch: Untergang von vier Kaiserreichen (Deutsches, Österreichisch-Ungarisches, Osmanisches, Russisches Reich); Entstehung neuer Nationalstaaten in Europa. 2) Versailles als Ursache von WW2: Die harten Bedingungen schufen wirtschaftliche Not und politische Instabilität, die Hitlers Aufstieg ermöglichten. 3) USA zur Weltmacht: Europas Schwächung stärkte die USA wirtschaftlich und politisch. 4) Gesundheit: Spanische Grippe 1918–1920 tötete 50–100 Millionen Menschen weltweit. 5) Gesellschaft: Massenverluste veränderten Europa dauerhaft; Frauen erhielten in vielen Ländern das Wahlrecht. 6) Naher Osten: Britisch-französische Mandatsgebiete und die Balfour-Erklärung legten Grundsteine heutiger Konflikte."
+    },
+    {
+      "id": "g50", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Was war der Völkerbund, der nach dem Ersten Weltkrieg gegründet wurde?",
+      "options": ["Ein europäisches Militärbündnis", "Eine internationale Organisation zur Friedenssicherung – Vorläufer der Vereinten Nationen", "Ein Wirtschaftsverband der Siegermächte", "Ein Bündnis der Alliierten gegen Deutschland"],
+      "correct": 1, "points": 2
     }
   ]
 }
