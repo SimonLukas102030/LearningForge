@@ -48,7 +48,9 @@ export async function registerWithEmail(email, password, displayName) {
 
 // ── Profil aktualisieren ─────────────────
 export async function updateUserProfile(uid, displayName, photoURL) {
-  await _auth.currentUser.updateProfile({ displayName, photoURL: photoURL || null });
+  // Firebase Auth photoURL hat ein Limit — große data-URLs (PNG) nur in Firestore speichern
+  const authPhoto = photoURL && photoURL.length < 2000 ? photoURL : null;
+  await _auth.currentUser.updateProfile({ displayName, photoURL: authPhoto });
   await _db.collection('users').doc(uid).set(
     { name: displayName, photoURL: photoURL || null },
     { merge: true }

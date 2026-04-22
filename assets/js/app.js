@@ -273,11 +273,11 @@ function renderNav(breadcrumbs = []) {
           </svg>
         </button>
         <div class="user-chip" id="userChip" onclick="window.LF.toggleUserMenu(event)">
-          <div class="avatar">${currentUser.photoURL
-            ? `<img src="${currentUser.photoURL}" alt="">`
-            : (currentUser.displayName || 'U')[0].toUpperCase()
+          <div class="avatar">${(userData?.photoURL || currentUser.photoURL)
+            ? `<img src="${userData?.photoURL || currentUser.photoURL}" alt="">`
+            : (userData?.name || currentUser.displayName || 'U')[0].toUpperCase()
           }</div>
-          <span class="uname">${currentUser.displayName?.split(' ')[0] || 'Nutzer'}</span>
+          <span class="uname">${(userData?.name || currentUser.displayName)?.split(' ')[0] || 'Nutzer'}</span>
           <div class="user-dropdown">
             <a onclick="location.hash='#/profil'">Profil</a>
             <a onclick="location.hash='#/statistiken'">Statistiken</a>
@@ -1282,6 +1282,27 @@ function _resizeToDataUrl(file) {
   });
 }
 
+function _resizeProfileImage(file, maxPx = 512) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      if (img.naturalWidth > maxPx || img.naturalHeight > maxPx) {
+        reject(new Error(`Bild muss kleiner als ${maxPx}×${maxPx} px sein (hochgeladen: ${img.naturalWidth}×${img.naturalHeight}).`));
+        return;
+      }
+      const c = document.createElement('canvas');
+      c.width  = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Bild konnte nicht geladen werden.')); };
+    img.src = url;
+  });
+}
+
 // ── Einstellungen-Seite ──────────────────
 function renderSettings() {
   const subjects = Object.values(structure || {});
@@ -1816,25 +1837,56 @@ function renderProfile() {
 
       <div class="profile-grid">
         <div class="profile-info-card">
-          <div class="profile-avatar-large" id="profileAvatarPreview">${
-            currentUser.photoURL
-              ? `<img src="${currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
-              : initial
-          }</div>
-          <div class="avatar-picker">
-            ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.pickEmoji('${e}')" title="${e}">${e}</button>`).join('')}
+
+          <!-- Ansicht -->
+          <div id="profileView">
+            <div class="profile-avatar-large">${
+              (userData?.photoURL || currentUser.photoURL)
+                ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+                : initial
+            }</div>
+            <div class="profile-name">${userData?.name || currentUser.displayName || 'Nutzer'}</div>
+            <div class="profile-email">${currentUser.email}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+              <button class="btn btn-secondary btn-sm" onclick="window.LF.profileEditOpen()">Bearbeiten</button>
+              <button class="btn btn-secondary btn-sm" onclick="window.LF.doLogout()">Abmelden</button>
+              <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Statistiken zur&uuml;cksetzen</button>
+            </div>
           </div>
-          <div class="profile-edit-row">
-            <input class="form-input profile-name-input" id="profileNameInput"
-                   value="${(currentUser.displayName || '').replace(/"/g,'&quot;')}"
-                   placeholder="Anzeigename" maxlength="40">
+
+          <!-- Bearbeitungsformular (versteckt) -->
+          <div id="profileEditForm" style="display:none;width:100%">
+            <div class="profile-avatar-large" id="profileAvatarPreview">${
+              (userData?.photoURL || currentUser.photoURL)
+                ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+                : initial
+            }</div>
+
+            <!-- Bild hochladen -->
+            <label class="btn btn-ghost btn-sm" style="margin:6px 0;cursor:pointer" title="PNG hochladen (max. 512&times;512 px)">
+              &#x1F4C1; Bild hochladen
+              <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
+                     onchange="window.LF.handleProfileFile(this)">
+            </label>
+
+            <!-- Emoji-Picker -->
+            <div class="avatar-picker">
+              ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.pickEmoji('${e}',event)" title="${e}">${e}</button>`).join('')}
+            </div>
+
+            <!-- Name -->
+            <div class="profile-edit-row">
+              <input class="form-input profile-name-input" id="profileNameInput"
+                     value="${(userData?.name || currentUser.displayName || '').replace(/"/g,'&quot;')}"
+                     placeholder="Anzeigename" maxlength="40">
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-primary btn-sm" id="profileSaveBtn" onclick="window.LF.saveProfile()">Speichern</button>
+              <button class="btn btn-ghost btn-sm" onclick="window.LF.profileEditClose()">Abbrechen</button>
+            </div>
           </div>
-          <button class="btn btn-primary btn-sm" id="profileSaveBtn" onclick="window.LF.saveProfile()">Speichern</button>
-          <div class="profile-email" style="margin-top:8px">${currentUser.email}</div>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
-            <button class="btn btn-secondary btn-sm" onclick="window.LF.doLogout()">Abmelden</button>
-            <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Statistiken zur&uuml;cksetzen</button>
-          </div>
+
         </div>
         <div class="grades-overview">
           <h3>Ø Noten nach Fach</h3>
@@ -5764,14 +5816,41 @@ window.LF.copyShareLink = () => {
 window.LF.openTutor = () => window.LF.tutorToggle();
 
 // ── Profil bearbeiten ────────────────────
-let _selectedEmojiUrl = null;
+let _pendingProfilePhotoURL = null;
 
-window.LF.pickEmoji = (emoji) => {
-  _selectedEmojiUrl = emojiToPhotoURL(emoji);
+window.LF.profileEditOpen = () => {
+  _pendingProfilePhotoURL = null;
+  document.getElementById('profileView').style.display     = 'none';
+  document.getElementById('profileEditForm').style.display = '';
+};
+
+window.LF.profileEditClose = () => {
+  _pendingProfilePhotoURL = null;
+  document.getElementById('profileView').style.display     = '';
+  document.getElementById('profileEditForm').style.display = 'none';
+};
+
+window.LF.pickEmoji = (emoji, ev) => {
+  _pendingProfilePhotoURL = emojiToPhotoURL(emoji);
   const preview = document.getElementById('profileAvatarPreview');
-  if (preview) preview.innerHTML = `<img src="${_selectedEmojiUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
+  if (preview) preview.innerHTML = `<img src="${_pendingProfilePhotoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
   document.querySelectorAll('.avatar-emoji-btn').forEach(b => b.classList.remove('selected'));
-  event.currentTarget?.classList.add('selected');
+  ev?.currentTarget?.classList.add('selected');
+};
+
+window.LF.handleProfileFile = async (input) => {
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const dataUrl = await _resizeProfileImage(file, 512);
+    _pendingProfilePhotoURL = dataUrl;
+    const preview = document.getElementById('profileAvatarPreview');
+    if (preview) preview.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
+    document.querySelectorAll('.avatar-emoji-btn').forEach(b => b.classList.remove('selected'));
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+  input.value = '';
 };
 
 window.LF.saveProfile = async () => {
@@ -5783,19 +5862,18 @@ window.LF.saveProfile = async () => {
   btn.disabled    = true;
   btn.textContent = 'Speichern…';
 
-  const photoURL = _selectedEmojiUrl ?? currentUser.photoURL ?? null;
+  const photoURL = _pendingProfilePhotoURL ?? userData?.photoURL ?? currentUser.photoURL ?? null;
   try {
     await updateUserProfile(currentUser.uid, newName, photoURL);
-    // Lokalen State aktualisieren ohne Reload
-    userData.name    = newName;
+    userData.name     = newName;
     userData.photoURL = photoURL;
+    _pendingProfilePhotoURL = null;
     showToast('Profil gespeichert!', 'success');
-    _selectedEmojiUrl = null;
     renderProfile();
   } catch(e) {
     console.error('[saveProfile]', e);
     showToast('Fehler beim Speichern.', 'error');
+    btn.disabled    = false;
+    btn.textContent = 'Speichern';
   }
-  btn.disabled    = false;
-  btn.textContent = 'Speichern';
 };
