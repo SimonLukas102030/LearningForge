@@ -55,6 +55,8 @@ Geschlossene Bereiche für gemeinsames Lernen und interne Ranglisten.
 * **Rollen:** Der Ersteller einer Gruppe wird Gruppen-Admin.
 * **Limits:** Standard-Nutzer können maximal 2 Gruppen erstellen.
 * **Features:** Exklusive Themen-Bereiche und Gruppen-interne Leaderboards basierend auf Mitglieder-UIDs.
+* **Custom Content:** Die Teammitglieder können ohne erlaubniss vom Admin, content für die Klasse raus bringen. Diese ist nur von den Anderen Klassenmitgliedern erreichbar.
+*  **Neue Page:** Es sollte einen neunen gruppen tab geben. Dort sieht man die anderen Mitglieder, und die Gruppen-content. 
 
 ## 7. Vokabeltrainer-Modul
 Spezialisierter Modus für Sprachen, integriert in die bestehende Test-Logik.
