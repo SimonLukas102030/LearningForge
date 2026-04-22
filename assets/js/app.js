@@ -27,6 +27,29 @@ let builderState       = null;
 let _visualDragIdx     = null;
 let customTopicData    = null;
 let loginBanError      = false;
+let _navRO             = null;
+
+function initNavCollapse() {
+  if (_navRO) { _navRO.disconnect(); _navRO = null; }
+  const navbar = document.querySelector('.navbar');
+  if (!navbar) return;
+
+  const check = () => {
+    // Remove class first so we can measure natural content width
+    navbar.classList.remove('navbar--collapsed');
+    const brand  = navbar.querySelector('.nav-brand');
+    const center = navbar.querySelector('.nav-center');
+    const right  = navbar.querySelector('.nav-right');
+    if (!brand || !center || !right) return;
+    // 48 = left+right padding, 32 = safety buffer
+    const needed = brand.offsetWidth + center.scrollWidth + right.offsetWidth + 80;
+    if (needed > navbar.offsetWidth) navbar.classList.add('navbar--collapsed');
+  };
+
+  _navRO = new ResizeObserver(check);
+  _navRO.observe(navbar);
+  check();
+}
 
 // ── Theme ────────────────────────────────
 export function initTheme() {
@@ -67,6 +90,10 @@ export function startApp() {
     document.getElementById('userChip')?.classList.remove('open');
     document.getElementById('mobileNav')?.classList.remove('open');
   });
+
+  // Re-init nav collapse whenever the app re-renders (navbar is replaced)
+  new MutationObserver(() => initNavCollapse())
+    .observe(document.getElementById('app'), { childList: true });
 }
 
 // ── Router ───────────────────────────────
