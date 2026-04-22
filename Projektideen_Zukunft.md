@@ -1,85 +1,91 @@
-# Zukünftige Projektideen & Features
+# Technical Roadmap: Plattform-Erweiterungen
 
-Dieses Dokument enthält verschiedene neue Konzepte und Funktionsvorschläge, die für eine zukünftige Umsetzung geplant sind.
+Dieses Dokument beschreibt die funktionalen und technischen Spezifikationen für die kommenden Entwicklungsphasen.
 
-## 1. User-Content & Community-Integration
-Um die Plattform dynamischer zu gestalten, sollen Nutzer eigene Inhalte beisteuern können:
-* **Eigene Uploads:** Nutzer können eigene Fächer, Themen oder Klassen hochladen.
-* **Persönliche Verfügbarkeit:** Diese Inhalte sind primär für den jeweiligen User in seinem Account verfügbar.
-* **Datenhaltung:** Die Speicherung erfolgt strukturiert in einer Google-Datenbank.
-* **Veröffentlichungs-Requests:** * User können beantragen, dass ihr Material auf der Hauptseite für alle sichtbar wird.
-    * Diese Anfragen werden zur Prüfung an das Admin-Konto weitergeleitet.
+---
 
-## 2. Administrations-System (Admin-Panel)
-Zur Verwaltung der Plattform wird ein dedizierter Administrationsbereich implementiert.
-* **Admin-Account:** simonkoper27@gmail.com
-* **Moderations-Tools:**
-    * **Leaderboard-Management:** Fähigkeit, Nutzer vom Leaderboard zu entfernen.
-    * **User-Sperren:** Komplette Blockierung von Accounts von der Seite.
-* **Content-Review:** Der Admin kann die vorgeschlagenen Themen oder Fächer der User annehmen oder ablehnen.
+## 1. User Content & Moderation (Firestore/Backend)
+Ziel: Umstellung von statischen Inhalten auf ein hybrides System (Global + User-generated).
+
+### 1.1 User-Uploads
+* **Scoped Access:** Inhalte (Fächer/Themen) erhalten ein `ownerID`-Feld.
+* **Visibility-Status:** Einführung eines Enums `visibility: ["private", "pending", "public"]`. Standard ist `private`.
+* **Request-Workflow:** User löst Trigger aus, der `visibility` auf `pending` setzt. Der Admin erhält eine Benachrichtigung über die Anfrage.
+
+### 1.2 Admin-Panel
+* **Permissions:** Zugriff exklusiv für `simonkoper27@gmail.com`.
+* **Funktionen:**
+    * **Content-Review:** Liste aller `pending` Dokumente mit Approve/Reject-Logik.
+    * **User-Management:** Möglichkeit, UIDs komplett zu sperren (Blacklist).
+    * **Leaderboard-Moderation:** Manuelles Entfernen von unangebrachtem Content oder Fake-Scores.
+
+---
+
+## 2. Gamification & Score-Logik
+Ziel: Umstellung von Durchschnittsberechnung auf kumulative Punkte mit zeitbasierten Multiplikatoren.
+
+### 2.1 Kumulative Punkteberechnung
+Die Gesamtpunktzahl ist die Summe aller erreichten Punkte ($\sum$). Die Testdauer dient als Gewichtungsfaktor.
+
+| Test-Dauer | Multiplikator | Basis-Punkte (Beispiel) |
+| :--- | :--- | :--- |
+| 5 Min | x 1.0 | 1 - 15 p |
+| 10 Min | x 1.5 | 1.5 - 22.5 p |
+| 15 Min | x 2.0 | 2 - 30 p |
+| 30 Min | x 2.5 | 2.5 - 37.5 p |
+| 90 Min | x 4.0 | 4 - 60 p |
+
+* **Implementierung:** Die `Test-Config` erhält ein Feld `durationCategory`. Das Backend berechnet beim Submit: `finalScore = basePoints * multiplier`.
+* **UI:** Im Profil und in der Statistik-Komponente wird primär der `totalScore` angezeigt.
+
+---
 
 ## 3. Visual Content Builder
-Ein zentrales Feature wird der intuitive Builder, der es ermöglicht, ohne Programmierkenntnisse neue Inhalte zu erstellen.
-* **UI-Fokus:** Erstellung von Fächern und Themen über eine einfache Benutzeroberfläche statt durch Schreiben von Code.
-* **Presets & Design:**
-    * Vordefinierte Elemente wie "in Kasten" mit Optionen für Farben.
-    * Einfache Tools für Trennlinien und weitere Gestaltungsmittel.
-* **Flexibilität:** * Fokus auf den visuellen Builder für die breite Masse.
-    * Optionaler Button für direkten HTML-Zugriff für fortgeschrittene Anpassungen.
+Ein intuitives Tool zur Erstellung von Lerninhalten ohne Code-Eingabe.
 
- ## 4. Punkte Management
- Die Punkte sollten addiert werden. Nicht der Durchschnitt sein. Also, wenn jemand 15p in test 1 hat und 10 in test 2, dann hat er 25 Punkte. Das sollte der User auch schnell sehen können, wenn er Auf profil oder Statistik geht. Außerdem sollte die Testlänge mitspielen. Also ein 5min test gibt 1 - 15 punkte, ein 10 min test das 1.5x und das 15min 2x und 30min 2.5x und 90 4x. Außerdem, sind es für die Zeit zu wenig Aufgaben / Fragen. Es muss viel länger sein. 
+* **UI-Komponenten:**
+    * **Container-System:** Auswahlboxen für Layout-Elemente (z. B. farbige Kästen).
+    * **Styling-Tools:** Farbwähler für Boxen, einfache Trennlinien-Generatoren.
+* **Hybrid-Ansatz:** Ein Toggle-Switch ermöglicht den Wechsel zwischen der visuellen Oberfläche und direktem HTML-Code-Zugriff für fortgeschrittene User.
 
- ## 5. benutzerdefinierte Icons 
- Die Icons bei den Fächern soll der Nutzer für sich ändern können. Also er kann bei Englisch z.B.statt einer USA-flagge eine GB-Flagge nehmen. Die geänderten Icons sollte nur der Nutzer, der es geändert hat sehen. Die neuen Icons sollten per Googledatabase gespeichert weden.
+---
 
-# 6. Klassen (Gruppen-System)
+## 4. Personalisierung & Gruppen (Klassen)
+### 4.1 Custom Icons
+* **Local Override:** User können Icons pro Fach (z. B. Flaggen) individuell anpassen.
+* **Persistenz:** Speicherung der gewählten Icon-ID/URL in der `user_settings` Collection der Google Database. Die Änderung ist nur für die jeweilige UID sichtbar.
 
-Das Klassensystem ermöglicht es Nutzern, sich in geschlossenen Gruppen zu organisieren, um gemeinsam Inhalte zu verwalten und den Lernfortschritt zu vergleichen.
+### 4.2 Klassen-System (Groups)
+* **Rollen:** Jeder Ersteller einer Gruppe ist automatisch Gruppen-Admin.
+* **Limitierung:** * Standard-User: Max. 2 Gruppen.
+    * System-Admin: Unbegrenzt.
+* **Funktionen:**
+    * Eigener Reiter (Tab) pro Gruppe in der Sidebar/Main-UI.
+    * **Kollaboration:** Jedes Mitglied kann Content hinzufügen (Visibility: Group-only).
+    * **Group-Leaderboard:** Ranking ausschließlich innerhalb der Gruppen-Mitglieder.
 
-## 6.1 Rollen und Verwaltung
-* **Erstellung:** Jeder Nutzer kann eigene Gruppen erstellen und wird automatisch zum **Admin** dieser Gruppe.
-* **Einladungen:** Admins können andere User in ihre Gruppen einladen.
-* **Limits:**
-    * Standard-Nutzer: Maximal **2 Gruppen**.
-    * System-Admins: Unbegrenzte Anzahl an Gruppen.
+---
 
-## 6.2 Gruppen-Features
-* **Personalisierung:**
-    * Frei wählbarer Gruppenname.
-    * Gruppen-Icon (Anforderung: 64x64px, PNG).
-* **Kollaboration:**
-    * Alle Mitglieder können neue **Themen und Fächer** hinzufügen.
-    * Erstellte Inhalte sind exklusiv innerhalb der Gruppe sichtbar.
-    * Keine Bestätigung durch den Admin für neue Inhalte erforderlich.
+## 5. Vokabeltrainer-Modul
+Spezialisiertes Modul für Fremdsprachen, gesteuert über `subjects-config.json`.
 
-## 6.3 Interface und Gamification
-* **Tab "Gruppe X":** Jede Gruppe erhält einen eigenen Reiter in der Benutzeroberfläche.
-* **Leaderboards:** Interne Ranglisten basierend auf der Aktivität (wer hat bereits wie viel erledigt).
+### 5.1 Datenstruktur & Abfrage
+Jede Lektion basiert auf einer JSON-Struktur, die Begriffe, Grammatik-Attribute und Beispielsätze enthält.
 
-# 7. Vokabeltrainer
+* **Input-Methode:** 100% Freitext (kein Multiple-Choice).
+* **Fachspezifische Validierung:**
+    * **Englisch:** Prüfung auf `translation`.
+    * **Latein:** Kombinierte Prüfung von `translation` + `grammar` (z. B. Genitiv, Genus, Kasus).
 
-Das Modul "Vokabeltrainer" dient als spezialisierter Bereich für Fremdsprachen (z. B. Latein, Englisch), um systematisches Lernen und Abprüfen von Wortschatz und Grammatik zu ermöglichen.
+### 5.2 Export & Druck
+* **PDF-Generierung:** Funktion zum Drucken von Tests.
+* **Optionen:**
+    1. **Blanko-Blatt:** Exportiert den Test zum physischen Ausfüllen.
+    2. **Ergebnis-Blatt:** Exportiert den bearbeiteten Test inklusive Note und Korrektur.
 
-## 7.1 Konfiguration und Struktur
-* **Aktivierung:** Der Trainer ist als separater Bereich neben der Jahresübersicht verfügbar. Die Aktivierung erfolgt pro Fach über die `Fächer/subjects-config.json`.
-* **Datenstruktur:** * Fächer enthalten verschiedene **Lektionen** in dem Thema Vokabeln.
-    * Jede Lektion basiert auf einer dedizierten `.json`-Datei, die folgende Kategorien umfasst:
-        * **Vokabel:** Das Wort in der Fremdsprache und die Zielübersetzung.
-        * **Grammatik:** Zusatzinformationen (z. B. Genus, Kasus, Stammformen).
-        * **Übersetzung:** Kontextuelle Beispielsätze oder alternative Bedeutungen.
+---
 
-## 7.2 Lern- und Testmodus
-* **Lernmodus:** Nutzer können Vokabeln der gewählten Lektion Schritt für Schritt durchgehen.
-* **Testmodus:**
-    * Dynamische Abfrage einer Stichprobe (Anzahl abhängig von der Gesamtlänge der Lektion).
-    * **Eingabemethode:** Ausschließlich Freitextfelder (kein Multiple-Choice).
-    * **Sprachspezifische Logik:**
-        * *Englisch:* Direkte Abfrage der Übersetzung.
-        * *Latein:* Kombinierte Abfrage von Übersetzung und Grammatik (Beispiel: `Senatoris` -> Antwort: `Hausherr, Gen. Sg. m.`).
-    * **Validierung:** Der Abgleich erfolgt automatisiert gegen die hinterlegten Werte in der Lektions-JSON.
-
-## 7.3 Auswertung und Export
-* **Benotung:** Nach Abschluss des Tests wird basierend auf der Fehlerquote automatisch eine Note generiert.
-* **PDF-Export:** Der Test (entweder blanko als Übungsblatt oder das Ergebnis) kann zur physischen Bearbeitung oder Archivierung als **PDF** gedruckt werden. Es kann auch vorm Test gedruckt werden, um als Physischer Test zu fungieren.
-
+### Umsetzungshinweise für den Developer
+1. **Database:** Erstellung einer `groups` Collection und Erweiterung der `users` Collection um `custom_icons`.
+2. **Logic:** Implementierung der Multiplikator-Tabelle in der `ScoreService`-Klasse.
+3. **UI:** Integration des Visual Builders als neues Admin/User-Tool mit Preview-Modus.
