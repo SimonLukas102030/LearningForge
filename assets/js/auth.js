@@ -14,7 +14,7 @@ export function initFirebase() {
   _auth = firebase.auth();
   _db   = firebase.firestore();
   // Offline-Persistence aktivieren (F-12)
-  _db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+  _db.enablePersistence().catch(err => {
     if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
       console.warn('[Firestore persistence]', err);
     }
