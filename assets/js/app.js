@@ -1762,16 +1762,28 @@ window.LF = {
 
   // ── Builder ──────────────────────────────
   builderNext: () => {
-    const s = builderState;
-    if (s.step === 1) {
-      if (!s.fach.trim() || !s.klasse.trim() || !s.thema.trim()) {
+    if (builderState.step === 1) {
+      builderState.fach        = document.getElementById('bFach')?.value.trim()   || '';
+      builderState.klasse      = document.getElementById('bKlasse')?.value.trim() || '';
+      builderState.thema       = document.getElementById('bThema')?.value.trim()  || '';
+      builderState.description = document.getElementById('bDesc')?.value.trim()   || '';
+      if (!builderState.fach || !builderState.klasse || !builderState.thema) {
         showToast('Bitte Fach, Klasse und Thema ausfüllen.', 'error'); return;
       }
+    }
+    if (builderState.step === 2) {
+      builderState.content = document.getElementById('builderContentInput')?.value || '';
     }
     builderState.step++;
     renderBuilder();
   },
-  builderPrev: () => { builderState.step--; renderBuilder(); },
+  builderPrev: () => {
+    if (builderState.step === 2) {
+      builderState.content = document.getElementById('builderContentInput')?.value || '';
+    }
+    builderState.step--;
+    renderBuilder();
+  },
 
   builderInsert: (type) => {
     const ta = document.getElementById('builderContentInput');
