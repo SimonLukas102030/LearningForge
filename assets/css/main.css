@@ -3523,3 +3523,33 @@ input, textarea, select { font-family: var(--font); }
   .share-link-card { flex-direction: column; align-items: flex-start; }
   .share-link-input { width: 100%; }
 }
+
+/* ── Profil-Bearbeitung ── */
+.avatar-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  margin: 10px 0 8px;
+  max-width: 200px;
+}
+.avatar-emoji-btn {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 3px 4px;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+  transition: border-color .15s, background .15s;
+}
+.avatar-emoji-btn:hover  { background: var(--hover-bg, var(--border)); }
+.avatar-emoji-btn.selected { border-color: var(--accent); background: var(--accent-light, #eef2ff); }
+.profile-edit-row { width: 100%; margin: 6px 0 4px; }
+.profile-name-input {
+  width: 100%;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 6px 10px;
+}

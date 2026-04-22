@@ -4,7 +4,7 @@
 
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile } from './auth.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
 import {
@@ -60,6 +60,14 @@ function updateOnlineStatus(isOnline) {
       showToast('Wieder online ✓', 'success');
     }
   }
+}
+
+const AVATAR_EMOJIS = ['🐼','🦁','🐯','🦊','🐻','🐨','🐸','🦋','🐺','🦄','🐙','🦑','🐳','🦅','🐉','🌟','🔥','⚡','🎮','🚀','🎭','🎨','🏆','💡'];
+
+function emojiToPhotoURL(emoji) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><text y="32" font-size="30" text-anchor="middle" x="20">${emoji}</text></svg>`;
+  try { return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))); }
+  catch { return null; }
 }
 
 // Gibt bestPoints/bestMaxPoints aus altem und neuem Format zurück
@@ -1808,17 +1816,24 @@ function renderProfile() {
 
       <div class="profile-grid">
         <div class="profile-info-card">
-          <div class="profile-avatar-large">${
+          <div class="profile-avatar-large" id="profileAvatarPreview">${
             currentUser.photoURL
               ? `<img src="${currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
               : initial
           }</div>
-          <div class="profile-name">${currentUser.displayName || 'Nutzer'}</div>
-          <div class="profile-email">${currentUser.email}</div>
-          <br>
-          <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="avatar-picker">
+            ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.pickEmoji('${e}')" title="${e}">${e}</button>`).join('')}
+          </div>
+          <div class="profile-edit-row">
+            <input class="form-input profile-name-input" id="profileNameInput"
+                   value="${(currentUser.displayName || '').replace(/"/g,'&quot;')}"
+                   placeholder="Anzeigename" maxlength="40">
+          </div>
+          <button class="btn btn-primary btn-sm" id="profileSaveBtn" onclick="window.LF.saveProfile()">Speichern</button>
+          <div class="profile-email" style="margin-top:8px">${currentUser.email}</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
             <button class="btn btn-secondary btn-sm" onclick="window.LF.doLogout()">Abmelden</button>
-            <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Statistiken zurücksetzen</button>
+            <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Statistiken zur&uuml;cksetzen</button>
           </div>
         </div>
         <div class="grades-overview">
@@ -5747,3 +5762,40 @@ window.LF.copyShareLink = () => {
 
 // ── KI-Tutor-Knopf in Themenansicht ──────
 window.LF.openTutor = () => window.LF.tutorToggle();
+
+// ── Profil bearbeiten ────────────────────
+let _selectedEmojiUrl = null;
+
+window.LF.pickEmoji = (emoji) => {
+  _selectedEmojiUrl = emojiToPhotoURL(emoji);
+  const preview = document.getElementById('profileAvatarPreview');
+  if (preview) preview.innerHTML = `<img src="${_selectedEmojiUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
+  document.querySelectorAll('.avatar-emoji-btn').forEach(b => b.classList.remove('selected'));
+  event.currentTarget?.classList.add('selected');
+};
+
+window.LF.saveProfile = async () => {
+  const nameInput = document.getElementById('profileNameInput');
+  const btn       = document.getElementById('profileSaveBtn');
+  const newName   = nameInput?.value?.trim();
+  if (!newName) { showToast('Name darf nicht leer sein.', 'error'); return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Speichern…';
+
+  const photoURL = _selectedEmojiUrl ?? currentUser.photoURL ?? null;
+  try {
+    await updateUserProfile(currentUser.uid, newName, photoURL);
+    // Lokalen State aktualisieren ohne Reload
+    userData.name    = newName;
+    userData.photoURL = photoURL;
+    showToast('Profil gespeichert!', 'success');
+    _selectedEmojiUrl = null;
+    renderProfile();
+  } catch(e) {
+    console.error('[saveProfile]', e);
+    showToast('Fehler beim Speichern.', 'error');
+  }
+  btn.disabled    = false;
+  btn.textContent = 'Speichern';
+};

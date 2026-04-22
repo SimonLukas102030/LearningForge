@@ -13,12 +13,6 @@ export function initFirebase() {
   }
   _auth = firebase.auth();
   _db   = firebase.firestore();
-  // Offline-Persistence aktivieren (F-12)
-  _db.enablePersistence().catch(err => {
-    if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
-      console.warn('[Firestore persistence]', err);
-    }
-  });
 }
 
 export const auth = () => _auth;
@@ -50,6 +44,15 @@ export async function registerWithEmail(email, password, displayName) {
     grades:    {}
   });
   return cred;
+}
+
+// ── Profil aktualisieren ─────────────────
+export async function updateUserProfile(uid, displayName, photoURL) {
+  await _auth.currentUser.updateProfile({ displayName, photoURL: photoURL || null });
+  await _db.collection('users').doc(uid).set(
+    { name: displayName, photoURL: photoURL || null },
+    { merge: true }
+  );
 }
 
 // ── Google Login ────────────────────────
