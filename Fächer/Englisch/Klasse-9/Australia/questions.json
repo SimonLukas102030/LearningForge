@@ -1,0 +1,212 @@
+{
+  "questions": [
+    {
+      "id": "aus1", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What is the capital of Australia?",
+      "options": ["Sydney", "Melbourne", "Canberra", "Brisbane"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus2", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Which ocean is Australia surrounded by?",
+      "options": ["Atlantic Ocean", "Pacific and Indian Oceans", "Arctic Ocean", "Mediterranean Sea"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus3", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What is the largest city in Australia by population?",
+      "options": ["Perth", "Sydney", "Canberra", "Adelaide"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus4", "type": "multiple_choice", "difficulty": "easy",
+      "question": "Which animal is NOT native to Australia?",
+      "options": ["Kangaroo", "Koala", "Polar bear", "Platypus"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus5", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What is Australia's national currency?",
+      "options": ["Australian Pound", "Australian Dollar", "Euro", "US Dollar"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus6", "type": "multiple_choice", "difficulty": "easy",
+      "question": "How many states does Australia have?",
+      "options": ["4", "5", "6", "8"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus7", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What does 'arvo' mean in Australian slang?",
+      "options": ["Morning", "Afternoon", "Evening", "Night"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus8", "type": "multiple_choice", "difficulty": "easy",
+      "question": "What are 'thongs' in Australian English?",
+      "options": ["Underwear", "Flip-flops", "Shorts", "Sunglasses"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus9", "type": "multiple_choice", "difficulty": "medium",
+      "question": "When is summer in Australia?",
+      "options": ["June to August", "September to November", "December to February", "March to May"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus10", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is the world's largest coral reef system located off Australia's coast?",
+      "options": ["The Red Sea Reef", "The Great Barrier Reef", "The Belize Barrier Reef", "The Florida Reef"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus11", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Which British explorer claimed the east coast of Australia for Britain in 1770?",
+      "options": ["Christopher Columbus", "Ferdinand Magellan", "Captain James Cook", "Francis Drake"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus12", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is Uluru?",
+      "options": ["A city", "A massive red sandstone rock formation", "A river", "A mountain range"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus13", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Which Australian city is known for its coffee culture and street art?",
+      "options": ["Sydney", "Perth", "Melbourne", "Darwin"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus14", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What does ANZAC stand for?",
+      "options": ["Australia and New Zealand Allied Command", "Australian and New Zealand Army Corps", "Allied Nations Zealand and Canberra", "Australian National Zone and Colonies"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus15", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What is a 'barbie' in Australian slang?",
+      "options": ["A doll", "A barbecue", "A beach", "A car"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus16", "type": "multiple_choice", "difficulty": "medium",
+      "question": "Which animal is known for sleeping 18-22 hours per day?",
+      "options": ["Wombat", "Kangaroo", "Koala", "Tasmanian Devil"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus17", "type": "multiple_choice", "difficulty": "medium",
+      "question": "What percentage of Australia is covered by desert or semi-desert?",
+      "options": ["About 30%", "About 50%", "About 70%", "About 90%"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus18", "type": "multiple_choice", "difficulty": "hard",
+      "question": "When did the First Fleet arrive in Australia?",
+      "options": ["1770", "1788", "1800", "1851"],
+      "correct": 1, "points": 2
+    },
+    {
+      "id": "aus19", "type": "multiple_choice", "difficulty": "hard",
+      "question": "What is the name of Australia's unique monotreme that lays eggs?",
+      "options": ["Echidna and Platypus", "Kangaroo", "Emu", "Dingo"],
+      "correct": 0, "points": 2
+    },
+    {
+      "id": "aus20", "type": "multiple_choice", "difficulty": "hard",
+      "question": "How long have Aboriginal Australians lived on the continent?",
+      "options": ["5,000 years", "15,000 years", "35,000 years", "Over 65,000 years"],
+      "correct": 3, "points": 2
+    },
+    {
+      "id": "aus21", "type": "multiple_choice", "difficulty": "hard",
+      "question": "Which of these is NOT one of Australia's two territories?",
+      "options": ["Northern Territory", "Australian Capital Territory", "Queensland Territory", "All are territories"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus22", "type": "multiple_choice", "difficulty": "hard",
+      "question": "What does 'fair dinkum' mean?",
+      "options": ["Good luck", "Goodbye", "Genuine or true", "Beautiful"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus23", "type": "multiple_choice", "difficulty": "hard",
+      "question": "Which major sport is NOT particularly popular in Australia?",
+      "options": ["Cricket", "AFL (Australian Rules Football)", "Ice Hockey", "Rugby"],
+      "correct": 2, "points": 2
+    },
+    {
+      "id": "aus24", "type": "free_text", "difficulty": "easy",
+      "question": "Name three iconic Australian animals and describe one unique feature of each.",
+      "maxPoints": 6,
+      "keywords": ["kangaroo", "koala", "platypus", "wombat", "echidna", "emu", "hop", "pouch", "eucalyptus", "egg", "monotreme", "cube", "poop", "sleep"],
+      "sampleAnswer": "The kangaroo can hop at speeds up to 70 km/h and carries its young in a pouch. The koala sleeps 18-22 hours per day and only eats eucalyptus leaves. The platypus is one of only five egg-laying mammals (monotremes) and has a duck bill, beaver tail, and venomous spur."
+    },
+    {
+      "id": "aus25", "type": "free_text", "difficulty": "medium",
+      "question": "Explain what the 'Stolen Generations' refers to and why it's an important part of Australian history.",
+      "maxPoints": 8,
+      "keywords": ["aboriginal", "indigenous", "children", "removed", "families", "government", "policy", "assimilation", "1910", "1970", "trauma", "apology", "kevin rudd", "2008"],
+      "sampleAnswer": "The Stolen Generations refers to Aboriginal and Torres Strait Islander children who were forcibly removed from their families by Australian government policies between 1910 and 1970. The goal was assimilation — to 'breed out' Aboriginal identity. Children were placed in institutions or with white families, and many never saw their families again. This caused deep trauma that affects Indigenous communities today. In 2008, Prime Minister Kevin Rudd formally apologized on behalf of the government."
+    },
+    {
+      "id": "aus26", "type": "free_text", "difficulty": "medium",
+      "question": "Describe the climate and landscape of the Australian Outback. Why do most Australians live on the coast?",
+      "maxPoints": 6,
+      "keywords": ["outback", "desert", "dry", "interior", "hot", "sparse", "70%", "coast", "85%", "temperate", "rainfall", "population", "water", "arable"],
+      "sampleAnswer": "The Outback is the vast, dry interior of Australia, consisting of desert and semi-desert landscapes covering about 70% of the continent. It's very hot during the day (40-50°C), cold at night, and has minimal rainfall. The land is sparsely populated because of harsh conditions and lack of water. Most Australians (85%) live within 50 km of the coast because coastal regions have temperate climates, more rainfall, better access to water, and more arable land for agriculture."
+    },
+    {
+      "id": "aus27", "type": "free_text", "difficulty": "medium",
+      "question": "Compare and contrast three major Australian cities (e.g., Sydney, Melbourne, and Brisbane). What makes each city unique?",
+      "maxPoints": 8,
+      "keywords": ["sydney", "melbourne", "brisbane", "opera house", "harbour bridge", "oldest", "cultural", "coffee", "art", "sport", "subtropical", "warm", "gold coast", "beaches"],
+      "sampleAnswer": "Sydney (5.3 million) is Australia's oldest and largest city, known for the iconic Opera House and Harbour Bridge, beautiful beaches like Bondi, and being the economic center. Melbourne (5.2 million) is called the cultural capital, famous for coffee culture, street art in laneways, and being sports-mad (AFL, tennis, cricket, F1). It has changeable weather ('four seasons in one day'). Brisbane (2.6 million) has a subtropical climate with warm weather year-round and is the gateway to the Gold Coast beaches and the Great Barrier Reef."
+    },
+    {
+      "id": "aus28", "type": "free_text", "difficulty": "medium",
+      "question": "Explain the concept of 'mateship' in Australian culture. Why is it important?",
+      "maxPoints": 6,
+      "keywords": ["mateship", "loyalty", "friends", "helping", "harsh", "conditions", "anzac", "war", "together", "values", "identity", "mate"],
+      "sampleAnswer": "Mateship is a core Australian value meaning deep loyalty to friends and comrades. It originated in the harsh conditions of early settlement and was reinforced during wars, especially at Gallipoli (ANZAC). Mateship means sticking together, helping each other out, and never leaving anyone behind. It's central to Australian identity and reflects values of loyalty, egalitarianism, and mutual support in difficult times."
+    },
+    {
+      "id": "aus29", "type": "free_text", "difficulty": "hard",
+      "question": "How did Australia's isolation from other continents affect its wildlife? Give specific examples.",
+      "maxPoints": 10,
+      "keywords": ["isolation", "45 million", "separated", "evolved", "endemic", "unique", "80%", "marsupials", "monotremes", "platypus", "kangaroo", "koala", "extinct", "elsewhere"],
+      "sampleAnswer": "Australia separated from other continents about 45 million years ago, causing animals to evolve in isolation. This created species found nowhere else on Earth — over 80% of Australian mammals, reptiles, and plants are endemic. Marsupials (like kangaroos, koalas, wombats) thrived in Australia but went extinct elsewhere. Monotremes (platypus and echidna) — egg-laying mammals — survived only in Australia and New Guinea. The platypus is so unique with its duck bill, beaver tail, and venomous spur that scientists initially thought it was a hoax. This isolation created one of the most unique ecosystems on the planet."
+    },
+    {
+      "id": "aus30", "type": "free_text", "difficulty": "hard",
+      "question": "Explain the historical and ongoing relationship between Britain and Australia. Include information about colonization, independence, and current status.",
+      "maxPoints": 10,
+      "keywords": ["britain", "british", "1788", "colony", "convicts", "empire", "1901", "federation", "commonwealth", "1986", "independence", "monarchy", "king", "charles", "governor-general", "republic"],
+      "sampleAnswer": "Australia was colonized by Britain in 1788 when the First Fleet arrived with convicts. It became a British penal colony and then multiple colonies. In 1901, six colonies federated to form the Commonwealth of Australia but remained part of the British Empire. Australia gradually gained independence: legislative independence in 1931 (adopted 1942), and full legal independence in 1986 with the Australia Act. However, Australia is still a constitutional monarchy — King Charles III is the head of state, represented by the Governor-General. There's ongoing debate about becoming a republic and cutting final ties with the British monarchy."
+    },
+    {
+      "id": "aus31", "type": "free_text", "difficulty": "hard",
+      "question": "Describe Australia's major economic strengths and explain its relationship with China as a trading partner.",
+      "maxPoints": 10,
+      "keywords": ["mining", "resources", "iron ore", "coal", "gas", "lithium", "agriculture", "wheat", "beef", "wool", "education", "tourism", "china", "largest", "trade", "partner", "exports", "tensions", "tariffs"],
+      "sampleAnswer": "Australia's economy is strong and diverse. Major strengths include: natural resources (iron ore, coal, natural gas, lithium, gold — largest exports), agriculture (wheat, beef, wool, wine), services (finance, tourism), and international education (3rd largest export). China is Australia's largest trading partner — Australia exports iron ore and coal to China and imports manufactured goods. However, relations became strained in 2020-2023 after Australia called for a COVID-19 investigation, leading China to impose tariffs on Australian barley, wine, and coal. The relationship is complex: economic interdependence versus political tensions. Relations are slowly improving."
+    },
+    {
+      "id": "aus32", "type": "free_text", "difficulty": "hard",
+      "question": "What is the Great Barrier Reef? Describe its importance and the environmental challenges it faces.",
+      "maxPoints": 10,
+      "keywords": ["coral", "reef", "largest", "2300", "km", "queensland", "marine", "fish", "species", "unesco", "visible", "space", "bleaching", "climate", "change", "temperature", "ocean", "warming", "conservation"],
+      "sampleAnswer": "The Great Barrier Reef is the world's largest coral reef system, stretching over 2,300 km off the Queensland coast. It's the largest living structure on Earth, visible from space. It's home to thousands of marine species including 1,500+ fish species, 400+ coral species, sharks, rays, sea turtles, dugongs, and dolphins. It's a UNESCO World Heritage site. However, it faces serious environmental challenges, particularly coral bleaching caused by rising ocean temperatures due to climate change. Since 2016, the reef has experienced six mass bleaching events. Conservation efforts are ongoing, but the reef's future depends on addressing climate change."
+    },
+    {
+      "id": "aus33", "type": "free_text", "difficulty": "hard",
+      "question": "Explain the significance of ANZAC Day in Australian culture. What does it commemorate and why is it important to national identity?",
+      "maxPoints": 10,
+      "keywords": ["anzac", "april 25", "gallipoli", "1915", "wwi", "australia", "new zealand", "army corps", "soldiers", "sacrifice", "mateship", "dawn", "service", "national", "identity", "war", "memorial"],
+      "sampleAnswer": "ANZAC Day (April 25) is one of Australia's most important national days. ANZAC stands for Australian and New Zealand Army Corps. It commemorates Australian and New Zealand soldiers who fought in WWI, especially at Gallipoli in 1915, where ANZAC forces suffered heavy casualties in a failed campaign. The day honors sacrifice, courage, and mateship shown by soldiers. Dawn services and marches are held across the country. ANZAC Day is significant because it helped forge Australian national identity — the idea of Australians coming together under extreme adversity, displaying values of mateship, courage, and sacrifice. It's about remembering all Australian soldiers who served and died in wars."
+    }
+  ]
+}
