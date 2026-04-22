@@ -26,3 +26,7 @@ Ein zentrales Feature wird der intuitive Builder, der es ermöglicht, ohne Progr
     * Einfache Tools für Trennlinien und weitere Gestaltungsmittel.
 * **Flexibilität:** * Fokus auf den visuellen Builder für die breite Masse.
     * Optionaler Button für direkten HTML-Zugriff für fortgeschrittene Anpassungen.
+
+ ## 4. Punkte Management
+ Die Punkte sollten addiert werden. Nicht der Durchschnitt sein. Also, wenn jemand 15p in test 1 hat und 10 in test 2, dann hat er 25 Punkte. Das sollte der User auch schnell sehen können, wenn er Auf profil oder Statistik geht. Außerdem sollte die Testlänge mitspielen. Also ein 5min test gibt 1 - 15 punkte, ein 10 min test das 1.5x und das 15min 2x und 30min 2.5x und 90 4x. Außerdem, sind es für die Zeit zu wenig Aufgaben / Fragen. Es muss viel länger sein. 
+
