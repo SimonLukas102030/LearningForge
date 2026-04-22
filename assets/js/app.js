@@ -191,6 +191,8 @@ function route() {
     renderSRS();
   } else if (parts[0] === 'daily-challenge') {
     renderDailyChallenge();
+  } else if (parts[0] === 'hilfe') {
+    renderHelp();
   } else {
     renderDashboard();
   }
@@ -225,6 +227,7 @@ function renderNav(breadcrumbs = []) {
           <a class="nav-link ${act('Builder')}"        onclick="location.hash='#/builder'">Builder</a>
           <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
           <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
+          <a class="nav-link ${act('Hilfe')}" onclick="location.hash='#/hilfe'">Hilfe</a>
           ${currentUser?.email === ADMIN_EMAIL ? `<a class="nav-link nav-link-admin ${act('Admin')}" onclick="location.hash='#/admin'">Admin</a>` : ''}
         </div>
       </div>
@@ -271,6 +274,7 @@ function renderNav(breadcrumbs = []) {
       <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">Builder</a>
       <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
       <a class="mobile-nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">Einstellungen</a>
+      <a class="mobile-nav-link ${act('Hilfe')}" onclick="location.hash='#/hilfe';window.LF.closeMobileMenu()">Hilfe</a>
       ${currentUser?.email === ADMIN_EMAIL ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">Admin-Panel</a>` : ''}
       <div class="mobile-nav-sep"></div>
       <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">Abmelden</a>
@@ -2599,6 +2603,269 @@ function removeTabSwitchDetection() {
 
 // ── Test-Ablauf ───────────────────────────
 let selectedTime = 15;
+
+// ── Hilfe-Seite ───────────────────────────
+function renderHelp() {
+  const S = (icon, title, body) => `
+    <div class="help-section">
+      <div class="help-section-head">
+        <span class="help-section-icon">${icon}</span>
+        <h2 class="help-section-title">${title}</h2>
+      </div>
+      <div class="help-section-body">${body}</div>
+    </div>`;
+
+  const row = (term, desc) =>
+    `<div class="help-row"><div class="help-term">${term}</div><div class="help-desc">${desc}</div></div>`;
+
+  const kbRow = (keys, desc) =>
+    `<div class="help-row"><div class="help-term"><span class="help-key">${keys}</span></div><div class="help-desc">${desc}</div></div>`;
+
+  const gradeRow = (note, pts, label, color) =>
+    `<div class="help-row"><div class="help-term"><span class="grade-badge" style="background:${color}">${note}</span></div><div class="help-desc">${pts}% · ${label}</div></div>`;
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Hilfe' }])}
+    <div class="page help-page">
+      <div class="page-header">
+        <h1>Hilfe &amp; Dokumentation</h1>
+        <div class="sub">Vollständige Übersicht aller Funktionen von LearningForge</div>
+      </div>
+
+      <div class="help-toc">
+        <div class="help-toc-title">Inhalt</div>
+        ${[
+          ['dashboard','Dashboard'],['faecher','Fächer &amp; Themen'],['tests','Tests'],
+          ['karten','Karteikarten'],['srs','SRS — Spaced Repetition'],
+          ['wissenscheck','Wissens-Check'],['pomodoro','Pomodoro-Timer'],
+          ['notizen','Notizen'],['lesezeichen','Lesezeichen'],
+          ['daily','Daily Challenge'],['statistiken','Statistiken'],
+          ['rangliste','Rangliste'],['profil','Profil &amp; XP'],
+          ['achievements','Achievements'],['streak','Streak-Kalender'],
+          ['gruppen','Gruppen'],['builder','Builder'],['meine-inhalte','Meine Inhalte'],
+          ['einstellungen','Einstellungen'],['tools','Werkzeuge (Rechner &amp; Tafelwerk)'],
+          ['offline','Offline &amp; PWA'],['shortcuts','Tastenkürzel'],
+        ].map(([id, label]) => `<a class="help-toc-item" href="#help-${id}">${label}</a>`).join('')}
+      </div>
+
+      ${S('🏠', '<span id="help-dashboard">Dashboard</span>', `
+        ${row('Fach-Karten', 'Zeigen Fortschritt (% getestete Themen), Anzahl Klassen und Durchschnittsnote. Klick öffnet das Fach.')}
+        ${row('Statistik-Bar', 'Schnellübersicht: Fächeranzahl, absolvierte Tests, Durchschnittsnote, SRS-fällige Karten.')}
+        ${row('Daily-Challenge-Karte', 'Zeigt ob die heutige Challenge erledigt ist. Klick führt zur Challenge-Seite.')}
+        ${row('Braucht Aufmerksamkeit', 'Themen mit Note 4 oder schlechter — priorisiert zum Wiederholen.')}
+        ${row('Letzte Tests', 'Die 5 zuletzt absolvierten Tests mit Note und Punktzahl.')}
+        ${row('Streak-Badge', 'Erscheint oben rechts wenn du mindestens 2 Tage in Folge gelernt hast.')}
+        ${row('App installieren', 'Erscheint einmalig wenn der Browser eine PWA-Installation anbietet.')}
+      `)}
+
+      ${S('📚', '<span id="help-faecher">Fächer &amp; Themen</span>', `
+        ${row('Fach', 'Oberste Ebene. Jedes Fach hat eine Farbe, ein Icon und beliebig viele Klassen.')}
+        ${row('Klasse / Jahr', 'Mittlere Ebene (z.B. Klasse 9, Klasse 10). Zeigt alle Themen dieser Klasse.')}
+        ${row('Thema', 'Kleinste Einheit mit Lerninhalt, Test, Karteikarten und Wissens-Check.')}
+        ${row('Fortschrittsring', 'SVG-Ring auf der Fach-Karte: ausgefüllter Anteil = % getestete Themen.')}
+        ${row('Themen-Seite — Tabs', '"Lernen" zeigt den Inhalt mit Wissens-Check. "Test" startet einen echten Test. "Karten" startet eine Karteikarten-Session.')}
+        ${row('Voraussetzungen', 'Gelbes Banner wenn ein Thema Vorgänger-Themen empfiehlt. Tags sind klickbar.')}
+        ${row('Lesezeichen-Button', 'Kleines Bookmark-Symbol auf jeder Themenkarte — speichert das Thema in Lesezeichen.')}
+      `)}
+
+      ${S('📝', '<span id="help-tests">Tests</span>', `
+        <div class="help-sub-title">Testzeiten &amp; Schwierigkeit</div>
+        ${row('5 Min', 'Nur Vokabeln (type: vocabulary). Nicht für MC / Freitext.')}
+        ${row('10 Min', 'Fragen mit difficulty: easy.')}
+        ${row('15 Min', 'Fragen mit easy.')}
+        ${row('30 Min', 'Fragen mit easy + medium.')}
+        ${row('90 Min', 'Alle Schwierigkeiten inkl. hard. Gemini wertet Freitext-Antworten ausführlicher.')}
+        <div class="help-sub-title" style="margin-top:16px">Bewertung</div>
+        ${gradeRow(1,'≥ 87','Sehr gut','#10b981')}
+        ${gradeRow(2,'≥ 73','Gut','#22d3ee')}
+        ${gradeRow(3,'≥ 60','Befriedigend','#f59e0b')}
+        ${gradeRow(4,'≥ 45','Ausreichend','#f97316')}
+        ${gradeRow(5,'≥ 20','Mangelhaft','#ef4444')}
+        ${gradeRow(6,'< 20','Ungenügend','#7f1d1d')}
+        <div class="help-sub-title" style="margin-top:16px">Ablauf</div>
+        ${row('Punkte', 'MC-Fragen: 2 Punkte. Freitext: bis zu 4 Punkte (KI-Auswertung via Gemini, Fallback: Keyword-Matching).')}
+        ${row('Tab-Wechsel', 'Wird erkannt — sofort Note 6 und Leaderboard-Eintrag. Nicht aus dem Test-Tab wechseln!')}
+        ${row('Beste Note zählt', 'Beim mehrfachen Wiederholen zählt immer die beste Prozentzahl. Alle Versuche erscheinen in den Statistiken.')}
+        ${row('Wiederholung', 'Nach dem Test können alle falsch beantworteten Fragen direkt geübt werden.')}
+        ${row('PDF-Download', '"Testbogen herunterladen" öffnet einen druckbaren A4-Bogen mit Feldern für Name, Datum und Klasse.')}
+        ${row('Kopieren für KI', '"In Zwischenablage" erzeugt formatierten Text zum Einfügen in ChatGPT / Gemini für detaillierteres Feedback.')}
+      `)}
+
+      ${S('🃏', '<span id="help-karten">Karteikarten</span>', `
+        ${row('Starten', 'Tab "Karten" auf der Themen-Seite → "Session starten".')}
+        ${row('Flip', 'Karte anklicken oder "Antwort zeigen" um die Karte umzudrehen (3D-Animation).')}
+        ${row('Gewusst / Nicht gewusst', 'Zwei Buttons nach dem Flip. Ergebnis wird am Ende als Score angezeigt.')}
+        ${row('Fortschrittsbalken', 'Zeigt wie viele Karten bereits bewertet wurden.')}
+        ${row('Abschluss', 'Nach der letzten Karte erscheinen "Gewusst" und "Nicht gewusst" als Zahlen.')}
+      `)}
+
+      ${S('🔁', '<span id="help-srs">SRS — Spaced Repetition</span>', `
+        ${row('Algorithmus', 'SM-2: berechnet aus Bewertung (0–5) wann eine Karte das nächste Mal erscheint.')}
+        ${row('Fällige Karten', 'Orange Chip im Dashboard zeigt Anzahl heute fälliger Karten.')}
+        ${row('Bewertungen', '0 = vergessen · 1 = fast vergessen · 2 = schwer · 3 = gut · 4 = leicht · 5 = sofort')}
+        ${row('Route', '#/srs öffnet die SRS-Review-Session.')}
+        ${row('Speicherung', 'Alle SRS-Daten liegen in users/{uid}.srs — keine extra Collection.')}
+        ${row('XP', 'Jede bewertete Karte gibt 3 XP.')}
+      `)}
+
+      ${S('✅', '<span id="help-wissenscheck">Wissens-Check</span>', `
+        ${row('Position', 'Unterhalb des Lerninhalts im Tab "Lernen".')}
+        ${row('Multiple Choice', 'Klick auf eine Option — sofortiges farbiges Feedback (grün / rot).')}
+        ${row('Freitext', 'Eingabe + Enter oder "Prüfen" — Keyword-basiert ausgewertet.')}
+        ${row('Antwort anzeigen', 'Button unterhalb der Freitext-Frage zeigt Musterantwort ohne Bewertung.')}
+        ${row('Kein Einfluss', 'Wissens-Check zählt nicht als Test und beeinflusst keine Note.')}
+      `)}
+
+      ${S('⏱', '<span id="help-pomodoro">Pomodoro-Timer</span>', `
+        ${row('Widget', 'Floating Button unten rechts auf allen Themen-Seiten (lila Kreis).')}
+        ${row('Arbeitsmodus', 'Standard 25 Minuten. Konfigurierbar über die Eingabefelder im Widget.')}
+        ${row('Pause', 'Standard 5 Minuten. Nach jeder Arbeitsphase folgt automatisch Pause.')}
+        ${row('Lernzeit', 'Am Ende jeder Arbeitsphase werden die Minuten in Firestore gespeichert (für Streak-Kalender und Statistiken).')}
+        ${row('Start / Stop', 'Button im aufgeklappten Panel. Timer läuft im Hintergrund weiter wenn du navigierst.')}
+        ${row('Reset', 'Setzt den Timer zurück ohne Lernzeit zu speichern.')}
+      `)}
+
+      ${S('📝', '<span id="help-notizen">Notizen</span>', `
+        ${row('Position', 'Ausklappbares Panel am Ende jeder Themen-Seite.')}
+        ${row('Autosave', 'Wird 1 Sekunde nach dem letzten Tastendruck automatisch gespeichert.')}
+        ${row('Speicherung', 'users/{uid}.notes.{subjectId}__{yearId}__{topicId}')}
+        ${row('Geräteübergreifend', 'Notes sind in Firestore gespeichert — auf allen Geräten verfügbar.')}
+      `)}
+
+      ${S('🔖', '<span id="help-lesezeichen">Lesezeichen</span>', `
+        ${row('Hinzufügen', 'Bookmark-Symbol auf einer Themenkarte oder Bookmark-Button auf der Themen-Seite.')}
+        ${row('Seite', '#/lesezeichen zeigt alle gespeicherten Themen.')}
+        ${row('Entfernen', 'Nochmals auf das Bookmark-Symbol klicken.')}
+        ${row('Speicherung', 'users/{uid}.bookmarks als Array von Topic-Keys.')}
+      `)}
+
+      ${S('📅', '<span id="help-daily">Daily Challenge</span>', `
+        ${row('Ablauf', '6 Multiple-Choice-Fragen aus zufällig gewählten Themen, 5 Minuten Zeit.')}
+        ${row('Seed', 'Die Fragen-Auswahl basiert auf dem aktuellen Datum — alle Nutzer sehen heute dieselben Fragen.')}
+        ${row('Rangliste', 'Nach Abgabe erscheint eine Tages-Rangliste aller Teilnehmer (nach Note sortiert).')}
+        ${row('XP', 'Note 1 = +80 XP · Note 2 = +50 XP · Note 3–6 = +30 XP · plus mögliche Achievements.')}
+        ${row('Einmal täglich', 'Pro Kalender-Tag kann die Challenge einmal absolviert werden. Die Karte im Dashboard zeigt den Status.')}
+        ${row('Route', '#/daily-challenge')}
+      `)}
+
+      ${S('📊', '<span id="help-statistiken">Statistiken</span>', `
+        ${row('Lernzeit', 'Balkendiagramm der täglichen Lernminuten der letzten Tage (Pomodoro-Daten).')}
+        ${row('Schwache Fragen', 'Fragen die du am häufigsten falsch beantwortest — mit Häufigkeitszähler.')}
+        ${row('Alle Tests', 'Vollständige Liste aller Tests mit Datum, Punkte und Note.')}
+        ${row('Nach Fach', 'Durchschnittsnote und Testanzahl pro Fach.')}
+        ${row('Route', '#/statistiken')}
+      `)}
+
+      ${S('🏆', '<span id="help-rangliste">Rangliste</span>', `
+        ${row('Testpunkte-Tab', 'Gesamt-Rangliste der Testpunkte (Summe aller besten Runs). Plus Karten nach Fach.')}
+        ${row('XP-Tab', 'Rangliste nach Gesamt-XP mit Level und Titel. Nur Nutzer mit XP > 0 erscheinen.')}
+        ${row('Fach-Karten', 'Zeigen die Top-5 pro Fach.')}
+        ${row('Du-Markierung', 'Dein Eintrag ist farblich hervorgehoben.')}
+        ${row('Firestore-Regeln', 'Die leaderboard-Collection benötigt eigene Lese-/Schreibregeln (siehe CLAUDE.md).')}
+        ${row('Route', '#/rangliste')}
+      `)}
+
+      ${S('👤', '<span id="help-profil">Profil &amp; XP</span>', `
+        ${row('Noten-Übersicht', 'Durchschnittsnote pro Fach mit Farb-Coding.')}
+        ${row('XP-Karte', 'Aktuelles Level, Titel, XP-Fortschrittsbalken und Gesamt-XP.')}
+        ${row('Level-Formel', 'XP für Level n = (n−1)·100 + 25·(n−1)·(n−2). Level 50 = Legende (max).')}
+        <div class="help-sub-title" style="margin-top:12px">XP-Quellen</div>
+        ${row('Test', 'Note 1 → 100 XP, Note 2 → 82, Note 3 → 64, Note 4 → 46, Note 5 → 28, Note 6 → 10')}
+        ${row('SRS-Review', '3 XP pro bewerteter Karte')}
+        ${row('Builder-Upload', '50 XP pro hochgeladenem Thema')}
+        ${row('Achievement', 'Bonus-XP je nach Achievement (30–500 XP)')}
+        ${row('Daily Challenge', 'Note 1 → 80, Note ≤2 → 50, sonst → 30 XP')}
+        ${row('Route', '#/profil')}
+      `)}
+
+      ${S('🏅', '<span id="help-achievements">Achievements (F-24)</span>', `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:8px">
+          ${ACHIEVEMENTS.map(a => `
+            <div style="display:flex;align-items:center;gap:10px;background:var(--bg-input);border-radius:8px;padding:8px 10px">
+              <div style="width:34px;height:34px;border-radius:8px;background:${a.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">${a.code}</div>
+              <div>
+                <div style="font-size:13px;font-weight:700">${a.title}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${a.desc} · +${a.xp} XP</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      `)}
+
+      ${S('🔥', '<span id="help-streak">Streak-Kalender (F-27)</span>', `
+        ${row('Darstellung', 'GitHub-Contribution-Graph-Stil: 53 Wochen × 7 Tage. Farbe = Lernintensität.')}
+        ${row('Intensitäts-Level', '0 = kein Lerntag · 1 = &lt;15 Min · 2 = 15–30 Min · 3 = 30–60 Min · 4 = &gt;60 Min')}
+        ${row('Streak-Quellen', 'Pomodoro-Lernzeit + Testabschlüsse (jeweils Datum aus Firestore).')}
+        ${row('Aktueller Streak', 'Aufeinander folgende Tage mit mindestens einem Lernereignis.')}
+        ${row('Längster Streak', 'Höchste je erreichte aufeinander folgende Sequenz.')}
+        ${row('Streak-Freeze', 'Ab 14 Tagen Streak steht 1 Freeze pro 7 Streaktage zur Verfügung. Wird verwendet um einen verpassten gestrigen Tag als Lerntag einzutragen.')}
+        ${row('Freeze-Anzeige', 'Banner erscheint automatisch wenn gestern fehlt und ein Freeze verfügbar ist.')}
+      `)}
+
+      ${S('👥', '<span id="help-gruppen">Gruppen</span>', `
+        ${row('Gruppe erstellen', 'Profilseite oder #/gruppen — Name eingeben, 6-stelliger Code wird generiert.')}
+        ${row('Beitreten', '6-stelligen Code eines anderen Nutzers eingeben.')}
+        ${row('Mitglieder', 'Admin (Ersteller) kann Mitglieder rauswerfen. Admin verlässt → Gruppe wird gelöscht.')}
+        ${row('Gruppen-Inhalte', 'Im Builder kannst du Themen für eine Gruppe hochladen. Alle Gruppenmitglieder sehen sie unter Meine Inhalte.')}
+        ${row('Route', '#/gruppen · #/gruppen/{groupId}')}
+      `)}
+
+      ${S('🔧', '<span id="help-builder">Builder</span>', `
+        ${row('Zweck', 'Eigene Lernthemen mit Inhalt und Fragen erstellen.')}
+        ${row('Schritt 1', 'Modus wählen: Visuell (Drag &amp; Drop Blöcke) oder Roh (direktes HTML/JSON).')}
+        ${row('Schritt 2', 'Fach, Klasse, Thema und Beschreibung eintragen.')}
+        ${row('Schritt 3', 'Lerninhalt erstellen. Visuell: Blöcke (Text, Formel, Bild, Tabelle, Schritt, Callout). Roh: freier HTML-String.')}
+        ${row('Schritt 4', 'Fragen hinzufügen (MC oder Freitext) und hochladen — entweder persönlich oder für eine Gruppe.')}
+        ${row('ZIP-Export', 'Exportiert alles als ZIP mit meta.json und questions.json — bereit für GitHub-Upload.')}
+        ${row('Route', '#/builder')}
+      `)}
+
+      ${S('📁', '<span id="help-meine-inhalte">Meine Inhalte</span>', `
+        ${row('Persönliche Themen', 'Alle eigenen, nicht-Gruppen-Inhalte.')}
+        ${row('Gruppen-Themen', 'Pro Gruppe ein Abschnitt mit allen Themen dieser Gruppe.')}
+        ${row('Löschen', 'Nur Eigentümer können ein Thema löschen.')}
+        ${row('Lernen / Testen', 'Jedes Custom-Thema hat eigene Lernen- und Test-Tabs (analog zu regulären Themen).')}
+        ${row('Route', '#/meine-inhalte · #/meine-inhalte/{topicId}')}
+      `)}
+
+      ${S('⚙️', '<span id="help-einstellungen">Einstellungen</span>', `
+        ${row('Fächerfarben', 'Pro Fach ein Farbwähler. "Standard" setzt auf die Farbe aus subjects-config.json zurück.')}
+        ${row('Theme', 'Hell / Dunkel — wird in Cookie lf_theme gespeichert. Kein Flackern beim Laden.')}
+        ${row('Fach-Icons', 'PNG-Upload (64×64 px) als individuelles Icon. Wird als Base64 in Firestore gespeichert.')}
+        ${row('Route', '#/einstellungen')}
+      `)}
+
+      ${S('🔢', '<span id="help-tools">Werkzeuge</span>', `
+        <div class="help-sub-title">Taschenrechner (Mathematik)</div>
+        ${row('Erscheint', 'Automatisch auf allen Mathematik-Themen-Seiten (unten rechts, lila Widget).')}
+        ${row('Operatoren', '+  −  ×  ÷  ^  sqrt()  π  Klammern  Dezimalzahlen')}
+        ${row('Kein Gleichungslöser', 'Nur numerische Berechnung. Gleichungssysteme nicht unterstützt.')}
+        <div class="help-sub-title" style="margin-top:16px">Tafelwerk (Chemie / Physik)</div>
+        ${row('Erscheint', 'Auf Chemie- und Physik-Themen-Seiten (unten links, teal Widget).')}
+        ${row('Tabs', 'Konstanten · Einheiten · Formeln · Periodensystem')}
+        ${row('Suche', 'Echtzeit-Filter über alle Einträge des aktuellen Tabs.')}
+      `)}
+
+      ${S('📶', '<span id="help-offline">Offline &amp; PWA</span>', `
+        ${row('Service Worker', 'Cacht die App-Shell (HTML, CSS, JS) mit Cache-First-Strategie.')}
+        ${row('GitHub-Inhalte', 'Network-First: zuerst aktuell von GitHub laden, bei Offline aus Cache liefern.')}
+        ${row('Firestore Offline', 'Firestore-Persistence aktiviert — Noten und Nutzerdata auch offline lesbar.')}
+        ${row('Offline-Banner', 'Roter Banner erscheint unten wenn kein Netz — verschwindet automatisch bei Reconnect.')}
+        ${row('Installieren', 'Unterstützende Browser bieten einen "Installieren"-Banner an. Auch über Browser-Menü → "Zum Startbildschirm".')}
+        ${row('Android-App', 'APK via GitHub Releases herunterladen. TWA (Trusted Web Activity) — zeigt dieselbe Web-App nativ.')}
+      `)}
+
+      ${S('⌨️', '<span id="help-shortcuts">Tastenkürzel</span>', `
+        ${kbRow('?', 'Tastenkürzel-Dialog anzeigen')}
+        ${kbRow('Alt + H', 'Dashboard öffnen')}
+        ${kbRow('Alt + S', 'Statistiken öffnen')}
+        ${kbRow('Alt + P', 'Profil öffnen')}
+        ${kbRow('Alt + E', 'Einstellungen öffnen')}
+        ${kbRow('Escape', 'Dialoge / Overlays schließen')}
+        ${kbRow('Enter', 'Login-Formular absenden')}
+      `)}
+
+    </div>`;
+}
 
 // ══════════════════════════════════════════
 //  Phase 3 — Gamification 3.0 Helpers
