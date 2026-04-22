@@ -1,10 +1,11 @@
-// ══════════════════════════════════════════
+﻿// ══════════════════════════════════════════
 //  LearningForge — App (Router + Seiten)
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData } from './auth.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
+import { DAILY_CHALLENGES } from './daily-challenges-config.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -37,6 +38,9 @@ let _notesSaveTimer    = null;
 let srsState           = null;
 let dailyChallengeState = null;
 let _commentTopicKey   = null;
+let _tutorContext      = '';
+let _tutorChat         = [];
+let _summaryCache      = {};
 
 // ── Online/Offline-Banner (F-11) ─────────
 function updateOnlineStatus(isOnline) {
@@ -154,8 +158,14 @@ function route() {
   unmountCalculator();
   unmountTafelwerk();
   unmountPomodoro();
+  unmountTutor();
   const hash  = location.hash.replace('#/', '') || '';
   const parts = hash.split('/').filter(Boolean);
+
+  if (parts[0] === 'bericht' && parts[1]) {
+    renderShareReport(parts[1]);
+    return;
+  }
 
   if (!currentUser) {
     renderLogin();
@@ -198,6 +208,8 @@ function route() {
     renderFriends();
   } else if (parts[0] === 'feed') {
     renderFeed();
+  } else if (parts[0] === 'lernplan') {
+    renderLernplan();
   } else {
     renderDashboard();
   }
@@ -441,8 +453,9 @@ function renderDashboard() {
   const gradeVals  = Object.values(grades).map(g => g.grade).filter(Boolean);
   const avgGrade   = gradeVals.length ? (gradeVals.reduce((a,b)=>a+b,0)/gradeVals.length).toFixed(1) : '–';
   const streak     = calcStreak();
-  const attention  = getNeedsAttention();
-  const recent     = getRecentTests();
+  const attention      = getNeedsAttention();
+  const recent         = getRecentTests();
+  const recommendations = getRecommendations();
 
   // Subject cards mit Fortschrittsring
   const subjectCards = subjects.length === 0
@@ -533,6 +546,20 @@ function renderDashboard() {
       </div>
       ${renderDailyChallengeCard()}
       ${attentionHtml}
+      ${recommendations.length ? `
+      <div class="section-title" style="margin-top:32px">Heute empfohlen</div>
+      <div class="recommendations-list">
+        ${recommendations.map(r => `
+          <div class="rec-item" onclick="location.hash='#/fach/${r.subjectId}/${r.yearId}/${r.topicId}'"
+               style="--subject-color:${getSubjectColor(r.subjectId)}">
+            <span class="rec-icon">${getSubjectIcon(r.subjectId)}</span>
+            <div class="rec-info">
+              <div class="rec-name">${r.topic.name}</div>
+              <div class="rec-reason">${r.reason}</div>
+            </div>
+            <span class="rec-arrow">›</span>
+          </div>`).join('')}
+      </div>` : ''}
       ${_installPrompt && !localStorage.getItem('lf_install_dismissed') ? `
         <div class="install-card" id="installCard">
           <div class="install-card-icon">⚡</div>
@@ -671,7 +698,11 @@ async function renderTopic(subjectId, yearId, topicId) {
     lernenTab = renderSubtopicGrid(meta.subtopics);
   } else if (meta.content) {
     currentSubtopics = null;
-    lernenTab = `<div class="content-block"><div class="content-body">${meta.content}</div></div>`;
+    lernenTab = `<div class="content-block"><div class="content-body">${meta.content}</div></div>
+      <div class="ai-summary-area" id="aiSummaryArea">
+        <button class="btn btn-ghost btn-sm ai-summary-btn" onclick="window.LF.generateSummary()">KI-Zusammenfassung erstellen</button>
+        <div class="ai-summary-box" id="aiSummaryBox" style="display:none"></div>
+      </div>`;
   } else {
     currentSubtopics = null;
     lernenTab = `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
@@ -689,7 +720,8 @@ async function renderTopic(subjectId, yearId, topicId) {
   const hasFlashcards = questions.length > 0;
   const topicKey = `${subjectId}__${yearId}__${topicId}`;
   _commentTopicKey = topicKey;
-  flashcardState = null;
+  _tutorContext    = meta.content || '';
+  flashcardState   = null;
 
   // F-19: Lesezeichen
   const isBookmarked = (userData?.bookmarks || []).includes(topicKey);
@@ -3060,6 +3092,7 @@ function _seededRand(seed) {
 
 async function getDailyChallengeQuestions() {
   const dateKey = new Date().toISOString().slice(0, 10);
+  if (DAILY_CHALLENGES[dateKey]) return DAILY_CHALLENGES[dateKey];
   const seed    = dateKey.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
   const rand    = _seededRand(seed);
 
