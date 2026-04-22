@@ -19,28 +19,28 @@ const TIME_CONFIG = {
     difficulties:    ['easy', 'medium'],
     maxQuestions:    10,
     textExpectation: 'Ein bis zwei vollständige Sätze werden erwartet.',
-    pointFactor:     1.5,
+    pointFactor:     1.0,
     label:           '10 Minuten — Kurz-Test'
   },
   15: {
     difficulties:    ['easy', 'medium'],
     maxQuestions:    15,
     textExpectation: 'Zwei bis drei Sätze mit kurzer Begründung.',
-    pointFactor:     2.0,
+    pointFactor:     1.0,
     label:           '15 Minuten — Standard-Test'
   },
   30: {
     difficulties:    ['easy', 'medium', 'hard'],
     maxQuestions:    25,
     textExpectation: 'Mehrere Sätze mit Begründung und ggf. Beispielen.',
-    pointFactor:     2.5,
+    pointFactor:     1.0,
     label:           '30 Minuten — Ausführlicher Test'
   },
   90: {
     difficulties:    ['easy', 'medium', 'hard'],
     maxQuestions:    Infinity,
     textExpectation: 'Ausführliche Antwort mit Fachbegriffen, Beispielen und vollständigen Erklärungen erforderlich. Ein einzelner Satz ist nicht ausreichend für volle Punktzahl.',
-    pointFactor:     4.0,
+    pointFactor:     1.0,
     label:           '90 Minuten — Klassenarbeit-Simulation'
   }
 };
