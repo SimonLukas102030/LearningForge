@@ -3307,3 +3307,219 @@ input, textarea, select { font-family: var(--font); }
   .comments-textarea  { width: 100%; }
   .friend-btns { flex-direction: column; gap: 4px; }
 }
+
+/* ══ Phase 5+6: KI & Analytics ══════════════ */
+
+/* F-37: KI-Zusammenfassung */
+.ai-summary-area {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.ai-summary-btn {
+  gap: 6px;
+}
+.ai-summary-box {
+  margin-top: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.ai-summary-box ul { margin: 0; padding-left: 20px; }
+.ai-summary-box li { margin-bottom: 4px; }
+
+/* F-38: KI-Tutor Widget */
+.tutor-widget {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 340px;
+  max-height: 480px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  display: flex;
+  flex-direction: column;
+  z-index: 1100;
+  overflow: hidden;
+}
+.tutor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+.tutor-close-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.tutor-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tutor-msg {
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.tutor-msg-ai {
+  background: var(--bg-secondary, var(--border));
+  align-self: flex-start;
+  border-bottom-left-radius: 3px;
+}
+.tutor-msg-user {
+  background: var(--accent);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 3px;
+}
+.tutor-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+.tutor-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.tutor-toggle-btn { margin-left: 8px; }
+
+/* F-36: Empfehlungen */
+.recommendations-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.rec-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-color, var(--accent));
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.rec-item:hover { background: var(--hover-bg, var(--border)); }
+.rec-icon { font-size: 20px; flex-shrink: 0; }
+.rec-info { flex: 1; min-width: 0; }
+.rec-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rec-reason { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.rec-arrow { color: var(--text-muted); font-size: 18px; }
+
+/* F-42: Lernzeit-Chart */
+.study-time-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 0 0;
+  height: 110px;
+}
+.stc-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+.stc-mins { font-size: 10px; color: var(--text-muted); min-height: 14px; }
+.stc-bar-wrap { flex: 1; display: flex; align-items: flex-end; }
+.stc-bar {
+  width: 100%;
+  min-height: 4px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+  transition: height .3s ease;
+  opacity: .85;
+}
+.stc-label { font-size: 11px; color: var(--text-muted); }
+
+/* F-40: Lernplan */
+.lernplan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.lernplan-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.lernplan-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.lernplan-day { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; letter-spacing: .05em; }
+.lernplan-topic { display: flex; align-items: flex-start; gap: 8px; }
+.lernplan-icon { font-size: 20px; flex-shrink: 0; }
+.lernplan-topic-name { font-weight: 600; font-size: 14px; }
+.lernplan-reason { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* F-46: Share-Link & Bericht */
+.share-link-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.share-link-title { font-weight: 600; font-size: 15px; }
+.share-link-sub   { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.share-link-input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  width: 260px;
+  max-width: 100%;
+}
+.share-report-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.share-report-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 600px) {
+  .tutor-widget { width: calc(100vw - 32px); right: 16px; bottom: 16px; }
+  .share-link-card { flex-direction: column; align-items: flex-start; }
+  .share-link-input { width: 100%; }
+}

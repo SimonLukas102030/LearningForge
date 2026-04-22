@@ -447,3 +447,28 @@ export async function getPendingTopics() {
     .where('status', '==', 'pending').get({ source: 'server' });
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
+// ── Eltern-Share-Link (F-46) ──────────────
+export async function createShareToken(uid) {
+  const token = Math.random().toString(36).slice(2, 14) + Math.random().toString(36).slice(2, 6);
+  await _db.collection('shareLinks').doc(token).set({
+    uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  return token;
+}
+
+export async function getShareData(token) {
+  const doc = await _db.collection('shareLinks').doc(token).get();
+  if (!doc.exists) return null;
+  const uid   = doc.data().uid;
+  const uSnap = await _db.collection('users').doc(uid).get();
+  return uSnap.exists ? { ...uSnap.data(), uid } : null;
+}
+
+// ── Gruppen-Mitgliederdaten (F-43) ────────
+export async function getMultipleUserData(uids) {
+  if (!uids?.length) return [];
+  const docs = await Promise.all(uids.map(id => _db.collection('users').doc(id).get()));
+  return docs.filter(d => d.exists).map(d => ({ uid: d.id, ...d.data() }));
+}

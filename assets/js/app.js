@@ -2,6 +2,7 @@
 //  LearningForge — App (Router + Seiten)
 // ══════════════════════════════════════════
 
+import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
 import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData } from './auth.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
@@ -788,6 +789,7 @@ async function renderTopic(subjectId, yearId, topicId) {
               onclick="window.LF.toggleBookmarkTopic('${topicKey}')">
         ${isBookmarked ? '🔖 Gespeichert' : '🔖 Lesezeichen'}
       </button>
+      ${meta.content ? `<button class="btn btn-ghost btn-sm tutor-toggle-btn" onclick="window.LF.tutorToggle()">🤖 KI-Tutor</button>` : ''}
     </div>
     <div class="topic-tabs" style="--subject-color:${color}">
       <button class="tab-btn active" id="tabBtnLernen"  onclick="window.LF.switchTab('Lernen')">Lernen</button>
@@ -1003,6 +1005,132 @@ function getRecentTests() {
   return attempts
     .sort((a, b) => new Date(b.g.date) - new Date(a.g.date))
     .slice(0, 5);
+}
+
+// ── F-36: KI-Empfehlungen (lokal) ────────
+function getRecommendations() {
+  const grades = userData?.grades || {};
+  const all = [];
+  Object.values(structure || {}).forEach(subject => {
+    Object.values(subject.years || {}).forEach(year => {
+      Object.values(year.topics || {}).forEach(topic => {
+        const key = `${subject.id}__${year.id}__${topic.id}`;
+        const g   = grades[key];
+        if (!g) {
+          all.push({ subjectId: subject.id, yearId: year.id, topicId: topic.id,
+            topic, priority: 1, reason: 'Noch nicht gelernt' });
+        } else if (g.grade >= 4) {
+          all.push({ subjectId: subject.id, yearId: year.id, topicId: topic.id,
+            topic, priority: 3, reason: `Note ${g.grade} — wiederholen` });
+        } else if (g.grade === 3) {
+          const lastDate = g.date?.seconds ? new Date(g.date.seconds * 1000) : null;
+          const daysAgo  = lastDate ? (Date.now() - lastDate.getTime()) / 86400000 : 999;
+          if (daysAgo > 14) {
+            all.push({ subjectId: subject.id, yearId: year.id, topicId: topic.id,
+              topic, priority: 2, reason: 'L\xe4nger nicht ge\xfcbt' });
+          }
+        }
+      });
+    });
+  });
+  return all.sort((a, b) => b.priority - a.priority).slice(0, 5);
+}
+
+// ── F-37/38: KI-Zusammenfassung & Tutor ──
+async function callAI(prompt, maxTokens = 600) {
+  if (CONFIG.groq?.apiKey) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
+        body:    JSON.stringify({
+          model:       'llama-3.3-70b-versatile',
+          messages:    [{ role: 'user', content: prompt }],
+          max_tokens:  maxTokens,
+          temperature: 0.7
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim();
+        if (text) return text;
+      }
+    } catch {}
+  }
+  if (CONFIG.gemini?.apiKey) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (text) return text;
+      }
+    } catch {}
+  }
+  throw new Error('Kein KI-Provider verf\xfcgbar');
+}
+
+async function callAIChat(messages, maxTokens = 400) {
+  if (CONFIG.groq?.apiKey) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
+        body:    JSON.stringify({
+          model:       'llama-3.3-70b-versatile',
+          messages,
+          max_tokens:  maxTokens,
+          temperature: 0.7
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content?.trim();
+        if (text) return text;
+      }
+    } catch {}
+  }
+  throw new Error('Kein KI-Provider verf\xfcgbar');
+}
+
+function unmountTutor() {
+  _tutorChat = [];
+  document.getElementById('tutorWidget')?.remove();
+}
+
+function mountTutor() {
+  if (document.getElementById('tutorWidget')) return;
+  const widget = document.createElement('div');
+  widget.id        = 'tutorWidget';
+  widget.className = 'tutor-widget';
+  widget.innerHTML = `
+    <div class="tutor-header">
+      <span>🤖 KI-Tutor</span>
+      <button class="tutor-close-btn" onclick="window.LF.tutorToggle()">&#x2715;</button>
+    </div>
+    <div class="tutor-messages" id="tutorMessages">
+      <div class="tutor-msg tutor-msg-ai">Hallo! Ich bin dein KI-Tutor f\xfcr dieses Thema. Stelle mir eine Frage!</div>
+    </div>
+    <div class="tutor-input-row">
+      <input class="tutor-input" id="tutorInput" placeholder="Frage stellen…"
+             onkeydown="if(event.key==='Enter')window.LF.tutorSend()">
+      <button class="btn btn-primary btn-sm" onclick="window.LF.tutorSend()">Senden</button>
+    </div>`;
+  document.body.appendChild(widget);
+}
+
+function renderTutorMessages() {
+  const el = document.getElementById('tutorMessages');
+  if (!el) return;
+  const msgs = _tutorChat.filter(m => m.role !== 'system');
+  el.innerHTML = msgs.length
+    ? msgs.map(m => `<div class="tutor-msg ${m.role === 'user' ? 'tutor-msg-user' : 'tutor-msg-ai'}">${m.content}</div>`).join('')
+    : '<div class="tutor-msg tutor-msg-ai">Hallo! Stelle mir eine Frage zum Thema!</div>';
+  el.scrollTop = el.scrollHeight;
 }
 
 function getSubjectProgress(subjectId) {
@@ -1263,6 +1391,33 @@ function renderStatistics() {
   const worstGrade = totalTests ? Math.max(...allGrades.map(g=>g.grade)) : null;
   const streak     = calcStreak();
 
+  // F-42: Lernzeit-Chart (letzte 7 Tage)
+  const studyTimeMap = userData?.studyTime || {};
+  const today = new Date();
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today); d.setDate(d.getDate() - (6 - i));
+    const key = d.toISOString().slice(0, 10);
+    return { label: d.toLocaleDateString('de-DE', { weekday: 'short' }), key, mins: studyTimeMap[key] || 0 };
+  });
+  const maxMins = Math.max(...last7.map(d => d.mins), 1);
+  const studyTimeChart = `
+    <div class="stats-card" style="margin-top:16px">
+      <div class="stats-card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>⏱ Lernzeit (letzte 7 Tage)</span>
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.exportGradesCSV()">&#x2B07; CSV exportieren</button>
+      </div>
+      <div class="study-time-chart">
+        ${last7.map(d => `
+          <div class="stc-col">
+            <div class="stc-mins">${d.mins > 0 ? d.mins + ' min' : ''}</div>
+            <div class="stc-bar-wrap">
+              <div class="stc-bar" style="height:${Math.round(d.mins/maxMins*80)+4}px"></div>
+            </div>
+            <div class="stc-label">${d.label}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
   // Übersicht-Karten
   const overviewCards = `
     <div class="stats-overview-grid">
@@ -1385,6 +1540,7 @@ function renderStatistics() {
               </table>
             </div>` : '<div class="empty-state" style="padding:16px">Keine Tests</div>'}
         </div>
+        ${studyTimeChart}
       `}
     </div>`;
 }
@@ -1699,6 +1855,20 @@ function renderProfile() {
         <span class="ach-count-badge">${achCount} / ${ACHIEVEMENTS.length}</span>
       </div>
       <div class="achievement-grid">${achTiles}</div>
+
+      <!-- F-46: Eltern-Share-Link -->
+      <div class="section-title" style="margin-top:32px;margin-bottom:12px">Lernbericht teilen</div>
+      <div class="share-link-card">
+        <div class="share-link-info">
+          <div class="share-link-title">Eltern-Zugang</div>
+          <div class="share-link-sub">Teile deinen Lernfortschritt ohne Login</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="share-link-input" id="shareLinkInput" readonly placeholder="Link erzeugen…">
+          <button class="btn btn-primary btn-sm" onclick="window.LF.createShareLink()">Link erstellen</button>
+          <button class="btn btn-ghost btn-sm" id="copyShareBtn" style="display:none" onclick="window.LF.copyShareLink()">Kopieren</button>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -2061,6 +2231,9 @@ async function renderGroupDetail(groupId) {
       <div>
         <div class="section-title">Gruppen-Rangliste</div>
         <div id="groupLbContent">${lbHtml}</div>
+        ${isCreator ? `
+          <div class="section-title" style="margin-top:24px">Mitglieder-Statistiken</div>
+          <div id="groupMemberStats"><div class="spinner" style="margin:16px auto"></div></div>` : ''}
       </div>
     </div>`;
 
@@ -2097,7 +2270,47 @@ async function renderGroupDetail(groupId) {
       ? lbRows
       : '<div class="empty-state" style="padding:16px;font-size:14px">Noch keine Tests gemacht.</div>';
   } catch(e) {
-    document.getElementById('groupLbContent').innerHTML = `<div class="empty-state" style="padding:16px;font-size:14px">Rangliste nicht verfügbar.</div>`;
+    document.getElementById('groupLbContent').innerHTML = `<div class="empty-state" style="padding:16px;font-size:14px">Rangliste nicht verf\xfcgbar.</div>`;
+  }
+
+  // F-43: Admin-Mitglieder-Statistiken laden
+  if (isCreator) {
+    try {
+      const memberData = await getMultipleUserData(memberUids);
+      const statsRows  = memberData.map(u => {
+        const g      = u.grades || {};
+        const vals   = Object.values(g).map(x => x.grade).filter(Boolean);
+        const avg    = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '–';
+        const streak = u.streak || 0;
+        const totalTime = Object.values(u.studyTime || {}).reduce((a,b)=>a+b, 0);
+        const av   = u.photoURL
+          ? `<img src="${u.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+          : (u.name||'?')[0].toUpperCase();
+        return `
+          <tr>
+            <td><div style="display:flex;align-items:center;gap:8px">
+              <div class="lb-avatar" style="width:28px;height:28px;font-size:12px">${av}</div>
+              ${u.name||'–'}
+            </div></td>
+            <td>${vals.length}</td>
+            <td><span class="grade-pill" style="background:${avg!=='–'?gradeColor(Math.round(parseFloat(avg))):'var(--border)'}">
+              ${avg}
+            </span></td>
+            <td>${streak} 🔥</td>
+            <td>${totalTime} min</td>
+          </tr>`;
+      }).join('');
+      const statsEl = document.getElementById('groupMemberStats');
+      if (statsEl) statsEl.innerHTML = memberData.length ? `
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Mitglied</th><th>Tests</th><th>Ø Note</th><th>Streak</th><th>Lernzeit</th></tr></thead>
+            <tbody>${statsRows}</tbody>
+          </table>
+        </div>` : '<div class="empty-state" style="padding:16px;font-size:14px">Keine Daten.</div>';
+    } catch {
+      document.getElementById('groupMemberStats')?.remove();
+    }
   }
 }
 
@@ -5166,6 +5379,110 @@ async function renderFeed() {
   initNavCollapse();
 }
 
+// ── F-40: Lernplan ───────────────────────
+function renderLernplan() {
+  const recs = getRecommendations();
+  const days = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+  const plan = days.map((day, i) => ({ day, rec: recs[i % Math.max(recs.length, 1)] }));
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Lernplan' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>&#x1F4C5; Lernplan</h1>
+        <div class="sub">Dein personalisierter Wochenplan</div>
+      </div>
+      ${recs.length === 0
+        ? `<div class="empty-state"><div class="empty-icon">&#x1F4C5;</div>Alle Themen auf dem neuesten Stand!</div>`
+        : `<div class="lernplan-grid">
+            ${plan.filter(p => p.rec).map(p => `
+              <div class="lernplan-card" onclick="location.hash='#/fach/${p.rec.subjectId}/${p.rec.yearId}/${p.rec.topicId}'">
+                <div class="lernplan-day">${p.day}</div>
+                <div class="lernplan-topic">
+                  <span class="lernplan-icon">${getSubjectIcon(p.rec.subjectId)}</span>
+                  <div>
+                    <div class="lernplan-topic-name">${p.rec.topic.name}</div>
+                    <div class="lernplan-reason">${p.rec.reason}</div>
+                  </div>
+                </div>
+              </div>`).join('')}
+           </div>`}
+    </div>`;
+}
+
+// ── F-46: Eltern-Bericht ─────────────────
+async function renderShareReport(token) {
+  document.getElementById('app').innerHTML = `
+    <div style="max-width:640px;margin:0 auto;padding:24px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <span style="font-size:24px">&#x26A1;</span>
+        <strong style="font-size:18px">LearningForge — Lernbericht</strong>
+      </div>
+      <div id="shareReportContent"><div class="spinner" style="margin:40px auto"></div></div>
+    </div>`;
+
+  let shareData;
+  try { shareData = await getShareData(token); } catch {}
+
+  if (!shareData) {
+    document.getElementById('shareReportContent').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">&#x1F517;</div>Link nicht gefunden oder abgelaufen.</div>`;
+    return;
+  }
+
+  const grades    = shareData.grades || {};
+  const gradeVals = Object.values(grades).map(g => g.grade).filter(Boolean);
+  const avgGrade  = gradeVals.length
+    ? (gradeVals.reduce((a,b)=>a+b,0)/gradeVals.length).toFixed(1) : '&#8211;';
+  const streak = shareData.streak || 0;
+  const xpInfo = calcLevel(shareData.xp || 0);
+
+  const gradeRows = Object.entries(grades).slice(0, 20).map(([key, g]) => {
+    const [subjectId,,topicId] = key.split('__');
+    const label = topicId ? topicId.replace(/-/g,' ') : key;
+    return `<tr>
+      <td>${subjectId}</td>
+      <td>${label}</td>
+      <td><span class="grade-pill" style="background:${gradeColor(g.grade)}">${g.grade}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('shareReportContent').innerHTML = `
+    <div class="share-report-box">
+      <div class="share-report-header">
+        <div class="profile-avatar-large" style="width:56px;height:56px;font-size:22px">${(shareData.name||'?')[0].toUpperCase()}</div>
+        <div>
+          <div style="font-weight:700;font-size:18px">${shareData.name || 'Sch&uuml;ler'}</div>
+          <div style="color:var(--text-muted);font-size:13px">Level ${xpInfo.level} &middot; ${xpInfo.totalXP} XP</div>
+        </div>
+      </div>
+      <div class="stats-overview-grid" style="margin:16px 0">
+        <div class="stat-overview-card">
+          <div class="soc-val">${gradeVals.length}</div>
+          <div class="soc-lbl">Tests</div>
+        </div>
+        <div class="stat-overview-card">
+          <div class="soc-val">${avgGrade}</div>
+          <div class="soc-lbl">&#216; Note</div>
+        </div>
+        <div class="stat-overview-card">
+          <div class="soc-val">${streak}</div>
+          <div class="soc-lbl">&#x1F525; Streak</div>
+        </div>
+      </div>
+      ${gradeRows ? `
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Fach</th><th>Thema</th><th>Note</th></tr></thead>
+            <tbody>${gradeRows}</tbody>
+          </table>
+        </div>` : ''}
+      <p style="margin-top:24px;font-size:12px;color:var(--text-muted)">
+        Erstellt mit LearningForge &mdash; <a href="${location.origin}${location.pathname}">Kostenlos registrieren</a>
+      </p>
+    </div>`;
+}
+
 // ── F-34: Kommentare ──────────────────────
 window.LF.loadComments = async () => {
   const area = document.getElementById('commentsList');
@@ -5299,3 +5616,133 @@ window.LF.unfriendUser = async (friendUid, friendName) => {
     renderFriends();
   } catch { showToast('Fehler.', 'error'); }
 };
+
+// ── F-37: KI-Zusammenfassung ─────────────
+window.LF.generateSummary = async () => {
+  const btn = document.querySelector('.ai-summary-btn');
+  const box = document.getElementById('aiSummaryBox');
+  if (!btn || !box || !_tutorContext) return;
+  btn.disabled = true;
+  btn.textContent = 'KI denkt nach…';
+
+  const cacheKey = _tutorContext.slice(0, 80);
+  if (_summaryCache[cacheKey]) {
+    box.innerHTML  = _summaryCache[cacheKey];
+    box.style.display = 'block';
+    btn.textContent   = 'KI-Zusammenfassung erstellen';
+    btn.disabled      = false;
+    return;
+  }
+
+  try {
+    const text = await callAI(
+      `Fasse den folgenden Lerninhalt in 3-5 kurzen, pr\xe4gnanten Stichpunkten auf Deutsch zusammen. Antworte nur mit den Stichpunkten, keine Einleitung:\n\n${_tutorContext.slice(0, 3000)}`,
+      400
+    );
+    const html = '<ul>' + text.split('\n')
+      .filter(l => l.trim())
+      .map(l => `<li>${l.replace(/^[-*•]\s*/, '')}</li>`)
+      .join('') + '</ul>';
+    _summaryCache[cacheKey] = html;
+    box.innerHTML     = html;
+    box.style.display = 'block';
+  } catch {
+    box.innerHTML     = '<p style="color:var(--text-muted)">KI nicht verf\xfcgbar.</p>';
+    box.style.display = 'block';
+  }
+  btn.textContent = 'KI-Zusammenfassung erstellen';
+  btn.disabled    = false;
+};
+
+// ── F-38: KI-Tutor ───────────────────────
+window.LF.tutorToggle = () => {
+  const widget = document.getElementById('tutorWidget');
+  if (widget) { unmountTutor(); return; }
+  if (!_tutorContext) { showToast('Kein Lerninhalt f\xfcr dieses Thema.', 'info'); return; }
+  _tutorChat = [
+    { role: 'system', content: `Du bist ein hilfreicher Lernassistent. Thema: ${_tutorContext.slice(0, 1500)}` }
+  ];
+  mountTutor();
+};
+
+window.LF.tutorSend = async () => {
+  const input = document.getElementById('tutorInput');
+  const msg   = input?.value?.trim();
+  if (!msg) return;
+  input.value    = '';
+  input.disabled = true;
+
+  _tutorChat.push({ role: 'user', content: msg });
+  renderTutorMessages();
+
+  try {
+    const reply = await callAIChat(_tutorChat, 400);
+    _tutorChat.push({ role: 'assistant', content: reply });
+  } catch {
+    _tutorChat.push({ role: 'assistant', content: 'Entschuldigung, KI-Verbindung unterbrochen.' });
+  }
+  renderTutorMessages();
+  input.disabled = false;
+  input.focus();
+};
+
+// ── F-44: CSV-Export ─────────────────────
+window.LF.exportGradesCSV = () => {
+  const grades = userData?.grades || {};
+  const rows   = [['Fach','Klasse','Thema','Note','Punkte','Max. Punkte','Datum']];
+  Object.entries(grades).forEach(([key, g]) => {
+    const [subjectId, yearId, topicId] = key.split('__');
+    const subject = structure?.[subjectId];
+    const year    = subject?.years?.[yearId];
+    const topic   = year?.topics?.[topicId];
+    const gp      = _gp(g);
+    const date    = g.date?.seconds ? new Date(g.date.seconds*1000).toLocaleDateString('de-DE') : '–';
+    rows.push([
+      subject?.name || subjectId,
+      year?.name    || yearId,
+      topic?.name   || topicId,
+      g.grade || '–',
+      gp.pts,
+      gp.max,
+      date
+    ]);
+  });
+  const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url; a.download = 'learningforge-noten.csv';
+  a.click(); URL.revokeObjectURL(url);
+};
+
+// ── F-46: Share-Link ─────────────────────
+window.LF.createShareLink = async () => {
+  const btn   = document.querySelector('.share-link-card .btn-primary');
+  const input = document.getElementById('shareLinkInput');
+  if (!btn || !input) return;
+  btn.disabled = true;
+  btn.textContent = 'Wird erstellt…';
+  try {
+    const token = await createShareToken(currentUser.uid);
+    const url   = `${location.origin}${location.pathname}#/bericht/${token}`;
+    input.value = url;
+    const copyBtn = document.getElementById('copyShareBtn');
+    if (copyBtn) copyBtn.style.display = 'inline-flex';
+    showToast('Link erstellt!', 'success');
+  } catch {
+    showToast('Fehler beim Erstellen.', 'error');
+  }
+  btn.disabled    = false;
+  btn.textContent = 'Link erstellen';
+};
+
+window.LF.copyShareLink = () => {
+  const input = document.getElementById('shareLinkInput');
+  if (!input?.value) return;
+  navigator.clipboard.writeText(input.value)
+    .then(() => showToast('Link kopiert!', 'success'))
+    .catch(() => showToast('Kopieren nicht verf\xfcgbar.', 'error'));
+};
+
+// ── KI-Tutor-Knopf in Themenansicht ──────
+window.LF.openTutor = () => window.LF.tutorToggle();
