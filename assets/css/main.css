@@ -2227,6 +2227,19 @@ input, textarea, select { font-family: var(--font); }
   margin-bottom: 6px;
 }
 
+/* ── Custom Subject Icon (PNG) ───────────── */
+.subject-icon-img {
+  width: 24px; height: 24px;
+  object-fit: contain;
+  vertical-align: middle;
+  border-radius: 4px;
+  display: inline-block;
+}
+.icon-upload-label {
+  cursor: pointer; display: inline-flex; align-items: center;
+}
+.icon-upload-label:hover { background: var(--border); }
+
 /* ── Tafelwerk-Widget ───────────────────── */
 .tw-widget {
   bottom: 24px; left: 24px; right: auto;

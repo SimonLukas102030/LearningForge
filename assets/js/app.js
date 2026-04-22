@@ -28,6 +28,7 @@ let _visualDragIdx     = null;
 let customTopicData    = null;
 let loginBanError      = false;
 let _navRO             = null;
+let _pendingIconUrls   = {};
 
 // Gibt bestPoints/bestMaxPoints aus altem und neuem Format zurück
 function _gp(g) {
@@ -825,8 +826,25 @@ export function getSubjectColor(subjectId) {
 
 // ── Fach-Icon abrufen (Nutzer > Standard) ─
 function getSubjectIcon(subjectId) {
-  const custom = userData?.settings?.customIcons?.[subjectId];
-  return custom || structure?.[subjectId]?.icon || '📚';
+  const url = userData?.settings?.customIconUrls?.[subjectId];
+  if (url) return `<img class="subject-icon-img" src="${url}" alt="">`;
+  return userData?.settings?.customIcons?.[subjectId] || structure?.[subjectId]?.icon || '📚';
+}
+
+function _resizeToDataUrl(file) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      c.getContext('2d').drawImage(img, 0, 0, 64, 64);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
 }
 
 // ── Einstellungen-Seite ──────────────────
@@ -855,19 +873,28 @@ function renderSettings() {
   }).join('');
 
   const iconRows = subjects.map(s => {
-    const current = getSubjectIcon(s.id);
+    const hasUrl     = !!userData?.settings?.customIconUrls?.[s.id];
+    const emojiVal   = userData?.settings?.customIcons?.[s.id] || s.icon;
+    const previewHtml = hasUrl
+      ? `<img class="subject-icon-img" src="${userData.settings.customIconUrls[s.id]}" alt="" style="width:36px;height:36px">`
+      : emojiVal;
     return `
       <div class="settings-color-row">
         <div class="settings-subject-info">
-          <span class="settings-icon" id="iconPreview_${s.id}">${current}</span>
+          <span class="settings-icon" id="iconPreview_${s.id}">${previewHtml}</span>
           <span class="settings-name">${s.name}</span>
         </div>
         <div class="settings-color-right">
           <input type="text" class="form-input" id="icon_${s.id}"
-                 value="${current}" maxlength="2" style="width:60px;text-align:center;font-size:20px"
-                 oninput="document.getElementById('iconPreview_${s.id}').textContent=this.value||'${s.icon}'">
+                 value="${emojiVal}" maxlength="2" style="width:54px;text-align:center;font-size:20px"
+                 oninput="window.LF.onEmojiInput('${s.id}',this.value)">
+          <label class="btn btn-ghost btn-sm icon-upload-label" title="PNG hochladen (64×64)">
+            📁
+            <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
+                   onchange="window.LF.handleIconFile('${s.id}',this)">
+          </label>
           <button class="btn btn-ghost btn-sm" onclick="window.LF.resetIcon('${s.id}','${s.icon}')">
-            Zurücksetzen
+            ↩
           </button>
         </div>
       </div>`;
@@ -898,7 +925,7 @@ function renderSettings() {
 
       <div class="settings-card" style="margin-top:16px">
         <div class="settings-section-title">Fach-Icons</div>
-        <p class="settings-hint">Emoji-Icon pro Fach anpassen (1–2 Zeichen).</p>
+        <p class="settings-hint">Emoji eingeben oder eigenes PNG hochladen (wird auf 64×64 px skaliert).</p>
         <div class="settings-color-list">
           ${subjects.length === 0
             ? '<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden.</div>'
@@ -2113,16 +2140,45 @@ window.LF = {
     userData = userData || {};
     userData.settings = userData.settings || {};
     userData.settings.customIcons = icons;
+
+    const existingUrls = userData.settings.customIconUrls || {};
+    const mergedUrls   = { ...existingUrls, ..._pendingIconUrls };
+    userData.settings.customIconUrls = mergedUrls;
+    _pendingIconUrls = {};
+
     await db().collection('users').doc(currentUser.uid).update({
-      'settings.customIcons': icons
+      'settings.customIcons':    icons,
+      'settings.customIconUrls': mergedUrls
     }).catch(console.error);
     showToast('Icons gespeichert! ✓', 'success');
   },
+
   resetIcon: (subjectId, defaultIcon) => {
+    delete _pendingIconUrls[subjectId];
+    if (userData?.settings?.customIconUrls) delete userData.settings.customIconUrls[subjectId];
     const input   = document.getElementById(`icon_${subjectId}`);
     const preview = document.getElementById(`iconPreview_${subjectId}`);
-    if (input)   input.value         = defaultIcon;
-    if (preview) preview.textContent = defaultIcon;
+    if (input)   input.value      = defaultIcon;
+    if (preview) preview.innerHTML = defaultIcon;
+  },
+
+  onEmojiInput: (subjectId, val) => {
+    delete _pendingIconUrls[subjectId];
+    const preview = document.getElementById(`iconPreview_${subjectId}`);
+    if (preview) preview.innerHTML = val || structure?.[subjectId]?.icon || '📚';
+  },
+
+  handleIconFile: async (subjectId, input) => {
+    const file = input.files?.[0];
+    if (!file) return;
+    const dataUrl = await _resizeToDataUrl(file);
+    if (!dataUrl) { showToast('Bild konnte nicht geladen werden.', 'error'); return; }
+    _pendingIconUrls[subjectId] = dataUrl;
+    const preview = document.getElementById(`iconPreview_${subjectId}`);
+    if (preview) preview.innerHTML = `<img class="subject-icon-img" src="${dataUrl}" alt="" style="width:36px;height:36px">`;
+    const emojiInput = document.getElementById(`icon_${subjectId}`);
+    if (emojiInput) emojiInput.value = '';
+    input.value = '';
   },
 
   startVocab: () => {
