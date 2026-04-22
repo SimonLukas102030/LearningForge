@@ -33,3 +33,26 @@ Ein zentrales Feature wird der intuitive Builder, der es ermöglicht, ohne Progr
  ## 5. benutzerdefinierte Icons 
  Die Icons bei den Fächern soll der Nutzer für sich ändern können. Also er kann bei Englisch z.B.statt einer USA-flagge eine GB-Flagge nehmen. Die geänderten Icons sollte nur der Nutzer, der es geändert hat sehen. Die neuen Icons sollten per Googledatabase gespeichert weden.
 
+# 6. Klassen (Gruppen-System)
+
+Das Klassensystem ermöglicht es Nutzern, sich in geschlossenen Gruppen zu organisieren, um gemeinsam Inhalte zu verwalten und den Lernfortschritt zu vergleichen.
+
+## 6.1 Rollen und Verwaltung
+* **Erstellung:** Jeder Nutzer kann eigene Gruppen erstellen und wird automatisch zum **Admin** dieser Gruppe.
+* **Einladungen:** Admins können andere User in ihre Gruppen einladen.
+* **Limits:**
+    * Standard-Nutzer: Maximal **2 Gruppen**.
+    * System-Admins: Unbegrenzte Anzahl an Gruppen.
+
+## 6.2 Gruppen-Features
+* **Personalisierung:**
+    * Frei wählbarer Gruppenname.
+    * Gruppen-Icon (Anforderung: 64x64px, PNG).
+* **Kollaboration:**
+    * Alle Mitglieder können neue **Themen und Fächer** hinzufügen.
+    * Erstellte Inhalte sind exklusiv innerhalb der Gruppe sichtbar.
+    * Keine Bestätigung durch den Admin für neue Inhalte erforderlich.
+
+## 6.3 Interface und Gamification
+* **Tab "Gruppe X":** Jede Gruppe erhält einen eigenen Reiter in der Benutzeroberfläche.
+* **Leaderboards:** Interne Ranglisten basierend auf der Aktivität (wer hat bereits wie viel erledigt).
