@@ -108,7 +108,9 @@ export async function evaluateAnswers(questions, answers, timeMinutes) {
     } else {
       const maxPts = q.maxPoints || Math.round(4 * cfg.pointFactor);
       let result;
-      if (CONFIG.gemini.apiKey) {
+      if (CONFIG.groq?.apiKey) {
+        result = await evaluateWithGroq(q, answer, maxPts, cfg.textExpectation);
+      } else if (CONFIG.gemini?.apiKey) {
         result = await evaluateWithGemini(q, answer, maxPts, cfg.textExpectation);
       } else {
         result = evaluateWithKeywords(q, answer, maxPts);
@@ -120,7 +122,58 @@ export async function evaluateAnswers(questions, answers, timeMinutes) {
   return results;
 }
 
-// ── Gemini KI-Auswertung ────────────────
+// ── Groq KI-Auswertung (primär) ─────────
+async function evaluateWithGroq(question, answer, maxPoints, textExpectation) {
+  const prompt =
+`Du bist ein sachlicher Schullehrer. Bewerte diese Schülerantwort fair und objektiv.
+
+FRAGE: ${question.question}
+MAXIMALE PUNKTZAHL: ${maxPoints}
+ANFORDERUNG: ${textExpectation}
+${question.sampleAnswer ? `MUSTERANTWORT: ${question.sampleAnswer}` : ''}
+
+SCHÜLERANTWORT: "${answer?.trim() || '(keine Antwort)'}"
+
+Antworte mit JSON: {"points": <Zahl 0 bis ${maxPoints}>, "feedback": "<1-2 Sätze Feedback auf Deutsch>"}`;
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
+      body:    JSON.stringify({
+        model:           'llama-3.3-70b-versatile',
+        messages:        [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens:      200,
+        temperature:     0.1
+      })
+    });
+
+    if (res.status === 429) {
+      console.warn('[LF] Groq 429 — Fallback zu Gemini');
+      return CONFIG.gemini?.apiKey
+        ? evaluateWithGemini(question, answer, maxPoints, textExpectation)
+        : evaluateWithKeywords(question, answer, maxPoints);
+    }
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      console.warn('[LF] Groq Fehler:', data.error?.message);
+      return evaluateWithKeywords(question, answer, maxPoints);
+    }
+
+    const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+    return {
+      points:   Math.min(Math.max(0, Math.round(parsed.points ?? 0)), maxPoints),
+      feedback: parsed.feedback || 'Keine Rückmeldung verfügbar.'
+    };
+  } catch (err) {
+    console.warn('[LF] Groq Exception:', err);
+    return evaluateWithKeywords(question, answer, maxPoints);
+  }
+}
+
+// ── Gemini KI-Auswertung (Fallback) ─────
 async function evaluateWithGemini(question, answer, maxPoints, textExpectation, attempt = 0) {
   const prompt =
 `Du bist ein sachlicher Schullehrer. Bewerte diese Schülerantwort fair und objektiv.
@@ -331,13 +384,15 @@ function shuffleArr(arr) {
 }
 
 export async function generateQuestionsWithGemini(htmlContent, timeMinutes) {
-  if (!CONFIG.gemini.apiKey || !htmlContent) return [];
+  const hasGroq   = !!CONFIG.groq?.apiKey;
+  const hasGemini = !!CONFIG.gemini?.apiKey;
+  if (!hasGroq && !hasGemini || !htmlContent) return [];
 
   const cfg        = TIME_CONFIG[timeMinutes] || TIME_CONFIG[15];
   const totalCount = cfg.maxQuestions === Infinity ? 20 : Math.min(cfg.maxQuestions, 20);
 
-  const mcRatio  = timeMinutes <= 5 ? 1.0 : timeMinutes <= 10 ? 0.5 : 0.0;
-  const mcCount  = Math.round(totalCount * mcRatio);
+  const mcRatio   = timeMinutes <= 5 ? 1.0 : timeMinutes <= 10 ? 0.5 : 0.0;
+  const mcCount   = Math.round(totalCount * mcRatio);
   const textCount = totalCount - mcCount;
 
   const content = htmlContent
@@ -356,7 +411,8 @@ export async function generateQuestionsWithGemini(htmlContent, timeMinutes) {
     textCount > 0 ? `  {"type":"free_text","difficulty":"medium","question":"...","maxPoints":4,"sampleAnswer":"..."}` : ''
   ].filter(Boolean).join(',\n');
 
-  const prompt =
+  // Groq erwartet ein JSON-Objekt (kein Array), deshalb {"questions":[...]}
+  const groqPrompt =
 `Du bist ein Lehrer. Erstelle abwechslungsreiche Testfragen zum folgenden Lerninhalt.
 Generiere jedes Mal andere Fragen — variiere Formulierungen, Zahlenwerte und Beispiele.
 
@@ -370,47 +426,69 @@ ${typeLines}
 - Sprache: Deutsch
 - Bei Mathe/Physik: Zahlenwerte bei jeder Generierung leicht variieren
 
-Antworte AUSSCHLIESSLICH mit diesem JSON-Array, ohne weitere Zeichen:
-[
+Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt:
+{"questions": [
 ${exampleLines}
-]`;
+]}`;
 
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
-      {
+  const geminiPrompt = groqPrompt
+    .replace('Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt:\n{"questions": [', 'Antworte AUSSCHLIESSLICH mit diesem JSON-Array, ohne weitere Zeichen:\n[')
+    .replace('\n]}', '\n]');
+
+  if (hasGroq) {
+    try {
+      const res  = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      }
-    );
-    const data    = await res.json();
-    const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-    const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
-    const jsonStr = cleaned.startsWith('[') ? cleaned : cleaned.slice(cleaned.indexOf('['));
-    const arr     = JSON.parse(jsonStr);
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
+        body:    JSON.stringify({
+          model:           'llama-3.3-70b-versatile',
+          messages:        [{ role: 'user', content: groqPrompt }],
+          response_format: { type: 'json_object' },
+          max_tokens:      2000,
+          temperature:     0.7
+        })
+      });
+      const data = await res.json();
+      const arr  = JSON.parse(data.choices?.[0]?.message?.content || '{}').questions;
+      if (Array.isArray(arr) && arr.length > 0) return _processGeneratedQuestions(arr, cfg);
+    } catch { /* fall through to Gemini */ }
+  }
 
-    if (!Array.isArray(arr) || arr.length === 0) return [];
+  if (hasGemini) {
+    try {
+      const res     = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: geminiPrompt }] }] }) }
+      );
+      const data    = await res.json();
+      const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+      const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
+      const jsonStr = cleaned.startsWith('[') ? cleaned : cleaned.slice(cleaned.indexOf('['));
+      const arr     = JSON.parse(jsonStr);
+      if (Array.isArray(arr) && arr.length > 0) return _processGeneratedQuestions(arr, cfg);
+    } catch { /* ignore */ }
+  }
 
-    return arr.map((q, i) => {
-      q.id = `gen_${Date.now()}_${i}`;
-      if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
-        const pairs    = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.correct }));
-        const shuffled = shuffleArr(pairs);
-        return {
-          ...q,
-          shuffledOptions:      shuffled.map(x => x.opt),
-          shuffledCorrectIndex: shuffled.findIndex(x => x.isCorrect),
-          timeConfig: cfg
-        };
-      }
+  return [];
+}
+
+function _processGeneratedQuestions(arr, cfg) {
+  return arr.map((q, i) => {
+    q.id = `gen_${Date.now()}_${i}`;
+    if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
+      const pairs    = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.correct }));
+      const shuffled = shuffleArr(pairs);
       return {
         ...q,
-        maxPoints:  Math.round((q.maxPoints || 4) * cfg.pointFactor),
+        shuffledOptions:      shuffled.map(x => x.opt),
+        shuffledCorrectIndex: shuffled.findIndex(x => x.isCorrect),
         timeConfig: cfg
       };
-    });
-  } catch {
-    return [];
-  }
+    }
+    return {
+      ...q,
+      maxPoints:  Math.round((q.maxPoints || 4) * cfg.pointFactor),
+      timeConfig: cfg
+    };
+  });
 }

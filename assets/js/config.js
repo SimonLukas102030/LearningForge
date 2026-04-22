@@ -26,9 +26,16 @@ export const CONFIG = {
     measurementId: "G-YDH9P8MXMW"
   },
 
-  // ── Gemini KI (optional) ───────────────
+  // ── Groq KI (primär, kostenlos) ────────
+  // Kostenloser API-Key: https://console.groq.com
+  // 14.400 Anfragen/Tag, 30/Min — deutlich mehr als Gemini
+  groq: {
+    apiKey: ''
+  },
+
+  // ── Gemini KI (Fallback) ────────────────
   // Kostenloser API-Key: https://aistudio.google.com/app/apikey
-  // Ohne Key: automatische Keyword-Auswertung als Fallback
+  // Wird nur genutzt wenn kein Groq-Key eingetragen ist
   gemini: {
     apiKey: 'AIzaSyAmnyA7I1S86WqotKt-r_3b3SMri0N6cMM'
   }
