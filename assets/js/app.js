@@ -3,7 +3,8 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays } from './auth.js';
+import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -34,6 +35,7 @@ let flashcardState     = null;
 let pomodoroState      = null;
 let _notesSaveTimer    = null;
 let srsState           = null;
+let dailyChallengeState = null;
 
 // ── Online/Offline-Banner (F-11) ─────────
 function updateOnlineStatus(isOnline) {
@@ -115,6 +117,7 @@ export function startApp() {
       }
       structure = await getStructure();
       await loadToolsOverride();
+      checkAndShowWeeklySummary();
     }
     route();
   });
@@ -186,6 +189,8 @@ function route() {
     renderLesezeichen();
   } else if (parts[0] === 'srs') {
     renderSRS();
+  } else if (parts[0] === 'daily-challenge') {
+    renderDailyChallenge();
   } else {
     renderDashboard();
   }
@@ -224,6 +229,11 @@ function renderNav(breadcrumbs = []) {
         </div>
       </div>
       <div class="nav-right">
+        ${(() => { const xi = userData ? calcLevel(userData.xp || 0) : null; return xi ? `
+        <div class="nav-xp-chip" title="Level ${xi.level} — ${xi.title} | ${xi.xpCurrent}/${xi.xpNeeded} XP" onclick="location.hash='#/profil'">
+          <span class="nav-xp-level">Lv.${xi.level}</span>
+          <div class="nav-xp-track"><div class="nav-xp-fill" id="navXPFill" style="width:${xi.pct}%"></div></div>
+        </div>` : ''; })()}
         <button class="btn-icon" id="themeBtn" onclick="window.LF.toggleTheme()" title="Theme wechseln">
           ${theme === 'dark' ? '☀️' : '🌙'}
         </button>
@@ -504,9 +514,10 @@ function renderDashboard() {
         </div>
         ${getSRSDueCount() > 0 ? `
         <div class="stat-chip srs-chip" onclick="location.hash='#/srs'" style="cursor:pointer">
-          <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">🧠 SRS fällig</span>
+          <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">SRS fällig</span>
         </div>` : ''}
       </div>
+      ${renderDailyChallengeCard()}
       ${attentionHtml}
       ${_installPrompt && !localStorage.getItem('lf_install_dismissed') ? `
         <div class="install-card" id="installCard">
@@ -1546,16 +1557,17 @@ function _updatePomodoroDisplay() {
 
 // ── Profil-Seite ─────────────────────────
 function renderProfile() {
-  const grades   = userData?.grades || {};
-  const subjects = Object.values(structure || {});
-  const initial  = (currentUser.displayName || 'U')[0].toUpperCase();
+  const grades    = userData?.grades || {};
+  const subjects  = Object.values(structure || {});
+  const initial   = (currentUser.displayName || 'U')[0].toUpperCase();
+  const xpInfo    = calcLevel(userData?.xp || 0);
+  const achieved  = new Set(userData?.achievements || []);
 
   const gradeRows = subjects.map(s => {
     const sGrades = Object.entries(grades).filter(([k]) => k.startsWith(s.id));
-    if (sGrades.length === 0) return '';
+    if (!sGrades.length) return '';
     const avg = sGrades.reduce((sum, [,g]) => sum + (g.grade||0), 0) / sGrades.length;
-    const { color } = calcGrade(0, 1); // just for color logic
-    const gi = calcGrade(Math.max(0, 7 - avg), 6);
+    const gi  = calcGrade(Math.max(0, 7 - avg), 6);
     return `
       <div class="grade-row">
         <span>${getSubjectIcon(s.id)} ${s.name}</span>
@@ -1563,10 +1575,24 @@ function renderProfile() {
       </div>`;
   }).filter(Boolean).join('') || '<div class="empty-state" style="padding:16px">Noch keine Noten vorhanden.</div>';
 
+  // Achievement grid
+  const achTiles = ACHIEVEMENTS.map(a => {
+    const unlocked = achieved.has(a.id);
+    return `
+      <div class="ach-tile ${unlocked ? 'ach-unlocked' : 'ach-locked'}" title="${a.title}: ${a.desc}${unlocked ? '' : ' (noch nicht freigeschaltet)'}">
+        <div class="ach-code" style="${unlocked ? `background:${a.color}` : ''}">${a.code}</div>
+        <div class="ach-title">${a.title}</div>
+        ${unlocked ? `<div class="ach-xp">+${a.xp} XP</div>` : `<div class="ach-xp ach-xp-locked">${a.xp} XP</div>`}
+      </div>`;
+  }).join('');
+
+  const achCount = achieved.size;
+
   document.getElementById('app').innerHTML = `
     ${renderNav([{ label: 'Profil' }])}
     <div class="page">
-      <div class="page-header"><h1>👤 Mein Profil</h1></div>
+      <div class="page-header"><h1>Mein Profil</h1></div>
+
       <div class="profile-grid">
         <div class="profile-info-card">
           <div class="profile-avatar-large">${
@@ -1587,6 +1613,35 @@ function renderProfile() {
           ${gradeRows}
         </div>
       </div>
+
+      <!-- XP / Level (F-25) -->
+      <div class="xp-card">
+        <div class="xp-card-left">
+          <div class="xp-level-badge">Lv.${xpInfo.level}</div>
+          <div class="xp-card-info">
+            <div class="xp-title">${xpInfo.title}</div>
+            <div class="xp-sub">${xpInfo.xpCurrent} / ${xpInfo.xpNeeded} XP bis Level ${xpInfo.level + 1}</div>
+          </div>
+        </div>
+        <div class="xp-card-right">
+          <div class="xp-bar-wrap">
+            <div class="xp-bar"><div class="xp-fill" style="width:${xpInfo.pct}%"></div></div>
+            <div class="xp-pct">${xpInfo.pct}%</div>
+          </div>
+          <div class="xp-total">Gesamt: ${xpInfo.totalXP} XP</div>
+        </div>
+      </div>
+
+      <!-- Streak-Kalender (F-27) -->
+      <div class="section-title" style="margin-top:32px;margin-bottom:12px">Lern-Aktivität</div>
+      ${renderStreakCalendar()}
+
+      <!-- Achievement-Grid (F-24) -->
+      <div class="section-title" style="margin-top:32px;margin-bottom:12px">
+        Achievements
+        <span class="ach-count-badge">${achCount} / ${ACHIEVEMENTS.length}</span>
+      </div>
+      <div class="achievement-grid">${achTiles}</div>
     </div>`;
 }
 
@@ -1667,16 +1722,51 @@ async function renderLeaderboard() {
       </div>`;
   }).filter(Boolean).join('');
 
+  // XP-Rangliste
+  const xpSorted = [...data].filter(u => u.xp > 0).sort((a,b) => (b.xp||0)-(a.xp||0)).slice(0,10);
+  const xpHtml = xpSorted.length ? xpSorted.map((u,i) => {
+    const xi = calcLevel(u.xp || 0);
+    const medal = i < 3 ? ['🥇','🥈','🥉'][i] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`;
+    const av = u.photoURL
+      ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      : (u.displayName||'?')[0].toUpperCase();
+    const isMe = u.uid === currentUser?.uid;
+    return `
+      <div class="lb-row${isMe?' lb-me':''}">
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-avatar">${av}</div>
+        <div class="lb-name">${u.displayName||'Unbekannt'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+        <div class="lb-meta">Lv.${xi.level} ${xi.title}</div>
+        <div class="lb-score" style="color:#f59e0b">${u.xp} XP</div>
+      </div>`;
+  }).join('') : '<div class="empty-state" style="padding:24px">Noch keine XP-Daten vorhanden.</div>';
+
   document.getElementById('lbContent').innerHTML = `
-    <div class="lb-main">
-      <div class="lb-main-title">Gesamt — Top 10</div>
-      <div class="lb-header-row">
-        <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
-        <span class="lb-name">Name</span><span class="lb-meta">Tests</span><span class="lb-score">Ø Pkt</span>
-      </div>
-      ${top10Html}
+    <div class="lb-tabs" id="lbTabs">
+      <button class="lb-tab active" onclick="window.LF.switchLbTab('punkte',this)">Testpunkte</button>
+      <button class="lb-tab" onclick="window.LF.switchLbTab('xp',this)">XP / Level</button>
     </div>
-    ${subjectGridHtml ? `<div class="section-title" style="margin-top:32px;margin-bottom:16px">Nach Fach</div><div class="lb-grid">${subjectGridHtml}</div>` : ''}`;
+    <div id="lbPunkte">
+      <div class="lb-main">
+        <div class="lb-main-title">Gesamt — Top 10</div>
+        <div class="lb-header-row">
+          <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
+          <span class="lb-name">Name</span><span class="lb-meta">Tests</span><span class="lb-score">Pkt</span>
+        </div>
+        ${top10Html}
+      </div>
+      ${subjectGridHtml ? `<div class="section-title" style="margin-top:32px;margin-bottom:16px">Nach Fach</div><div class="lb-grid">${subjectGridHtml}</div>` : ''}
+    </div>
+    <div id="lbXP" style="display:none">
+      <div class="lb-main">
+        <div class="lb-main-title">XP-Rangliste — Top 10</div>
+        <div class="lb-header-row">
+          <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
+          <span class="lb-name">Name</span><span class="lb-meta">Level</span><span class="lb-score">XP</span>
+        </div>
+        ${xpHtml}
+      </div>
+    </div>`;
 }
 
 // ── Meine Inhalte ────────────────────────
@@ -2510,6 +2600,381 @@ function removeTabSwitchDetection() {
 // ── Test-Ablauf ───────────────────────────
 let selectedTime = 15;
 
+// ══════════════════════════════════════════
+//  Phase 3 — Gamification 3.0 Helpers
+// ══════════════════════════════════════════
+
+// ── F-24/25: XP + Achievement-Grant ────────
+async function grantXPAndAchievements(ctx = {}) {
+  if (!currentUser || !userData) return;
+  const uid     = currentUser.uid;
+  const already = new Set(userData.achievements || []);
+  const newOnes = ACHIEVEMENTS.filter(a => !already.has(a.id) && a.check(userData, ctx));
+
+  let xpGained = ctx.xp || 0;
+  newOnes.forEach(a => { xpGained += a.xp; });
+
+  const prevLevel = calcLevel(userData.xp || 0).level;
+  userData.xp = (userData.xp || 0) + xpGained;
+  userData.achievements = [...already, ...newOnes.map(a => a.id)];
+
+  const p = [];
+  if (xpGained > 0) {
+    p.push(saveXP(uid, xpGained).catch(console.error));
+    // Mirror XP to leaderboard doc so XP-tab can show it
+    p.push(db().collection('leaderboard').doc(uid).set({ xp: userData.xp, displayName: currentUser.displayName || 'Nutzer', photoURL: currentUser.photoURL || null }, { merge: true }).catch(console.error));
+  }
+  if (newOnes.length) p.push(saveAchievements(uid, newOnes.map(a => a.id)).catch(console.error));
+  await Promise.all(p);
+
+  newOnes.forEach((a, i) => {
+    setTimeout(() => showToast(`Achievement freigeschaltet: ${a.title} (+${a.xp} XP)`, 'success'), i * 1800);
+  });
+
+  const newLevel = calcLevel(userData.xp).level;
+  if (newLevel > prevLevel) {
+    const info = calcLevel(userData.xp);
+    setTimeout(() => showToast(`Level ${newLevel} erreicht — ${info.title}!`, 'success'), newOnes.length * 1800 + 600);
+  }
+
+  // Update XP bar in nav without full re-render
+  const fill = document.getElementById('navXPFill');
+  if (fill) fill.style.width = calcLevel(userData.xp).pct + '%';
+}
+
+function countTestsToday() {
+  const today = new Date().toISOString().slice(0, 10);
+  return Object.values(userData?.grades || {})
+    .flatMap(g => g.history || [])
+    .filter(h => h.date?.startsWith(today)).length;
+}
+
+function checkSubjectComplete(subjectId) {
+  const subject = structure?.[subjectId];
+  if (!subject) return false;
+  const grades   = userData?.grades || {};
+  const allKeys  = Object.values(subject.years || {})
+    .flatMap(y => Object.keys(y.topics || {}).map(tid => `${subjectId}__${y.id}__${tid}`));
+  return allKeys.length > 0 && allKeys.every(k => grades[k]);
+}
+
+// ── F-27: Streak-Kalender ──────────────────
+function calcStreakExtended() {
+  const studyMap   = userData?.studyTime || {};
+  const freezeSet  = new Set(userData?.freezeDays || []);
+  const active     = new Set();
+
+  // Study days from pomodoro tracking
+  Object.entries(studyMap).forEach(([d, m]) => { if (m > 0) active.add(d); });
+  // Grade history dates
+  Object.values(userData?.grades || {}).forEach(g =>
+    (g.history || []).forEach(h => { if (h.date) active.add(h.date.slice(0, 10)); })
+  );
+  // Freeze days
+  freezeSet.forEach(d => active.add(d));
+
+  if (!active.size) return { streak: 0, longest: 0, active, freezeSet };
+
+  const today     = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  let streak = 0;
+  if (active.has(today) || active.has(yesterday)) {
+    let d = active.has(today) ? new Date() : new Date(Date.now() - 864e5);
+    while (active.has(d.toISOString().slice(0, 10))) {
+      streak++;
+      d = new Date(d - 864e5);
+    }
+  }
+
+  const sorted = [...active].sort();
+  let longest = 0, cur = 0, prev = null;
+  for (const date of sorted) {
+    if (prev) {
+      const diff = Math.round((new Date(date) - new Date(prev)) / 864e5);
+      cur = diff === 1 ? cur + 1 : 1;
+    } else cur = 1;
+    longest = Math.max(longest, cur);
+    prev = date;
+  }
+  longest = Math.max(longest, streak);
+
+  return { streak, longest, active, freezeSet };
+}
+
+function renderStreakCalendar() {
+  const { streak, longest, active, freezeSet } = calcStreakExtended();
+  const studyMap = userData?.studyTime || {};
+
+  // Build 53 weeks starting on Monday
+  const today       = new Date();
+  const dayOfWeek   = (today.getDay() + 6) % 7; // Mon=0
+  const startMs     = today.getTime() - (dayOfWeek + 52 * 7) * 864e5;
+  const weeks       = [];
+  let   week        = [];
+
+  for (let i = 0; i < 371; i++) {
+    const d       = new Date(startMs + i * 864e5);
+    const dateStr = d.toISOString().slice(0, 10);
+    const mins    = studyMap[dateStr] || 0;
+    const frozen  = freezeSet.has(dateStr);
+    const lvl     = frozen ? 'f' : mins === 0 ? '0' : mins < 15 ? '1' : mins < 30 ? '2' : mins < 60 ? '3' : '4';
+    week.push(`<div class="scal-cell scl-${lvl}" title="${dateStr}${mins > 0 ? ': ' + mins + ' Min' : ''}${frozen ? ' (Freeze)' : ''}"></div>`);
+    if (week.length === 7 || i === 370) { weeks.push(`<div class="scal-week">${week.join('')}</div>`); week = []; }
+  }
+
+  // Freeze UI: available if streak ≥ 14 and user missed yesterday
+  const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  const missedYesterday = !active.has(yesterday);
+  const freezesAvailable = Math.floor(streak / 7);
+  const usedFreezes = (userData?.freezeDays || []).length;
+  const canFreeze = missedYesterday && streak >= 14 && usedFreezes < freezesAvailable;
+
+  return `
+    <div class="streak-stats-row">
+      <div class="streak-stat">
+        <div class="streak-stat-val">${streak}</div>
+        <div class="streak-stat-lbl">Aktueller Streak</div>
+      </div>
+      <div class="streak-stat">
+        <div class="streak-stat-val">${longest}</div>
+        <div class="streak-stat-lbl">Längster Streak</div>
+      </div>
+      ${streak >= 14 ? `
+      <div class="streak-stat">
+        <div class="streak-stat-val">${freezesAvailable - usedFreezes}</div>
+        <div class="streak-stat-lbl">Streak-Freezes</div>
+      </div>` : ''}
+    </div>
+    <div class="streak-cal">
+      <div class="scal-grid">${weeks.join('')}</div>
+      <div class="scal-legend">
+        <span>Weniger</span>
+        <div class="scl-box scl-0"></div>
+        <div class="scl-box scl-1"></div>
+        <div class="scl-box scl-2"></div>
+        <div class="scl-box scl-3"></div>
+        <div class="scl-box scl-4"></div>
+        <span>Mehr</span>
+      </div>
+    </div>
+    ${canFreeze ? `
+    <div class="freeze-banner">
+      Streak-Freeze verfügbar — gestern als Lerntag einreichen?
+      <button class="btn btn-sm btn-primary" style="margin-left:12px" onclick="window.LF.useStreakFreeze()">Freeze verwenden</button>
+    </div>` : ''}`;
+}
+
+// ── F-26: Daily Challenge ──────────────────
+function _seededRand(seed) {
+  let s = seed >>> 0;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0xffffffff; };
+}
+
+async function getDailyChallengeQuestions() {
+  const dateKey = new Date().toISOString().slice(0, 10);
+  const seed    = dateKey.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+  const rand    = _seededRand(seed);
+
+  const allTopics = Object.values(structure || {})
+    .flatMap(s => Object.values(s.years || {})
+      .flatMap(y => Object.values(y.topics || {})
+        .map(t => ({ subjectId: s.id, yearId: y.id, topicId: t.id }))));
+
+  if (!allTopics.length) return [];
+
+  const shuffled = [...allTopics].sort(() => rand() - 0.5);
+  const picked   = shuffled.slice(0, Math.min(3, shuffled.length));
+
+  const sets = await Promise.all(
+    picked.map(t => getTopicQuestions(t.subjectId, t.yearId, t.topicId).catch(() => ({ questions: [] })))
+  );
+
+  const mc = sets.flatMap(r => (r.questions || []).filter(q => q.type === 'multiple_choice'));
+  const shuffledQ = [...mc].sort(() => rand() - 0.5);
+  return shuffledQ.slice(0, 6);
+}
+
+function renderDailyChallengeCard() {
+  const today    = new Date().toISOString().slice(0, 10);
+  const done     = userData?.dailyChallenges?.[today];
+  if (done) {
+    const gi = calcGrade(done.points, done.maxPoints);
+    return `
+      <div class="daily-card daily-card-done" onclick="location.hash='#/daily-challenge'">
+        <div class="daily-card-label">Daily Challenge</div>
+        <div class="daily-card-status">Heute erledigt</div>
+        <div class="daily-card-grade" style="background:${gi.color}">${done.grade}</div>
+      </div>`;
+  }
+  return `
+    <div class="daily-card" onclick="location.hash='#/daily-challenge'">
+      <div class="daily-card-label">Daily Challenge</div>
+      <div class="daily-card-status">5 Min · 6 Fragen · Bonus-XP</div>
+      <div class="daily-card-cta">Jetzt starten</div>
+    </div>`;
+}
+
+async function renderDailyChallenge() {
+  const today = new Date().toISOString().slice(0, 10);
+  const done  = userData?.dailyChallenges?.[today];
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Daily Challenge' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>Daily Challenge</h1>
+        <div class="sub">${today} · 6 Fragen aus allen Fächern · 5 Minuten</div>
+      </div>
+      <div id="dcArea"><div class="spinner" style="margin:40px auto"></div></div>
+    </div>`;
+
+  if (done) {
+    const gi      = calcGrade(done.points, done.maxPoints);
+    let scores    = [];
+    try { scores = await getDailyScores(today); } catch(e) {}
+    const ranked  = [...scores].sort((a,b)=>(a.grade||9)-(b.grade||9));
+    const lbHtml  = ranked.map((u,i) => {
+      const m = i < 3 ? ['🥇','🥈','🥉'][i] : (i+1);
+      const isMe = u.uid === currentUser?.uid;
+      return `
+        <div class="lb-row${isMe?' lb-me':''}">
+          <div class="lb-rank">${m}</div>
+          <div class="lb-avatar">${u.displayName?.[0]?.toUpperCase()||'?'}</div>
+          <div class="lb-name">${u.displayName||'?'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+          <div class="lb-meta">${u.points}/${u.maxPoints} Pkt</div>
+          <div class="lb-score" style="color:${gradeColor(u.grade)}">${u.grade}</div>
+        </div>`;
+    }).join('') || '<div class="empty-state" style="padding:16px">Noch keine weiteren Einträge.</div>';
+
+    document.getElementById('dcArea').innerHTML = `
+      <div class="dc-done">
+        <div class="dc-done-grade" style="background:${gi.color}">${done.grade}</div>
+        <div class="dc-done-pts">${done.points} / ${done.maxPoints} Punkte</div>
+        <div class="dc-done-sub">Morgen gibt es eine neue Challenge!</div>
+      </div>
+      <div class="section-title" style="margin-top:28px;margin-bottom:12px">Heutige Rangliste</div>
+      <div class="lb-main">${lbHtml}</div>`;
+    return;
+  }
+
+  // Not done yet — load questions
+  let questions = [];
+  try { questions = await getDailyChallengeQuestions(); } catch(e) {}
+
+  if (!questions.length) {
+    document.getElementById('dcArea').innerHTML = `<div class="empty-state">Keine Fragen verfügbar. Füge zuerst Themen mit Fragen hinzu.</div>`;
+    return;
+  }
+
+  // Shuffle options for MC
+  questions = questions.map(q => {
+    if (q.type === 'multiple_choice' && q.options) {
+      const indexed = q.options.map((opt, i) => ({ opt, correct: i === q.correct }));
+      indexed.sort(() => Math.random() - 0.5);
+      return { ...q, shuffledOptions: indexed.map(x=>x.opt), shuffledCorrectIndex: indexed.findIndex(x=>x.correct) };
+    }
+    return q;
+  });
+
+  dailyChallengeState = { questions, answers: new Array(questions.length).fill(null), current: 0, startTime: Date.now(), timer: null, timeLeft: 300, dateKey: today };
+
+  _renderDCQuestion();
+}
+
+function _renderDCQuestion() {
+  if (!dailyChallengeState) return;
+  const { questions, answers, current, timeLeft } = dailyChallengeState;
+  const q   = questions[current];
+  const pct = ((current) / questions.length) * 100;
+
+  const opts = q.shuffledOptions || q.options || [];
+  const optHtml = opts.map((o, i) => `
+    <button class="dc-opt ${answers[current] === String(i) ? 'dc-opt-selected' : ''}"
+            onclick="window.LF.dcSelectOpt(${i})">${String.fromCharCode(65+i)}. ${o}</button>`).join('');
+
+  document.getElementById('dcArea').innerHTML = `
+    <div class="dc-header">
+      <div class="dc-timer" id="dcTimer">${Math.floor(timeLeft/60)}:${String(timeLeft%60).padStart(2,'0')}</div>
+      <div class="dc-counter">${current+1} / ${questions.length}</div>
+    </div>
+    <div class="dc-progress"><div class="dc-progress-fill" style="width:${pct}%"></div></div>
+    <div class="dc-question">${q.question}</div>
+    <div class="dc-opts">${optHtml}</div>
+    <div class="dc-nav">
+      ${current > 0 ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.dcNav(-1)">Zurück</button>` : '<div></div>'}
+      ${current < questions.length-1
+        ? `<button class="btn btn-primary btn-sm" onclick="window.LF.dcNav(1)">Weiter</button>`
+        : `<button class="btn btn-primary" onclick="window.LF.dcSubmit()">Abgeben</button>`}
+    </div>`;
+
+  if (!dailyChallengeState.timer) {
+    dailyChallengeState.timer = setInterval(() => {
+      dailyChallengeState.timeLeft--;
+      const el = document.getElementById('dcTimer');
+      if (el) {
+        const tl = dailyChallengeState.timeLeft;
+        el.textContent = `${Math.floor(tl/60)}:${String(tl%60).padStart(2,'0')}`;
+        if (tl <= 30) el.classList.add('dc-timer-warn');
+      }
+      if (dailyChallengeState.timeLeft <= 0) {
+        clearInterval(dailyChallengeState.timer);
+        window.LF.dcSubmit();
+      }
+    }, 1000);
+  }
+}
+
+// ── F-29: Wöchentliche Zusammenfassung ─────
+function checkAndShowWeeklySummary() {
+  if (!userData) return;
+  const now  = new Date();
+  const d    = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yr   = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const wnum = Math.ceil(((d - yr) / 86400000 + 1) / 7);
+  const wKey = `${now.getFullYear()}-W${wnum.toString().padStart(2,'0')}`;
+  if (localStorage.getItem('lf_weekly_summary') === wKey) return;
+
+  // Collect last 7 days
+  const days = Array.from({ length: 7 }, (_, i) =>
+    new Date(Date.now() - (i+1) * 864e5).toISOString().slice(0, 10)
+  );
+  const totalMins  = days.reduce((s, d) => s + (userData.studyTime?.[d] || 0), 0);
+  const totalXP    = days.reduce((s, d) => s + (userData.xpLog?.[d] || 0), 0);
+  const totalTests = Object.values(userData.grades || {})
+    .flatMap(g => g.history || [])
+    .filter(h => days.some(d => h.date?.startsWith(d))).length;
+
+  if (totalMins === 0 && totalTests === 0 && totalXP === 0) return;
+
+  localStorage.setItem('lf_weekly_summary', wKey);
+
+  const streak = calcStreak();
+  const newAch  = (userData.achievements || []).length;
+  const msg     = MOTIVATION_SENTENCES[Math.floor(Math.random() * MOTIVATION_SENTENCES.length)];
+
+  const modal = document.createElement('div');
+  modal.id    = 'weeklySummaryModal';
+  modal.innerHTML = `
+    <div class="weekly-overlay" onclick="window.LF.dismissWeeklySummary()"></div>
+    <div class="weekly-modal">
+      <div class="weekly-modal-top">
+        <h2>Wochenrückblick</h2>
+        <div class="weekly-modal-sub">Letzte 7 Tage</div>
+      </div>
+      <div class="weekly-stats">
+        <div class="wm-stat"><div class="wm-val">${totalMins}</div><div class="wm-lbl">Minuten gelernt</div></div>
+        <div class="wm-stat"><div class="wm-val">${totalTests}</div><div class="wm-lbl">Tests gemacht</div></div>
+        <div class="wm-stat"><div class="wm-val">${totalXP}</div><div class="wm-lbl">XP verdient</div></div>
+        <div class="wm-stat"><div class="wm-val">${streak}</div><div class="wm-lbl">Streak</div></div>
+      </div>
+      <div class="weekly-motivation">${msg}</div>
+      <button class="btn btn-primary" onclick="window.LF.dismissWeeklySummary()">Weiter lernen</button>
+    </div>`;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add('weekly-visible'));
+}
+
 window.LF = {
   toggleTheme,
   toggleUserMenu: (e) => {
@@ -2735,6 +3200,79 @@ window.LF = {
 
   showToast: (msg, type) => showToast(msg, type),
 
+  // ── Phase 3: Gamification (F-24 – F-29) ──
+
+  // Leaderboard-Tab wechseln (F-25/F-28)
+  switchLbTab: (tab, btn) => {
+    document.querySelectorAll('.lb-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('lbPunkte').style.display = tab === 'punkte' ? 'block' : 'none';
+    document.getElementById('lbXP').style.display     = tab === 'xp'     ? 'block' : 'none';
+  },
+
+  // Streak-Freeze verwenden (F-27)
+  useStreakFreeze: async () => {
+    if (!currentUser) return;
+    const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    const existing  = userData?.freezeDays || [];
+    if (existing.includes(yesterday)) { showToast('Freeze für gestern bereits verwendet.', 'info'); return; }
+    const updated = [...existing, yesterday];
+    userData = userData || {};
+    userData.freezeDays = updated;
+    await saveFreezeDays(currentUser.uid, updated).catch(console.error);
+    showToast('Streak-Freeze angewendet — gestern zählt als Lerntag!', 'success');
+    renderProfile();
+  },
+
+  // Daily Challenge Optionsauswahl (F-26)
+  dcSelectOpt: (idx) => {
+    if (!dailyChallengeState) return;
+    dailyChallengeState.answers[dailyChallengeState.current] = String(idx);
+    _renderDCQuestion();
+  },
+
+  dcNav: (dir) => {
+    if (!dailyChallengeState) return;
+    const next = dailyChallengeState.current + dir;
+    if (next < 0 || next >= dailyChallengeState.questions.length) return;
+    dailyChallengeState.current = next;
+    _renderDCQuestion();
+  },
+
+  dcSubmit: async () => {
+    if (!dailyChallengeState) return;
+    if (dailyChallengeState.timer) { clearInterval(dailyChallengeState.timer); dailyChallengeState.timer = null; }
+    const { questions, answers, dateKey } = dailyChallengeState;
+    let pts = 0, max = 0;
+    questions.forEach((q, i) => {
+      const userAns = parseInt(answers[i] ?? '-1');
+      const correct = q.shuffledCorrectIndex ?? q.correct;
+      max += q.points || 2;
+      if (userAns === correct) pts += q.points || 2;
+    });
+    const gi = calcGrade(pts, max);
+
+    userData = userData || {};
+    userData.dailyChallenges = userData.dailyChallenges || {};
+    userData.dailyChallenges[dateKey] = { grade: gi.grade, points: pts, maxPoints: max };
+    userData.dailyChallengesCompleted = (userData.dailyChallengesCompleted || 0) + 1;
+    await incrementCounter(currentUser.uid, 'dailyChallengesCompleted').catch(console.error);
+    await saveDailyScore(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, dateKey, gi.grade, pts, max).catch(console.error);
+    await db().collection('users').doc(currentUser.uid).set({ dailyChallenges: { [dateKey]: userData.dailyChallenges[dateKey] } }, { merge: true }).catch(console.error);
+
+    const xpBonus = gi.grade === 1 ? 80 : gi.grade <= 2 ? 50 : 30;
+    grantXPAndAchievements({ xp: xpBonus, dailyPerfect: gi.grade === 1 }).catch(console.error);
+
+    dailyChallengeState = null;
+    renderDailyChallenge();
+  },
+
+  // Wöchentlicher Rückblick schließen (F-29)
+  dismissWeeklySummary: () => {
+    const el = document.getElementById('weeklySummaryModal');
+    if (el) { el.classList.remove('weekly-visible'); setTimeout(() => el.remove(), 300); }
+  },
+
   // ── PWA Install (F-13) ───────────────────
   installApp: async () => {
     if (!_installPrompt) return;
@@ -2870,6 +3408,9 @@ window.LF = {
     if (!userData.srs) userData.srs = {};
     userData.srs[card.id] = { ...existing, ...updated };
     await saveSRS(currentUser.uid, userData.srs).catch(console.error);
+    userData.srsReviewsTotal = (userData.srsReviewsTotal || 0) + 1;
+    await incrementCounter(currentUser.uid, 'srsReviewsTotal').catch(console.error);
+    grantXPAndAchievements({ xp: 3 }).catch(console.error);
     srsState.current++;
     srsState.done++;
     const area = document.getElementById('srsArea');
@@ -3188,6 +3729,7 @@ window.LF = {
     if (msg) msg.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
     try {
       await saveCustomTopic(currentUser.uid, builderState, null);
+      grantXPAndAchievements({ xp: 50, customCreated: true }).catch(console.error);
       if (msg) msg.innerHTML = `<div class="success-msg">Hochgeladen! <a onclick="location.hash='#/meine-inhalte'" style="color:var(--accent);cursor:pointer;text-decoration:underline">Jetzt in Meine Inhalte ansehen →</a></div>`;
     } catch(e) {
       if (msg) msg.innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
@@ -3529,6 +4071,20 @@ window.LF.submitTest = async () => {
       currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
       subjectId, yearId, topicId, bestInfo.grade, bestRun.points
     ).catch(console.error);
+
+    // F-25: XP + F-24: Achievements
+    const qCount = questions.length;
+    userData.totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + qCount;
+    await incrementCounter(currentUser.uid, 'totalQuestionsAnswered', qCount).catch(console.error);
+    const ctx = {
+      xp:            penalty ? 5 : calcXPForTest(bestInfo.grade),
+      streak:        calcStreak(),
+      hour:          new Date().getHours(),
+      perfect:       !penalty && total === max && max > 0,
+      testsToday:    countTestsToday(),
+      subjectComplete: checkSubjectComplete(subjectId),
+    };
+    grantXPAndAchievements(ctx).catch(console.error);
   }
 
   renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty });

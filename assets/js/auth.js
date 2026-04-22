@@ -273,3 +273,50 @@ export async function saveWeakQuestions(uid, questionIds) {
   questionIds.forEach(id => { updates[`weakQuestions.${id}`] = inc; });
   await _db.collection('users').doc(uid).update(updates).catch(console.error);
 }
+
+// ── XP speichern (F-25) ───────────────────
+export async function saveXP(uid, xpToAdd) {
+  const key = new Date().toISOString().slice(0, 10);
+  await _db.collection('users').doc(uid).update({
+    xp: firebase.firestore.FieldValue.increment(xpToAdd),
+    [`xpLog.${key}`]: firebase.firestore.FieldValue.increment(xpToAdd)
+  }).catch(() =>
+    _db.collection('users').doc(uid).set(
+      { xp: xpToAdd, xpLog: { [key]: xpToAdd } }, { merge: true }
+    )
+  );
+}
+
+// ── Achievements speichern (F-24) ─────────
+export async function saveAchievements(uid, ids) {
+  if (!ids.length) return;
+  await _db.collection('users').doc(uid).set(
+    { achievements: firebase.firestore.FieldValue.arrayUnion(...ids) }, { merge: true }
+  );
+}
+
+// ── Allgemeiner Zähler (Fragen, SRS-Reviews) ─
+export async function incrementCounter(uid, field, by = 1) {
+  await _db.collection('users').doc(uid).update({
+    [field]: firebase.firestore.FieldValue.increment(by)
+  }).catch(() =>
+    _db.collection('users').doc(uid).set({ [field]: by }, { merge: true })
+  );
+}
+
+// ── Daily Challenge Score (F-26) ──────────
+export async function saveDailyScore(uid, displayName, photoURL, dateKey, grade, points, maxPoints) {
+  await _db.collection('dailyScores').doc(dateKey).set({
+    [`scores.${uid}`]: { uid, displayName, photoURL: photoURL || null, grade, points, maxPoints }
+  }, { merge: true });
+}
+
+export async function getDailyScores(dateKey) {
+  const doc = await _db.collection('dailyScores').doc(dateKey).get({ source: 'server' });
+  return doc.exists ? Object.values(doc.data().scores || {}) : [];
+}
+
+// ── Streak-Freeze (F-27) ──────────────────
+export async function saveFreezeDays(uid, freezeDays) {
+  await _db.collection('users').doc(uid).set({ freezeDays }, { merge: true });
+}
