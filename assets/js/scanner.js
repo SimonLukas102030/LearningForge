@@ -9,8 +9,8 @@ const RAW = () =>
 const API = () =>
   `https://api.github.com/repos/${CONFIG.github.owner}/${CONFIG.github.repo}`;
 
-const CACHE_KEY     = 'lf_structure_v3';
-const CACHE_SHA_KEY = 'lf_structure_sha_v3';
+const CACHE_KEY     = 'lf_structure_v4';
+const CACHE_SHA_KEY = 'lf_structure_sha_v4';
 
 export async function getStructure(forceRefresh = false) {
   if (CONFIG.github.owner === 'DEIN_GITHUB_USERNAME') {
@@ -112,6 +112,7 @@ function buildStructure(tree, subjectsConfig) {
         name:  cfg.name  || idToName(subjectId),
         color: cfg.color || defaultColor(subjectId),
         icon:  cfg.icon  || '📚',
+        tools: cfg.tools || {},
         years: {}
       };
     }

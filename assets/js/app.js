@@ -81,6 +81,7 @@ export function startApp() {
         return;
       }
       structure = await getStructure();
+      await loadToolsOverride();
     }
     route();
   });
@@ -100,6 +101,7 @@ export function startApp() {
 // ── Router ───────────────────────────────
 function route() {
   unmountCalculator();
+  unmountTafelwerk();
   const hash  = location.hash.replace('#/', '') || '';
   const parts = hash.split('/').filter(Boolean);
 
@@ -539,7 +541,9 @@ async function renderTopic(subjectId, yearId, topicId) {
   const topic   = year?.topics?.[topicId];
   if (!topic) { location.hash = `#/fach/${subjectId}/${yearId}`; return; }
 
-  if (subjectId === 'Mathematik') mountCalculator();
+  const subjectTools = getSubjectTools(subjectId);
+  if (subjectTools.calculator) mountCalculator();
+  if (subjectTools.tafelwerk)  mountTafelwerk();
 
   document.getElementById('app').innerHTML = `
     ${renderNav([
@@ -1481,12 +1485,36 @@ async function renderAdmin() {
         </div>`;
     }).join('');
 
+  const toolsOverride = await loadToolsOverride();
+  const allSubjects   = structure ? Object.values(structure) : [];
+  const toolRows = allSubjects.map(s => {
+    const t = { ...(s.tools || {}), ...((toolsOverride[s.id]) || {}) };
+    return `
+      <div class="admin-tool-row">
+        <span class="admin-tool-fach">${s.icon || '📚'} ${s.name}</span>
+        <label class="admin-tool-check">
+          <input type="checkbox" data-subject="${s.id}" data-tool="calculator" ${t.calculator ? 'checked' : ''}
+            onchange="window.LF.adminToggleTool('${s.id}','calculator',this.checked)">
+          Taschenrechner
+        </label>
+        <label class="admin-tool-check">
+          <input type="checkbox" data-subject="${s.id}" data-tool="tafelwerk" ${t.tafelwerk ? 'checked' : ''}
+            onchange="window.LF.adminToggleTool('${s.id}','tafelwerk',this.checked)">
+          Tafelwerk
+        </label>
+      </div>`;
+  }).join('');
+
   document.getElementById('adminContent').innerHTML = `
     <div class="admin-stats-bar">
       <span>${users.length} Nutzer gesamt</span>
       <span>${users.filter(u=>u.isBanned).length} gesperrt</span>
       <span>${users.reduce((s,u)=>s+Object.keys(u.grades||{}).length,0)} Tests gesamt</span>
     </div>
+    <div class="admin-section-title">Hilfsmittel pro Fach</div>
+    <div class="admin-tool-list">${toolRows || '<div class="empty-state">Keine F&auml;cher geladen.</div>'}</div>
+    <button class="btn btn-primary" style="margin-bottom:24px" onclick="window.LF.adminSaveTools()">Hilfsmittel speichern</button>
+    <div class="admin-section-title">Nutzerverwaltung</div>
     <div class="admin-user-list">${rows || '<div class="empty-state">Keine Nutzer gefunden.</div>'}</div>`;
 }
 
@@ -2185,6 +2213,23 @@ window.LF = {
     if (!confirm(`Rangliste von ${name} wirklich zurücksetzen?`)) return;
     await resetLeaderboard(uid);
     showToast(`Rangliste von ${name} zurückgesetzt.`, 'success');
+  },
+
+  adminToggleTool: (subjectId, tool, value) => {
+    if (!_toolsOverride) _toolsOverride = {};
+    if (!_toolsOverride[subjectId]) _toolsOverride[subjectId] = {};
+    _toolsOverride[subjectId][tool] = value;
+  },
+
+  adminSaveTools: async () => {
+    try {
+      await db().collection('appConfig').doc('subjectTools').set(
+        { tools: _toolsOverride || {} }, { merge: false }
+      );
+      showToast('Hilfsmittel gespeichert.', 'success');
+    } catch (e) {
+      showToast('Fehler beim Speichern: ' + e.message, 'error');
+    }
   },
 
   // ── Builder ──────────────────────────────
@@ -3009,6 +3054,132 @@ function unmountCalculator() {
   calcExpr = '';
 }
 
+// ── Tafelwerk ─────────────────────────────
+let _twOpen = true;
+
+function mountTafelwerk() {
+  if (document.getElementById('twWidget')) return;
+  const el = document.createElement('div');
+  el.id = 'twWidget';
+  el.className = 'calc-widget tw-widget';
+  el.innerHTML = `
+    <button class="calc-toggle-btn" onclick="window.LF.toggleTw()">
+      Tafelwerk <span id="twArrow">▲</span>
+    </button>
+    <div class="calc-panel tw-panel" id="twPanel">
+      <div class="tw-tabs">
+        <button class="tw-tab active" onclick="window.LF.twTab(this,'tw-konstanten')">Konstanten</button>
+        <button class="tw-tab" onclick="window.LF.twTab(this,'tw-formeln')">Formeln</button>
+        <button class="tw-tab" onclick="window.LF.twTab(this,'tw-einheiten')">Einheiten</button>
+        <button class="tw-tab" onclick="window.LF.twTab(this,'tw-perioden')">Periodensystem</button>
+      </div>
+      <div class="tw-body">
+        <div id="tw-konstanten" class="tw-section">
+          <table class="tw-table"><tbody>
+            <tr><td>Lichtgeschwindigkeit</td><td><em>c</em> = 2,998 &times; 10<sup>8</sup> m/s</td></tr>
+            <tr><td>Gravitationskonstante</td><td><em>G</em> = 6,674 &times; 10<sup>&minus;11</sup> N&middot;m&sup2;/kg&sup2;</td></tr>
+            <tr><td>Erdbeschleunigung</td><td><em>g</em> = 9,81 m/s&sup2;</td></tr>
+            <tr><td>Avogadro-Konstante</td><td><em>N</em><sub>A</sub> = 6,022 &times; 10<sup>23</sup> mol<sup>&minus;1</sup></td></tr>
+            <tr><td>Planck-Konstante</td><td><em>h</em> = 6,626 &times; 10<sup>&minus;34</sup> J&middot;s</td></tr>
+            <tr><td>Boltzmann-Konstante</td><td><em>k</em><sub>B</sub> = 1,381 &times; 10<sup>&minus;23</sup> J/K</td></tr>
+            <tr><td>Elementarladung</td><td><em>e</em> = 1,602 &times; 10<sup>&minus;19</sup> C</td></tr>
+            <tr><td>Elektrische Feldkonstante</td><td>&epsilon;<sub>0</sub> = 8,854 &times; 10<sup>&minus;12</sup> F/m</td></tr>
+            <tr><td>Magnetische Feldkonstante</td><td>&mu;<sub>0</sub> = 4&pi; &times; 10<sup>&minus;7</sup> H/m</td></tr>
+            <tr><td>Universelle Gaskonstante</td><td><em>R</em> = 8,314 J/(mol&middot;K)</td></tr>
+            <tr><td>Ruhemasse Elektron</td><td><em>m</em><sub>e</sub> = 9,109 &times; 10<sup>&minus;31</sup> kg</td></tr>
+            <tr><td>Ruhemasse Proton</td><td><em>m</em><sub>p</sub> = 1,673 &times; 10<sup>&minus;27</sup> kg</td></tr>
+          </tbody></table>
+        </div>
+        <div id="tw-formeln" class="tw-section" style="display:none">
+          <table class="tw-table"><tbody>
+            <tr><th colspan="2">Mechanik</th></tr>
+            <tr><td>Gleichf&ouml;rm. Bewegung</td><td><em>s</em> = <em>v</em> &middot; <em>t</em></td></tr>
+            <tr><td>Beschleunigung</td><td><em>a</em> = &Delta;<em>v</em> / &Delta;<em>t</em></td></tr>
+            <tr><td>Gleichm. beschl. Bew.</td><td><em>s</em> = &frac12;<em>at</em>&sup2;</td></tr>
+            <tr><td>Kraft</td><td><em>F</em> = <em>m</em> &middot; <em>a</em></td></tr>
+            <tr><td>Gewichtskraft</td><td><em>F</em><sub>G</sub> = <em>m</em> &middot; <em>g</em></td></tr>
+            <tr><td>Arbeit</td><td><em>W</em> = <em>F</em> &middot; <em>s</em></td></tr>
+            <tr><td>Leistung</td><td><em>P</em> = <em>W</em> / <em>t</em></td></tr>
+            <tr><td>Kinetische Energie</td><td><em>E</em><sub>kin</sub> = &frac12;<em>mv</em>&sup2;</td></tr>
+            <tr><td>Potentielle Energie</td><td><em>E</em><sub>pot</sub> = <em>mgh</em></td></tr>
+            <tr><th colspan="2">Elektrik</th></tr>
+            <tr><td>Ohmsches Gesetz</td><td><em>U</em> = <em>R</em> &middot; <em>I</em></td></tr>
+            <tr><td>Elektrische Leistung</td><td><em>P</em> = <em>U</em> &middot; <em>I</em></td></tr>
+            <tr><th colspan="2">W&auml;rmelehre</th></tr>
+            <tr><td>W&auml;rmemenge</td><td><em>Q</em> = <em>m</em> &middot; <em>c</em> &middot; &Delta;<em>T</em></td></tr>
+            <tr><th colspan="2">Optik</th></tr>
+            <tr><td>Brechungsgesetz</td><td><em>n</em><sub>1</sub> sin&alpha; = <em>n</em><sub>2</sub> sin&beta;</td></tr>
+            <tr><td>Linsengleichung</td><td>1/<em>f</em> = 1/<em>g</em> + 1/<em>b</em></td></tr>
+          </tbody></table>
+        </div>
+        <div id="tw-einheiten" class="tw-section" style="display:none">
+          <table class="tw-table"><tbody>
+            <tr><th colspan="3">SI-Grundeinheiten</th></tr>
+            <tr><td>L&auml;nge</td><td>Meter</td><td>m</td></tr>
+            <tr><td>Masse</td><td>Kilogramm</td><td>kg</td></tr>
+            <tr><td>Zeit</td><td>Sekunde</td><td>s</td></tr>
+            <tr><td>Elektrische Stromst&auml;rke</td><td>Ampere</td><td>A</td></tr>
+            <tr><td>Temperatur</td><td>Kelvin</td><td>K</td></tr>
+            <tr><td>Stoffmenge</td><td>Mol</td><td>mol</td></tr>
+            <tr><td>Lichts&auml;rke</td><td>Candela</td><td>cd</td></tr>
+            <tr><th colspan="3">Abgeleitete Einheiten</th></tr>
+            <tr><td>Kraft</td><td>Newton</td><td>N = kg&middot;m/s&sup2;</td></tr>
+            <tr><td>Druck</td><td>Pascal</td><td>Pa = N/m&sup2;</td></tr>
+            <tr><td>Energie</td><td>Joule</td><td>J = N&middot;m</td></tr>
+            <tr><td>Leistung</td><td>Watt</td><td>W = J/s</td></tr>
+            <tr><td>Spannung</td><td>Volt</td><td>V = W/A</td></tr>
+            <tr><td>Widerstand</td><td>Ohm</td><td>&Omega; = V/A</td></tr>
+            <tr><td>Frequenz</td><td>Hertz</td><td>Hz = 1/s</td></tr>
+          </tbody></table>
+        </div>
+        <div id="tw-perioden" class="tw-section tw-perioden-section" style="display:none">
+          <div class="tw-pse-note">Periodensystem (Hauptgruppen)</div>
+          <div class="tw-pse-grid">${_buildPseGrid()}</div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+}
+
+function _buildPseGrid() {
+  const elements = [
+    ['H','1','Wasserstoff'],['He','2','Helium'],
+    ['Li','3','Lithium'],['Be','4','Beryllium'],['B','5','Bor'],['C','6','Kohlenstoff'],
+    ['N','7','Stickstoff'],['O','8','Sauerstoff'],['F','9','Fluor'],['Ne','10','Neon'],
+    ['Na','11','Natrium'],['Mg','12','Magnesium'],['Al','13','Aluminium'],['Si','14','Silicium'],
+    ['P','15','Phosphor'],['S','16','Schwefel'],['Cl','17','Chlor'],['Ar','18','Argon'],
+    ['K','19','Kalium'],['Ca','20','Calcium'],['Fe','26','Eisen'],['Cu','29','Kupfer'],
+    ['Zn','30','Zink'],['Br','35','Brom'],['Ag','47','Silber'],['I','53','Iod'],
+    ['Au','79','Gold'],['Hg','80','Quecksilber'],['Pb','82','Blei'],['U','92','Uran'],
+  ];
+  return elements.map(([sym, num, name]) =>
+    `<div class="tw-elem" title="${name} (${num})"><div class="tw-elem-num">${num}</div><div class="tw-elem-sym">${sym}</div><div class="tw-elem-name">${name}</div></div>`
+  ).join('');
+}
+
+function unmountTafelwerk() {
+  document.getElementById('twWidget')?.remove();
+  _twOpen = true;
+}
+
+// ── Tool-Konfiguration ────────────────────
+let _toolsOverride = null;
+
+async function loadToolsOverride() {
+  if (_toolsOverride !== null) return _toolsOverride;
+  try {
+    const doc = await db().collection('appConfig').doc('subjectTools').get({ source: 'server' });
+    _toolsOverride = doc.exists ? (doc.data().tools || {}) : {};
+  } catch { _toolsOverride = {}; }
+  return _toolsOverride;
+}
+
+function getSubjectTools(subjectId) {
+  const base = structure?.[subjectId]?.tools || {};
+  const over = (_toolsOverride || {})[subjectId] || {};
+  return { ...base, ...over };
+}
+
 function safeCalcEval(expr) {
   if (!expr) return '';
   let e = expr
@@ -3043,6 +3214,23 @@ window.LF.toggleCalc = () => {
   const open = panel.style.display !== 'none';
   panel.style.display = open ? 'none' : 'block';
   if (arrow) arrow.textContent = open ? '▲' : '▼';
+};
+
+window.LF.toggleTw = () => {
+  const panel = document.getElementById('twPanel');
+  const arrow = document.getElementById('twArrow');
+  if (!panel) return;
+  const open = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▲' : '▼';
+};
+
+window.LF.twTab = (btn, sectionId) => {
+  document.querySelectorAll('.tw-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tw-section').forEach(s => s.style.display = 'none');
+  btn.classList.add('active');
+  const sec = document.getElementById(sectionId);
+  if (sec) sec.style.display = 'block';
 };
 
 window.LF.calcInput = (val) => {

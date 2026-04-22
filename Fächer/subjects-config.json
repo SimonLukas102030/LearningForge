@@ -4,7 +4,8 @@
   "Mathematik": {
     "name":  "Mathematik",
     "color": "#3b82f6",
-    "icon":  "📐"
+    "icon":  "📐",
+    "tools": { "calculator": true }
   },
   "Deutsch": {
     "name":  "Deutsch",
@@ -29,12 +30,14 @@
   "Chemie": {
     "name":  "Chemie",
     "color": "#14b8a6",
-    "icon":  "⚗️"
+    "icon":  "⚗️",
+    "tools": { "tafelwerk": true }
   },
   "Physik": {
     "name":  "Physik",
     "color": "#6366f1",
-    "icon":  "⚛️"
+    "icon":  "⚛️",
+    "tools": { "tafelwerk": true }
   },
   "Geographie": {
     "name":  "Geographie",
