@@ -29,6 +29,14 @@ let customTopicData    = null;
 let loginBanError      = false;
 let _navRO             = null;
 
+// Gibt bestPoints/bestMaxPoints aus altem und neuem Format zurück
+function _gp(g) {
+  return {
+    pts: g.bestPoints ?? g.totalPoints ?? g.points ?? 0,
+    max: g.bestMaxPoints ?? g.totalMaxPoints ?? g.maxPoints ?? 1
+  };
+}
+
 function initNavCollapse() {
   if (_navRO) { _navRO.disconnect(); _navRO = null; }
   const navbar = document.querySelector('.navbar');
@@ -427,7 +435,7 @@ function renderDashboard() {
           <span class="recent-icon">${getSubjectIcon(r.subjectId)}</span>
           <div class="recent-info">
             <div class="recent-name">${r.topic.name}</div>
-            <div class="recent-sub">${r.subject.name} · ${r.g.totalPoints ?? r.g.points}/${r.g.totalMaxPoints ?? r.g.maxPoints} Pkt</div>
+            <div class="recent-sub">${r.subject.name} · ${_gp(r.g).pts}/${_gp(r.g).max} Pkt</div>
           </div>
           <div class="recent-grade" style="background:${gradeColor(r.g.grade)}">${r.g.grade}</div>
         </div>`).join('')}
@@ -504,12 +512,14 @@ function renderYear(subjectId, yearId) {
     ? `<div class="empty-state"><div class="empty-icon">📝</div>Noch keine Themen vorhanden.</div>`
     : topics.map(t => {
         const g = grades[`${subjectId}__${yearId}__${t.id}`];
-        const gradeInfo = g ? calcGrade(g.totalPoints || g.points || 0, g.totalMaxPoints || g.maxPoints || 1) : null;
+        const gp = g ? _gp(g) : null;
+        const gradeInfo = gp ? calcGrade(gp.pts, gp.max) : null;
+        const attempts = g?.history?.length ?? (g ? 1 : 0);
         return `
           <div class="topic-card" onclick="location.hash='#/fach/${subjectId}/${yearId}/${t.id}'">
             <div class="t-info">
               <div class="t-name">${t.name}</div>
-              ${g ? `<div class="t-desc">Note: ${g.grade} · ${g.totalPoints ?? g.points}/${g.totalMaxPoints ?? g.maxPoints} Pkt. gesamt</div>` : '<div class="t-desc">Noch nicht getestet</div>'}
+              ${g ? `<div class="t-desc">Beste Note: ${g.grade} · ${gp.pts}/${gp.max} Pkt${attempts > 1 ? ` · ${attempts} Versuche` : ''}</div>` : '<div class="t-desc">Noch nicht getestet</div>'}
             </div>
             <div class="t-right">
               ${gradeInfo ? `<div class="t-grade" style="background:${gradeInfo.color}">${g.grade}</div>` : ''}
@@ -585,12 +595,14 @@ async function renderTopic(subjectId, yearId, topicId) {
   const hasVocab = vocabQuestions.length > 0;
   if (hasVocab) vocabState = { allCards: vocabQuestions, cards: [], index: 0, correct: 0, wrong: [] };
 
-  const gradeInfo = prevGrade ? calcGrade(prevGrade.totalPoints || prevGrade.points || 0, prevGrade.totalMaxPoints || prevGrade.maxPoints || 1) : null;
+  const prevGp   = prevGrade ? _gp(prevGrade) : null;
+  const gradeInfo = prevGp ? calcGrade(prevGp.pts, prevGp.max) : null;
+  const prevAttempts = prevGrade?.history?.length ?? (prevGrade ? 1 : 0);
   const testTab = questions.length > 0 ? `
     <div class="test-start" id="testArea">
       <h2>Test starten</h2>
       ${gradeInfo
-        ? `<p>Note: <strong>${gradeInfo.grade} – ${gradeInfo.label}</strong> (${prevGrade.totalPoints ?? prevGrade.points}/${prevGrade.totalMaxPoints ?? prevGrade.maxPoints} Punkte gesamt)</p>`
+        ? `<p>Beste Note: <strong>${gradeInfo.grade} – ${gradeInfo.label}</strong> (${prevGp.pts}/${prevGp.max} Pkt${prevAttempts > 1 ? `, ${prevAttempts} Versuche` : ''})</p>`
         : '<p>Noch kein Test gemacht. Wie lange möchtest du testen?</p>'}
       <div class="time-selector">
         ${TIME_OPTIONS.map(t => `<button class="time-btn ${t===15?'active':''}" onclick="window.LF.selectTime(${t})" id="timeBtn${t}">${t} min</button>`).join('')}
@@ -735,11 +747,13 @@ function renderUebenStart(questions, subjectId, yearId, topicId) {
 
 function calcStreak() {
   const grades = userData?.grades || {};
-  const datestrs = [...new Set(
-    Object.values(grades)
+  const datestrs = [...new Set([
+    ...Object.values(grades)
       .filter(g => g.date?.seconds)
-      .map(g => new Date(g.date.seconds * 1000).toDateString())
-  )].sort((a, b) => new Date(b) - new Date(a));
+      .map(g => new Date(g.date.seconds * 1000).toDateString()),
+    ...Object.values(grades)
+      .flatMap(g => (g.history || []).map(h => new Date(h.date).toDateString()))
+  ])].sort((a, b) => new Date(b) - new Date(a));
 
   if (!datestrs.length) return 0;
   const today     = new Date().toDateString();
@@ -772,17 +786,24 @@ function getNeedsAttention() {
 
 function getRecentTests() {
   const grades = userData?.grades || {};
-  return Object.entries(grades)
-    .filter(([, g]) => g.date?.seconds)
-    .sort((a, b) => b[1].date.seconds - a[1].date.seconds)
-    .slice(0, 5)
-    .map(([key, g]) => {
-      const [subjectId, yearId, topicId] = key.split('__');
-      const subject = structure?.[subjectId];
-      const topic   = subject?.years?.[yearId]?.topics?.[topicId];
-      return subject && topic ? { subjectId, yearId, topicId, subject, topic, g } : null;
-    })
-    .filter(Boolean);
+  const attempts = Object.entries(grades).flatMap(([key, g]) => {
+    const [subjectId, yearId, topicId] = key.split('__');
+    const subject = structure?.[subjectId];
+    const topic   = subject?.years?.[yearId]?.topics?.[topicId];
+    if (!subject || !topic) return [];
+    if (g.history?.length) {
+      return g.history.map(h => ({ subjectId, yearId, topicId, subject, topic,
+        g: { grade: h.grade, bestPoints: h.points, bestMaxPoints: h.maxPoints, date: h.date }
+      }));
+    }
+    if (g.date?.seconds) {
+      return [{ subjectId, yearId, topicId, subject, topic, g }];
+    }
+    return [];
+  });
+  return attempts
+    .sort((a, b) => new Date(b.g.date) - new Date(a.g.date))
+    .slice(0, 5);
 }
 
 function getSubjectProgress(subjectId) {
@@ -957,25 +978,33 @@ function renderStatistics() {
       </div>`;
   }).join('');
 
-  // Letzte 10 Tests als Tabelle
-  const allTestsSorted = Object.entries(grades)
-    .filter(([,g]) => g.date?.seconds)
-    .sort((a,b) => b[1].date.seconds - a[1].date.seconds)
-    .slice(0, 10);
-
-  const testRows = allTestsSorted.map(([key, g]) => {
+  // Alle Versuche aus history flach machen, nach Datum sortieren
+  const allAttempts = Object.entries(grades).flatMap(([key, g]) => {
     const [subjectId, yearId, topicId] = key.split('__');
     const subject = structure?.[subjectId];
     const topic   = subject?.years?.[yearId]?.topics?.[topicId];
-    if (!subject || !topic) return '';
-    const date = new Date(g.date.seconds * 1000).toLocaleDateString('de-DE');
-    const info = calcGrade(g.totalPoints || g.points || 0, g.totalMaxPoints || g.maxPoints || 1);
+    if (!subject || !topic) return [];
+    if (g.history?.length) {
+      return g.history.map(h => ({ subjectId, yearId, topicId, subject, topic, h }));
+    }
+    if (g.date?.seconds) {
+      const gp = _gp(g);
+      return [{ subjectId, yearId, topicId, subject, topic,
+        h: { points: gp.pts, maxPoints: gp.max, grade: g.grade,
+             date: new Date(g.date.seconds * 1000).toISOString() }
+      }];
+    }
+    return [];
+  }).sort((a, b) => new Date(b.h.date) - new Date(a.h.date)).slice(0, 15);
+
+  const testRows = allAttempts.map(({ subjectId, yearId, topicId, subject, topic, h }) => {
+    const date = new Date(h.date).toLocaleDateString('de-DE');
     return `
       <tr onclick="location.hash='#/fach/${subjectId}/${yearId}/${topicId}'" style="cursor:pointer">
         <td>${getSubjectIcon(subjectId)} ${subject.name}</td>
         <td>${topic.name}</td>
-        <td><span class="grade-pill" style="background:${gradeColor(g.grade)}">${g.grade}</span></td>
-        <td>${g.totalPoints ?? g.points}/${g.totalMaxPoints ?? g.maxPoints}</td>
+        <td><span class="grade-pill" style="background:${gradeColor(h.grade)}">${h.grade}</span></td>
+        <td>${h.points}/${h.maxPoints}</td>
         <td>${date}</td>
       </tr>`;
   }).join('');
@@ -1021,7 +1050,7 @@ function renderStatistics() {
         </div>
 
         <div class="stats-card" style="margin-top:16px">
-          <div class="stats-card-title">🕐 Letzte 10 Tests</div>
+          <div class="stats-card-title">🕐 Letzte Versuche</div>
           ${testRows ? `
             <div class="table-wrap">
               <table class="stats-table">
@@ -2754,23 +2783,34 @@ window.LF.submitTest = async () => {
   if (currentUser) {
     userData = userData || {};
     userData.grades = userData.grades || {};
-    const existing       = userData.grades[`${subjectId}__${yearId}__${topicId}`];
-    const totalPoints    = (existing?.totalPoints    || 0) + total;
-    const totalMaxPoints = (existing?.totalMaxPoints || 0) + max;
-    const cumulGrade     = penalty
-      ? grade
-      : calcGrade(totalPoints, totalMaxPoints);
-    userData.grades[`${subjectId}__${yearId}__${topicId}`] = {
-      grade: cumulGrade.grade, points: total, maxPoints: max,
-      totalPoints, totalMaxPoints
+    const key      = `${subjectId}__${yearId}__${topicId}`;
+    const existing = userData.grades[key] || {};
+
+    const attempt = {
+      points: total, maxPoints: max,
+      grade: penalty ? 6 : grade.grade,
+      date: new Date().toISOString()
     };
-    await saveGrade(currentUser.uid, subjectId, yearId, topicId, {
-      grade: cumulGrade.grade, points: total, maxPoints: max,
-      totalPoints, totalMaxPoints
-    }).catch(console.error);
+    const history = [...(existing.history || []), attempt];
+
+    // Best = attempt with highest percentage
+    const bestRun  = history.reduce((best, h) =>
+      (h.points / h.maxPoints) > (best.points / best.maxPoints) ? h : best,
+      history[0]
+    );
+    const bestInfo = calcGrade(bestRun.points, bestRun.maxPoints);
+
+    const gradeEntry = {
+      grade:         bestInfo.grade,
+      bestPoints:    bestRun.points,
+      bestMaxPoints: bestRun.maxPoints,
+      history
+    };
+    userData.grades[key] = gradeEntry;
+    await saveGrade(currentUser.uid, subjectId, yearId, topicId, gradeEntry).catch(console.error);
     await updateLeaderboard(
       currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
-      subjectId, yearId, topicId, cumulGrade.grade, totalPoints
+      subjectId, yearId, topicId, bestInfo.grade, bestRun.points
     ).catch(console.error);
   }
 
