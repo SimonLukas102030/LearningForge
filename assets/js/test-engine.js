@@ -149,11 +149,22 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Format, ohne weitere Zeichen:
     const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
     const jsonStr = cleaned.startsWith('{') ? cleaned : cleaned.slice(cleaned.indexOf('{'));
     const parsed  = JSON.parse(jsonStr);
-    return {
+    const result  = {
       points:   Math.min(Math.max(0, Math.round(parsed.points ?? 0)), maxPoints),
       feedback: parsed.feedback || 'Keine Rückmeldung verfügbar.'
     };
-  } catch {
+    console.group('[LF] Gemini Auswertung — ' + question.question?.slice(0, 60));
+    console.log('Prompt:', prompt);
+    console.log('HTTP-Status:', res.status);
+    console.log('Gemini raw:', raw);
+    console.log('Geparst:', parsed);
+    console.log('Ergebnis:', result);
+    console.groupEnd();
+    return result;
+  } catch(err) {
+    console.group('[LF] Gemini Auswertung FEHLER — ' + question.question?.slice(0, 60));
+    console.error('Fehler:', err);
+    console.groupEnd();
     return evaluateWithKeywords(question, answer, maxPoints);
   }
 }
