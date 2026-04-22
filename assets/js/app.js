@@ -24,6 +24,7 @@ let calcExpr           = '';
 let currentSubtopics   = null;
 let vocabState         = null;
 let builderState       = null;
+let _visualDragIdx     = null;
 let loginBanError      = false;
 
 // ── Theme ────────────────────────────────
@@ -1291,11 +1292,11 @@ const BUILDER_SNIPPETS = {
 
 function renderBuilder() {
   if (!builderState) {
-    builderState = { step: 1, fach: '', klasse: '', thema: '', description: '', content: '', questions: [] };
+    builderState = { step: 1, mode: null, fach: '', klasse: '', thema: '', description: '', content: '', blocks: [], questions: [] };
   }
   const { step } = builderState;
 
-  const steps = ['Info', 'Inhalt', 'Fragen', 'Export'];
+  const steps = ['Info', 'Modus', 'Inhalt', 'Fragen', 'Export'];
   const stepBar = steps.map((s, i) => `
     <div class="builder-step ${i + 1 === step ? 'active' : i + 1 < step ? 'done' : ''}">
       <div class="builder-step-num">${i + 1 < step ? '✓' : i + 1}</div>
@@ -1324,56 +1325,98 @@ function renderBuilderStep(step) {
       <div class="form-group">
         <label class="form-label">Fach</label>
         <input class="form-input" id="bFach" placeholder="z.B. Geschichte" value="${s.fach}"
-               list="bFachList" oninput="builderState.fach=this.value">
+               list="bFachList">
         <datalist id="bFachList">${Object.values(structure||{}).map(s=>`<option value="${s.name}">`).join('')}</datalist>
       </div>
       <div class="form-group">
         <label class="form-label">Klasse</label>
-        <input class="form-input" id="bKlasse" placeholder="z.B. Klasse-9" value="${s.klasse}"
-               oninput="builderState.klasse=this.value">
+        <input class="form-input" id="bKlasse" placeholder="z.B. Klasse-9" value="${s.klasse}">
       </div>
       <div class="form-group">
         <label class="form-label">Thema-Name</label>
-        <input class="form-input" id="bThema" placeholder="z.B. Erster Weltkrieg" value="${s.thema}"
-               oninput="builderState.thema=this.value">
+        <input class="form-input" id="bThema" placeholder="z.B. Erster Weltkrieg" value="${s.thema}">
       </div>
       <div class="form-group">
         <label class="form-label">Kurzbeschreibung (optional)</label>
-        <input class="form-input" id="bDesc" placeholder="Was lernst du hier?" value="${s.description}"
-               oninput="builderState.description=this.value">
+        <input class="form-input" id="bDesc" placeholder="Was lernst du hier?" value="${s.description}">
       </div>
       <div class="builder-nav">
         <span></span>
-        <button class="btn btn-primary" onclick="window.LF.builderNext()">Weiter: Inhalt</button>
+        <button class="btn btn-primary" onclick="window.LF.builderNext()">Weiter: Modus wählen</button>
       </div>
     </div>`;
 
   if (step === 2) return `
-    <div class="builder-card builder-card-wide">
-      <h2>Lerninhalt erstellen</h2>
-      <div class="builder-snippet-bar">
-        ${Object.entries({p:'Absatz',h3:'Überschrift',info:'Info-Box',tip:'Tipp-Box',warn:'Warnung',danger:'Denkfehler',formula:'Formel',key:'Kernkonzept',steps:'Schritte',twocol:'2 Spalten',def:'Definition',table:'Tabelle'})
-          .map(([k,l])=>`<button class="builder-snippet-btn" onclick="window.LF.builderInsert('${k}')">${l}</button>`).join('')}
-      </div>
-      <div class="builder-split">
-        <div class="builder-split-left">
-          <label class="form-label">HTML-Inhalt</label>
-          <textarea class="form-input builder-textarea" id="builderContentInput"
-                    oninput="builderState.content=this.value;window.LF.builderPreview()"
-                    placeholder="Klicke auf einen Baustein oben oder tippe HTML...">${s.content}</textarea>
+    <div class="builder-card">
+      <h2>Wie möchtest du den Inhalt erstellen?</h2>
+      <p class="sub" style="margin-bottom:28px">Wähle eine Methode — du kannst später zurückgehen und wechseln.</p>
+      <div class="builder-mode-grid">
+        <div class="builder-mode-card" onclick="window.LF.builderChooseMode('visual')">
+          <div class="mode-icon">🧱</div>
+          <h3>Visueller Builder</h3>
+          <span class="mode-badge">Empfohlen</span>
+          <p class="mode-desc">Bausteine per Klick hinzufügen und per Drag &amp; Drop sortieren. Kein Code nötig — so einfach wie eine Website aufbauen.</p>
+          <button class="btn btn-primary" style="margin-top:20px;width:100%">Visuellen Builder wählen</button>
         </div>
-        <div class="builder-split-right">
-          <label class="form-label">Vorschau</label>
-          <div class="builder-preview content-body" id="builderPreviewDiv">${s.content || '<span style="color:var(--text-muted)">Vorschau erscheint hier…</span>'}</div>
+        <div class="builder-mode-card" onclick="window.LF.builderChooseMode('html')">
+          <div class="mode-icon">&lt;/&gt;</div>
+          <h3>HTML-Builder</h3>
+          <span class="mode-badge mode-badge-gray">Fortgeschritten</span>
+          <p class="mode-desc">Schreibe direkt HTML-Code mit vorgefertigten Bausteinen. Volle Kontrolle über das Layout. Für erfahrene Nutzer.</p>
+          <button class="btn btn-secondary" style="margin-top:20px;width:100%">HTML-Builder wählen</button>
         </div>
       </div>
-      <div class="builder-nav">
+      <div class="builder-nav" style="margin-top:24px">
         <button class="btn btn-secondary" onclick="window.LF.builderPrev()">Zurück</button>
-        <button class="btn btn-primary"   onclick="window.LF.builderNext()">Weiter: Fragen</button>
+        <span></span>
       </div>
     </div>`;
 
-  if (step === 3) return `
+  if (step === 3) {
+    if (s.mode === 'visual') return `
+      <div class="builder-card builder-card-wide">
+        <h2>Visueller Inhalt-Builder</h2>
+        <div class="vbuilder-palette">
+          ${Object.entries(VISUAL_BLOCK_TYPES).map(([type, def]) =>
+            `<button class="vbuilder-palette-btn" onclick="window.LF.visualAddBlock('${type}')">${def.icon} ${def.label}</button>`
+          ).join('')}
+        </div>
+        <div class="vbuilder-canvas" id="vbuilderCanvas">
+          ${renderVisualBlocks()}
+        </div>
+        <div class="builder-nav">
+          <button class="btn btn-secondary" onclick="window.LF.builderPrev()">Zurück</button>
+          <button class="btn btn-primary"   onclick="window.LF.builderNext()">Weiter: Fragen</button>
+        </div>
+      </div>`;
+
+    return `
+      <div class="builder-card builder-card-wide">
+        <h2>Lerninhalt erstellen</h2>
+        <div class="builder-snippet-bar">
+          ${Object.entries({p:'Absatz',h3:'Überschrift',info:'Info-Box',tip:'Tipp-Box',warn:'Warnung',danger:'Denkfehler',formula:'Formel',key:'Kernkonzept',steps:'Schritte',twocol:'2 Spalten',def:'Definition',table:'Tabelle'})
+            .map(([k,l])=>`<button class="builder-snippet-btn" onclick="window.LF.builderInsert('${k}')">${l}</button>`).join('')}
+        </div>
+        <div class="builder-split">
+          <div class="builder-split-left">
+            <label class="form-label">HTML-Inhalt</label>
+            <textarea class="form-input builder-textarea" id="builderContentInput"
+                      oninput="builderState.content=this.value;window.LF.builderPreview()"
+                      placeholder="Klicke auf einen Baustein oben oder tippe HTML...">${s.content}</textarea>
+          </div>
+          <div class="builder-split-right">
+            <label class="form-label">Vorschau</label>
+            <div class="builder-preview content-body" id="builderPreviewDiv">${s.content || '<span style="color:var(--text-muted)">Vorschau erscheint hier…</span>'}</div>
+          </div>
+        </div>
+        <div class="builder-nav">
+          <button class="btn btn-secondary" onclick="window.LF.builderPrev()">Zurück</button>
+          <button class="btn btn-primary"   onclick="window.LF.builderNext()">Weiter: Fragen</button>
+        </div>
+      </div>`;
+  }
+
+  if (step === 4) return `
     <div class="builder-card builder-card-wide">
       <h2>Fragen hinzufügen</h2>
       <div class="builder-qform">
@@ -1397,10 +1440,10 @@ function renderBuilderStep(step) {
       </div>
     </div>`;
 
-  if (step === 4) {
-    const fachFolder  = builderState.fach.replace(/\s+/g, '-');
+  if (step === 5) {
+    const fachFolder   = builderState.fach.replace(/\s+/g, '-');
     const klasseFolder = builderState.klasse.replace(/\s+/g, '-');
-    const themaFolder = builderState.thema.replace(/\s+/g, '-');
+    const themaFolder  = builderState.thema.replace(/\s+/g, '-');
     return `
       <div class="builder-card">
         <h2>Fertig! Einreichen</h2>
@@ -1467,6 +1510,152 @@ function renderBuilderQFields(type) {
       <input class="form-input" id="bQDirection" placeholder="DE → EN"></div>
     <div class="form-group"><label class="form-label">Tipp (optional)</label>
       <input class="form-input" id="bQHint" placeholder="Tier, bellt"></div>`;
+}
+
+// ── Visual Builder ─────────────────────────
+const VISUAL_BLOCK_TYPES = {
+  heading:    { icon: 'H2', label: 'Überschrift',  make: () => ({ text: 'Neue Überschrift' }) },
+  paragraph:  { icon: '¶',  label: 'Absatz',        make: () => ({ text: '' }) },
+  infobox:    { icon: '💡', label: 'Info-Box',       make: () => ({ variant: 'info', text: 'Hinweis hier eintragen' }) },
+  keypoint:   { icon: '★',  label: 'Kernaussage',   make: () => ({ title: 'Kernaussage', text: 'Inhalt hier' }) },
+  list:       { icon: '≡',  label: 'Liste',          make: () => ({ ordered: false, items: ['Punkt 1', 'Punkt 2', 'Punkt 3'] }) },
+  definition: { icon: '📖', label: 'Definition',    make: () => ({ term: 'Begriff', text: 'Die Definition des Begriffs.' }) },
+  divider:    { icon: '—',  label: 'Trennlinie',    make: () => ({}) },
+};
+
+function vEsc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function collectVisualBlocks() {
+  builderState.blocks = builderState.blocks.map((block, i) => {
+    const d = { ...block.data };
+    switch (block.type) {
+      case 'heading':
+      case 'paragraph':
+        d.text = document.getElementById(`vb_${i}_text`)?.value ?? d.text;
+        break;
+      case 'infobox':
+        d.variant = document.getElementById(`vb_${i}_variant`)?.value ?? d.variant;
+        d.text    = document.getElementById(`vb_${i}_text`)?.value    ?? d.text;
+        break;
+      case 'keypoint':
+        d.title = document.getElementById(`vb_${i}_title`)?.value ?? d.title;
+        d.text  = document.getElementById(`vb_${i}_text`)?.value  ?? d.text;
+        break;
+      case 'list': {
+        const raw = document.getElementById(`vb_${i}_items`)?.value ?? '';
+        d.items   = raw.split('\n').filter(s => s.trim());
+        d.ordered = document.getElementById(`vb_${i}_ordered`)?.checked ?? d.ordered;
+        break;
+      }
+      case 'definition':
+        d.term = document.getElementById(`vb_${i}_term`)?.value ?? d.term;
+        d.text = document.getElementById(`vb_${i}_text`)?.value ?? d.text;
+        break;
+    }
+    return { ...block, data: d };
+  });
+}
+
+function serializeVisualBlocks() {
+  return builderState.blocks.map(block => {
+    const d = block.data;
+    switch (block.type) {
+      case 'heading':   return `<h3>${vEsc(d.text)}</h3>`;
+      case 'paragraph': return `<p>${vEsc(d.text).replace(/\n/g,'<br>')}</p>`;
+      case 'infobox': {
+        const icons = { info:'💡 ', tip:'✅ ', warn:'⚠️ ', danger:'🚨 ', formula:'' };
+        return `<div class="lf-box lf-${d.variant}">${icons[d.variant]||''}${vEsc(d.text)}</div>`;
+      }
+      case 'keypoint':
+        return `<div class="lf-key"><div class="lf-key-title">${vEsc(d.title)}</div><div class="lf-key-body">${vEsc(d.text)}</div></div>`;
+      case 'list': {
+        const tag   = d.ordered ? 'ol' : 'ul';
+        const items = (d.items||[]).map(item => `<li>${vEsc(item)}</li>`).join('');
+        return `<${tag} class="lf-steps">${items}</${tag}>`;
+      }
+      case 'definition':
+        return `<dl class="lf-def"><dt>${vEsc(d.term)}</dt><dd>${vEsc(d.text)}</dd></dl>`;
+      case 'divider':   return '<hr>';
+      default:          return '';
+    }
+  }).join('\n');
+}
+
+function renderVisualBlock(block, i) {
+  const handle = `<div class="vblock-handle" draggable="true"
+    ondragstart="window.LF.visualDragStart(event,${i})"
+    ondragend="window.LF.visualDragEnd()">⠿</div>`;
+  const del = `<button class="vblock-delete" onclick="window.LF.visualDeleteBlock(${i})" title="Entfernen">🗑</button>`;
+  const d = block.data;
+  let body = '';
+  switch (block.type) {
+    case 'heading':
+      body = `<div class="vblock-type-label">Überschrift</div>
+        <input class="form-input" id="vb_${i}_text" value="${vEsc(d.text)}" placeholder="Überschrift...">`;
+      break;
+    case 'paragraph':
+      body = `<div class="vblock-type-label">Absatz</div>
+        <textarea class="form-input vb-ta" id="vb_${i}_text" rows="3" placeholder="Text...">${vEsc(d.text)}</textarea>`;
+      break;
+    case 'infobox': {
+      const variants = { info:'💡 Hinweis', tip:'✅ Tipp', warn:'⚠️ Warnung', danger:'🚨 Fehler', formula:'∑ Formel' };
+      body = `<div class="vblock-type-label">Info-Box</div>
+        <div class="vb-row">
+          <select class="form-input" id="vb_${i}_variant" style="max-width:140px">
+            ${Object.entries(variants).map(([v,l]) =>
+              `<option value="${v}"${d.variant===v?' selected':''}>${l}</option>`).join('')}
+          </select>
+          <input class="form-input" id="vb_${i}_text" value="${vEsc(d.text)}" placeholder="Text...">
+        </div>`;
+      break;
+    }
+    case 'keypoint':
+      body = `<div class="vblock-type-label">Kernaussage</div>
+        <input class="form-input" id="vb_${i}_title" value="${vEsc(d.title)}" placeholder="Titel..." style="margin-bottom:6px">
+        <textarea class="form-input vb-ta" id="vb_${i}_text" rows="2" placeholder="Inhalt...">${vEsc(d.text)}</textarea>`;
+      break;
+    case 'list':
+      body = `<div class="vblock-type-label">Liste</div>
+        <label style="font-size:13px;display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <input type="checkbox" id="vb_${i}_ordered"${d.ordered?' checked':''}> Nummeriert
+        </label>
+        <textarea class="form-input vb-ta" id="vb_${i}_items" rows="4"
+          placeholder="Punkt 1&#10;Punkt 2&#10;...">${(d.items||[]).map(vEsc).join('\n')}</textarea>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Ein Eintrag pro Zeile</div>`;
+      break;
+    case 'definition':
+      body = `<div class="vblock-type-label">Definition</div>
+        <input class="form-input" id="vb_${i}_term" value="${vEsc(d.term)}" placeholder="Begriff..." style="margin-bottom:6px">
+        <textarea class="form-input vb-ta" id="vb_${i}_text" rows="2" placeholder="Definition...">${vEsc(d.text)}</textarea>`;
+      break;
+    case 'divider':
+      body = `<div class="vblock-type-label">Trennlinie</div>
+        <hr style="border:none;border-top:2px solid var(--border);margin:4px 0">`;
+      break;
+  }
+  return `
+    <div class="vblock" data-idx="${i}"
+      ondragover="window.LF.visualDragOver(event,${i})"
+      ondragleave="window.LF.visualDragLeave(event)"
+      ondrop="window.LF.visualDrop(event,${i})">
+      ${handle}
+      <div class="vblock-body">${body}</div>
+      ${del}
+    </div>`;
+}
+
+function renderVisualBlocks() {
+  if (!builderState.blocks.length) {
+    return `<div class="vblock-empty">Noch keine Bausteine. Klicke oben auf einen Baustein-Typ, um zu beginnen.</div>`;
+  }
+  return builderState.blocks.map((b, i) => renderVisualBlock(b, i)).join('');
+}
+
+function renderVisualCanvas() {
+  const canvas = document.getElementById('vbuilderCanvas');
+  if (canvas) canvas.innerHTML = renderVisualBlocks();
 }
 
 function renderBuilderQList() {
@@ -1771,15 +1960,24 @@ window.LF = {
         showToast('Bitte Fach, Klasse und Thema ausfüllen.', 'error'); return;
       }
     }
-    if (builderState.step === 2) {
-      builderState.content = document.getElementById('builderContentInput')?.value || '';
+    if (builderState.step === 3) {
+      if (builderState.mode === 'html') {
+        builderState.content = document.getElementById('builderContentInput')?.value || '';
+      } else {
+        collectVisualBlocks();
+        builderState.content = serializeVisualBlocks();
+      }
     }
     builderState.step++;
     renderBuilder();
   },
   builderPrev: () => {
-    if (builderState.step === 2) {
-      builderState.content = document.getElementById('builderContentInput')?.value || '';
+    if (builderState.step === 3) {
+      if (builderState.mode === 'html') {
+        builderState.content = document.getElementById('builderContentInput')?.value || '';
+      } else {
+        collectVisualBlocks();
+      }
     }
     builderState.step--;
     renderBuilder();
@@ -1848,6 +2046,56 @@ window.LF = {
   builderDeleteQ: (i) => {
     builderState.questions.splice(i, 1);
     document.getElementById('builderQList').innerHTML = renderBuilderQList();
+  },
+
+  builderChooseMode: (mode) => {
+    builderState.mode = mode;
+    builderState.step = 3;
+    renderBuilder();
+  },
+
+  visualAddBlock: (type) => {
+    collectVisualBlocks();
+    const def = VISUAL_BLOCK_TYPES[type];
+    if (!def) return;
+    builderState.blocks.push({ type, data: def.make() });
+    renderVisualCanvas();
+  },
+  visualDeleteBlock: (i) => {
+    collectVisualBlocks();
+    builderState.blocks.splice(i, 1);
+    renderVisualCanvas();
+  },
+  visualDragStart: (e, i) => {
+    _visualDragIdx = i;
+    e.dataTransfer.effectAllowed = 'move';
+  },
+  visualDragOver: (e, i) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.vblock').forEach(b => b.classList.remove('drag-over'));
+    document.querySelectorAll('.vblock')[i]?.classList.add('drag-over');
+  },
+  visualDragLeave: (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+  },
+  visualDragEnd: () => {
+    document.querySelectorAll('.vblock').forEach(b => b.classList.remove('drag-over'));
+    _visualDragIdx = null;
+  },
+  visualDrop: (e, toIdx) => {
+    e.preventDefault();
+    document.querySelectorAll('.vblock').forEach(b => b.classList.remove('drag-over'));
+    if (_visualDragIdx === null || _visualDragIdx === toIdx) { _visualDragIdx = null; return; }
+    collectVisualBlocks();
+    const blocks = [...builderState.blocks];
+    const [moved] = blocks.splice(_visualDragIdx, 1);
+    blocks.splice(toIdx, 0, moved);
+    builderState.blocks = blocks;
+    _visualDragIdx = null;
+    renderVisualCanvas();
   },
 
   builderExport: async () => {

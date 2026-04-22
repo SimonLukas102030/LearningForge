@@ -1854,3 +1854,167 @@ input, textarea, select { font-family: var(--font); }
   letter-spacing: 0.15em;
   color: var(--accent);
 }
+
+/* ══ Section 38: Builder — Modus-Auswahl ══════════════════ */
+.builder-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 600px) { .builder-mode-grid { grid-template-columns: 1fr; } }
+
+.builder-mode-card {
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: border-color .2s, transform .15s, box-shadow .2s;
+  text-align: center;
+  background: var(--bg-card);
+}
+.builder-mode-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(99,102,241,.15);
+}
+.builder-mode-card .mode-icon {
+  font-size: 44px;
+  margin-bottom: 14px;
+  display: block;
+}
+.builder-mode-card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.builder-mode-card .mode-desc {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+.mode-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  letter-spacing: .04em;
+}
+.mode-badge-gray {
+  background: var(--text-muted);
+}
+
+/* ══ Section 39: Visual Builder ══════════════════════════ */
+.vbuilder-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.vbuilder-palette-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text);
+  transition: background .15s, border-color .15s;
+}
+.vbuilder-palette-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.vbuilder-canvas {
+  min-height: 120px;
+  margin-bottom: 20px;
+}
+
+.vblock-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+}
+
+.vblock {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  margin-bottom: 8px;
+  transition: border-color .15s, background .15s;
+}
+.vblock.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.vblock-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 18px;
+  padding: 6px 4px;
+  user-select: none;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.vblock-handle:active { cursor: grabbing; }
+
+.vblock-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.vblock-body .form-input { width: 100%; box-sizing: border-box; }
+
+.vb-ta { resize: vertical; min-height: 60px; }
+
+.vb-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.vb-row .form-input { flex: 1; min-width: 0; }
+
+.vblock-type-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.vblock-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px 8px;
+  font-size: 16px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+  flex-shrink: 0;
+}
+.vblock-delete:hover {
+  color: var(--danger, #ef4444);
+  background: rgba(239,68,68,.1);
+}
