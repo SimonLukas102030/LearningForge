@@ -121,7 +121,7 @@ export async function evaluateAnswers(questions, answers, timeMinutes) {
 }
 
 // ── Gemini KI-Auswertung ────────────────
-async function evaluateWithGemini(question, answer, maxPoints, textExpectation) {
+async function evaluateWithGemini(question, answer, maxPoints, textExpectation, attempt = 0) {
   const prompt =
 `Du bist ein sachlicher Schullehrer. Bewerte diese Schülerantwort fair und objektiv.
 
@@ -136,7 +136,7 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Format, ohne weitere Zeichen:
 {"points": <Zahl 0 bis ${maxPoints}>, "feedback": "<1-2 Sätze Feedback auf Deutsch>"}`;
 
   try {
-    const res = await fetch(
+    const res  = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
       {
         method:  'POST',
@@ -144,27 +144,36 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Format, ohne weitere Zeichen:
         body:    JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       }
     );
-    const data    = await res.json();
-    const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+    // Rate limit → wait and retry (up to 3×, 3s / 6s / 10s)
+    if (res.status === 429 && attempt < 3) {
+      const wait = [3000, 6000, 10000][attempt];
+      console.warn(`[LF] Gemini 429 — warte ${wait/1000}s, Versuch ${attempt + 2}/4`);
+      await new Promise(r => setTimeout(r, wait));
+      return evaluateWithGemini(question, answer, maxPoints, textExpectation, attempt + 1);
+    }
+
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      console.warn('[LF] Gemini Fehler:', res.status, data.error?.message);
+      return evaluateWithKeywords(question, answer, maxPoints);
+    }
+
+    const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!raw) {
+      console.warn('[LF] Gemini leere Antwort — Keyword-Fallback');
+      return evaluateWithKeywords(question, answer, maxPoints);
+    }
     const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
     const jsonStr = cleaned.startsWith('{') ? cleaned : cleaned.slice(cleaned.indexOf('{'));
     const parsed  = JSON.parse(jsonStr);
-    const result  = {
+    return {
       points:   Math.min(Math.max(0, Math.round(parsed.points ?? 0)), maxPoints),
       feedback: parsed.feedback || 'Keine Rückmeldung verfügbar.'
     };
-    console.group('[LF] Gemini Auswertung — ' + question.question?.slice(0, 60));
-    console.log('Prompt:', prompt);
-    console.log('HTTP-Status:', res.status);
-    console.log('Gemini raw:', raw);
-    console.log('Geparst:', parsed);
-    console.log('Ergebnis:', result);
-    console.groupEnd();
-    return result;
   } catch(err) {
-    console.group('[LF] Gemini Auswertung FEHLER — ' + question.question?.slice(0, 60));
-    console.error('Fehler:', err);
-    console.groupEnd();
+    console.warn('[LF] Gemini Exception:', err);
     return evaluateWithKeywords(question, answer, maxPoints);
   }
 }

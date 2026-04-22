@@ -2615,7 +2615,7 @@ window.LF.submitTest = async () => {
   document.getElementById('testArea').innerHTML = `
     <div style="text-align:center;padding:40px">
       <div class="spinner" style="margin:0 auto 16px"></div>
-      <p>${penalty ? 'Tab-Wechsel erkannt. Wird als Note 6 gewertet…' : 'Antworten werden ausgewertet…'}</p>
+      <p id="evalStatus">${penalty ? 'Tab-Wechsel erkannt. Wird als Note 6 gewertet…' : 'Antworten werden ausgewertet… (kann bei KI-Fragen bis zu 15 Sek. dauern)'}</p>
     </div>`;
 
   const results = await evaluateAnswers(questions, effectiveAns, timeMinutes);
