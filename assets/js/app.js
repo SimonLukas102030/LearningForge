@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -25,6 +25,7 @@ let currentSubtopics   = null;
 let vocabState         = null;
 let builderState       = null;
 let _visualDragIdx     = null;
+let customTopicData    = null;
 let loginBanError      = false;
 
 // ── Theme ────────────────────────────────
@@ -97,6 +98,9 @@ function route() {
     else location.hash = '#/';
   } else if (parts[0] === 'builder') {
     renderBuilder();
+  } else if (parts[0] === 'meine-inhalte') {
+    if (parts[1]) renderCustomTopicPage(parts[1]);
+    else renderMyContent();
   } else if (parts[0] === 'gruppen') {
     if (parts[1]) renderGroupDetail(parts[1]);
     else renderGroups();
@@ -129,8 +133,9 @@ function renderNav(breadcrumbs = []) {
           <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
           <a class="nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken'">Statistiken</a>
           <a class="nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste'">Rangliste</a>
-          <a class="nav-link ${act('Gruppen')}"      onclick="location.hash='#/gruppen'">Gruppen</a>
-          <a class="nav-link ${act('Builder')}"      onclick="location.hash='#/builder'">Builder</a>
+          <a class="nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen'">Gruppen</a>
+          <a class="nav-link ${act('Meine Inhalte')}" onclick="location.hash='#/meine-inhalte'">Meine Inhalte</a>
+          <a class="nav-link ${act('Builder')}"        onclick="location.hash='#/builder'">Builder</a>
           <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
           <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
           ${currentUser?.email === ADMIN_EMAIL ? `<a class="nav-link nav-link-admin ${act('Admin')}" onclick="location.hash='#/admin'">Admin</a>` : ''}
@@ -169,8 +174,9 @@ function renderNav(breadcrumbs = []) {
       <a class="mobile-nav-link ${!breadcrumbs.length ? 'mnl-active' : ''}" onclick="location.hash='#/';window.LF.closeMobileMenu()">Start</a>
       <a class="mobile-nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken';window.LF.closeMobileMenu()">Statistiken</a>
       <a class="mobile-nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste';window.LF.closeMobileMenu()">Rangliste</a>
-      <a class="mobile-nav-link ${act('Gruppen')}"      onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">Gruppen</a>
-      <a class="mobile-nav-link ${act('Builder')}"      onclick="location.hash='#/builder';window.LF.closeMobileMenu()">Builder</a>
+      <a class="mobile-nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">Gruppen</a>
+      <a class="mobile-nav-link ${act('Meine Inhalte')}" onclick="location.hash='#/meine-inhalte';window.LF.closeMobileMenu()">Meine Inhalte</a>
+      <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">Builder</a>
       <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
       <a class="mobile-nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">Einstellungen</a>
       ${currentUser?.email === ADMIN_EMAIL ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">Admin-Panel</a>` : ''}
@@ -1052,6 +1058,109 @@ async function renderLeaderboard() {
     ${subjectGridHtml ? `<div class="section-title" style="margin-top:32px;margin-bottom:16px">Nach Fach</div><div class="lb-grid">${subjectGridHtml}</div>` : ''}`;
 }
 
+// ── Meine Inhalte ────────────────────────
+async function renderMyContent() {
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Meine Inhalte' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>Meine Inhalte</h1>
+        <div class="sub">Selbst erstellte und Gruppen-Themen</div>
+      </div>
+      <div id="myContentBody"><div class="spinner" style="margin:60px auto"></div></div>
+    </div>`;
+
+  const uid = currentUser.uid;
+  let html = '';
+
+  try {
+    const personal = await getMyCustomTopics(uid);
+    html += `<h2 style="font-size:18px;font-weight:700;margin-bottom:12px">Persönliche Themen</h2>`;
+    if (personal.length) {
+      html += `<div class="custom-topic-grid">${personal.map(t => renderCustomTopicCard(t, true)).join('')}</div>`;
+    } else {
+      html += `<div class="empty-state" style="margin-bottom:32px">Noch keine persönlichen Themen. Erstelle eines im <a onclick="location.hash='#/builder'" style="color:var(--accent);cursor:pointer">Builder</a>.</div>`;
+    }
+
+    const groupIds = userData?.groupIds || [];
+    if (groupIds.length) {
+      const groups = await getUserGroups(groupIds);
+      for (const group of groups) {
+        const topics = await getGroupCustomTopics(group.id);
+        html += `<h2 style="font-size:18px;font-weight:700;margin:28px 0 12px">Gruppe: ${group.name}</h2>`;
+        if (topics.length) {
+          html += `<div class="custom-topic-grid">${topics.map(t => renderCustomTopicCard(t, t.ownerUid === uid)).join('')}</div>`;
+        } else {
+          html += `<div class="empty-state" style="margin-bottom:16px">Noch keine Gruppenthemen.</div>`;
+        }
+      }
+    }
+  } catch(e) {
+    html = `<div class="error-msg">Fehler beim Laden: ${e.message}</div>`;
+  }
+
+  document.getElementById('myContentBody').innerHTML = html || '<div class="empty-state">Keine Inhalte gefunden.</div>';
+}
+
+function renderCustomTopicCard(topic, canDelete) {
+  const qCount = (topic.questions || []).length;
+  const safeId = topic.id;
+  return `
+    <div class="custom-topic-card">
+      <div class="custom-topic-meta">${topic.fach || '?'} · ${topic.klasse || '?'}</div>
+      <div class="custom-topic-name">${topic.thema || 'Unbenannt'}</div>
+      ${topic.description ? `<div class="custom-topic-desc">${topic.description}</div>` : ''}
+      <div class="custom-topic-footer">
+        <span class="custom-topic-qcount">${qCount} Frage${qCount !== 1 ? 'n' : ''}</span>
+        <div class="custom-topic-actions">
+          <button class="btn btn-primary btn-sm" onclick="location.hash='#/meine-inhalte/${safeId}'">Ansehen</button>
+          ${canDelete ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.deleteCustomTopicUI('${safeId}')">Löschen</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+async function renderCustomTopicPage(topicId) {
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Meine Inhalte', href: '#/meine-inhalte' }])}
+    <div class="page">
+      <div id="customTopicBody"><div class="spinner" style="margin:60px auto"></div></div>
+    </div>`;
+
+  try {
+    customTopicData = await getCustomTopicById(topicId);
+    if (!customTopicData) { location.hash = '#/meine-inhalte'; return; }
+    const t = customTopicData;
+    const qCount = (t.questions || []).length;
+
+    document.getElementById('customTopicBody').innerHTML = `
+      <div class="page-header">
+        <div class="breadcrumb-sub">${t.fach} · ${t.klasse}</div>
+        <h1>${t.thema}</h1>
+        ${t.description ? `<div class="sub">${t.description}</div>` : ''}
+      </div>
+      <div class="topic-tab-bar">
+        <button class="tab-btn active" id="ctTabBtnLernen" onclick="window.LF.ctSwitchTab('Lernen')">Lernen</button>
+        ${qCount > 0 ? `<button class="tab-btn" id="ctTabBtnTest" onclick="window.LF.ctSwitchTab('Test')">Test</button>` : ''}
+      </div>
+      <div id="ctTabLernen">
+        <div class="content-body">${t.content || '<p style="color:var(--text-muted)">Kein Inhalt vorhanden.</p>'}</div>
+      </div>
+      ${qCount > 0 ? `
+      <div id="ctTabTest" style="display:none">
+        <div class="test-setup-card">
+          <h2>Test starten</h2>
+          <p class="sub">${qCount} Frage${qCount !== 1 ? 'n' : ''} verfügbar</p>
+          <div id="ctTestArea">
+            <button class="btn btn-primary btn-lg" onclick="window.LF.startCustomTest()">Test starten</button>
+          </div>
+        </div>
+      </div>` : ''}`;
+  } catch(e) {
+    document.getElementById('customTopicBody').innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
+  }
+}
+
 // ── Gruppen ──────────────────────────────
 async function renderGroups() {
   document.getElementById('app').innerHTML = `
@@ -1315,6 +1424,7 @@ function renderBuilder() {
         ${renderBuilderStep(step)}
       </div>
     </div>`;
+  if (step === 5) setTimeout(() => window.LF?.initBuilderExport(), 0);
 }
 
 function renderBuilderStep(step) {
@@ -1446,24 +1556,45 @@ function renderBuilderStep(step) {
     const themaFolder  = builderState.thema.replace(/\s+/g, '-');
     return `
       <div class="builder-card">
-        <h2>Fertig! Einreichen</h2>
+        <h2>Fertig! Veröffentlichen</h2>
         <div class="builder-export-info">
           <div class="builder-export-row"><span class="builder-export-lbl">Fach:</span> <strong>${builderState.fach}</strong></div>
           <div class="builder-export-row"><span class="builder-export-lbl">Klasse:</span> <strong>${builderState.klasse}</strong></div>
           <div class="builder-export-row"><span class="builder-export-lbl">Thema:</span> <strong>${builderState.thema}</strong></div>
           <div class="builder-export-row"><span class="builder-export-lbl">Fragen:</span> <strong>${builderState.questions.length}</strong></div>
-          <div class="builder-export-row"><span class="builder-export-lbl">Ordnerpfad:</span> <code>Fächer/${fachFolder}/${klasseFolder}/${themaFolder}/</code></div>
         </div>
-        <div class="builder-export-steps">
-          <div class="builder-export-step"><span class="builder-export-num">1</span> ZIP herunterladen</div>
-          <div class="builder-export-step"><span class="builder-export-num">2</span> ZIP per Mail an <strong>simonkoper27@gmail.com</strong> schicken</div>
-          <div class="builder-export-step"><span class="builder-export-num">3</span> Betreff: <code>${builderState.fach} / ${builderState.klasse} / ${builderState.thema}</code></div>
+
+        <div class="builder-publish-section">
+          <h3>In der App hochladen</h3>
+          <p class="sub">Sofort spielbar — kein ZIP, keine Mail nötig.</p>
+          <div class="builder-publish-btns">
+            <button class="btn btn-primary" onclick="window.LF.builderUploadPersonal()">
+              Nur für mich hochladen
+            </button>
+            <div id="builderGroupSection">
+              <div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>
+            </div>
+          </div>
+          <div id="builderUploadMsg"></div>
         </div>
-        <div class="builder-nav">
+
+        <div class="builder-export-divider"><span>oder per Mail einreichen</span></div>
+
+        <div>
+          <p class="sub" style="margin-bottom:12px">ZIP herunterladen und an <strong>simonkoper27@gmail.com</strong> senden — dann wird das Thema für alle freigeschaltet.</p>
+          <div class="builder-export-steps">
+            <div class="builder-export-step"><span class="builder-export-num">1</span> ZIP herunterladen</div>
+            <div class="builder-export-step"><span class="builder-export-num">2</span> An <strong>simonkoper27@gmail.com</strong> senden</div>
+            <div class="builder-export-step"><span class="builder-export-num">3</span> Betreff: <code>${builderState.fach} / ${builderState.klasse} / ${builderState.thema}</code></div>
+          </div>
+          <button class="btn btn-secondary" onclick="window.LF.builderExport()" style="margin-top:12px">ZIP herunterladen</button>
+          <div id="builderExportMsg" style="margin-top:12px"></div>
+        </div>
+
+        <div class="builder-nav" style="margin-top:24px">
           <button class="btn btn-secondary" onclick="window.LF.builderPrev()">Zurück</button>
-          <button class="btn btn-primary btn-lg" onclick="window.LF.builderExport()">ZIP herunterladen</button>
+          <span></span>
         </div>
-        <div id="builderExportMsg" style="margin-top:16px"></div>
       </div>`;
   }
 }
@@ -2140,6 +2271,70 @@ window.LF = {
     }
   },
 
+  // ── Builder Upload ──────────────────────
+  initBuilderExport: async () => {
+    const section = document.getElementById('builderGroupSection');
+    if (!section) return;
+    const groupIds = userData?.groupIds || [];
+    if (!groupIds.length) { section.innerHTML = ''; return; }
+    const groups = await getUserGroups(groupIds);
+    if (!groups.length) { section.innerHTML = ''; return; }
+    section.innerHTML = groups.map(g => `
+      <button class="btn btn-secondary" onclick="window.LF.builderUploadGroup('${g.id}','${(g.name||'').replace(/'/g,"\\'")}')">
+        Für Gruppe „${g.name}" hochladen
+      </button>`).join('');
+  },
+
+  builderUploadPersonal: async () => {
+    const msg = document.getElementById('builderUploadMsg');
+    if (msg) msg.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
+    try {
+      await saveCustomTopic(currentUser.uid, builderState, null);
+      if (msg) msg.innerHTML = `<div class="success-msg">Hochgeladen! <a onclick="location.hash='#/meine-inhalte'" style="color:var(--accent);cursor:pointer;text-decoration:underline">Jetzt in Meine Inhalte ansehen →</a></div>`;
+    } catch(e) {
+      if (msg) msg.innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
+    }
+  },
+
+  builderUploadGroup: async (groupId, groupName) => {
+    const msg = document.getElementById('builderUploadMsg');
+    if (msg) msg.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
+    try {
+      await saveCustomTopic(currentUser.uid, builderState, groupId);
+      if (msg) msg.innerHTML = `<div class="success-msg">Für Gruppe „${groupName}" hochgeladen! <a onclick="location.hash='#/meine-inhalte'" style="color:var(--accent);cursor:pointer;text-decoration:underline">Ansehen →</a></div>`;
+    } catch(e) {
+      if (msg) msg.innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
+    }
+  },
+
+  // ── Custom Topic ────────────────────────
+  ctSwitchTab: (name) => {
+    ['Lernen','Test'].forEach(t => {
+      document.getElementById(`ctTab${t}`)?.style.setProperty('display', t === name ? 'block' : 'none');
+      document.getElementById(`ctTabBtn${t}`)?.classList.toggle('active', t === name);
+    });
+  },
+
+  startCustomTest: () => {
+    if (!customTopicData) return;
+    const questions = customTopicData.questions || [];
+    if (!questions.length) { showToast('Keine Fragen in diesem Thema.', 'error'); return; }
+    const fakeSubject = { name: customTopicData.fach || 'Eigene Inhalte' };
+    const fakeTopic   = { name: customTopicData.thema || 'Unbenannt' };
+    renderActiveTest(questions, 30, '_custom', '_custom', customTopicData.id, fakeSubject, fakeTopic);
+  },
+
+  deleteCustomTopicUI: async (topicId) => {
+    if (!confirm('Thema wirklich löschen?')) return;
+    try {
+      await deleteCustomTopic(topicId);
+      showToast('Thema gelöscht.', 'success');
+      renderMyContent();
+    } catch(e) {
+      showToast('Fehler: ' + e.message, 'error');
+    }
+  },
+
   retryVocabWrong: () => {
     const wrongCards = vocabState.wrong.map(w => w.card);
     for (let i = wrongCards.length - 1; i > 0; i--) {
@@ -2160,6 +2355,13 @@ window.LF = {
     if (hint) hint.textContent = getTimeConfig(t).textExpectation;
   },
   startTest: async (subjectId, yearId, topicId) => {
+    if (subjectId === '_custom') {
+      if (!customTopicData || customTopicData.id !== topicId) {
+        customTopicData = await getCustomTopicById(topicId);
+      }
+      window.LF.startCustomTest();
+      return;
+    }
     const subject = structure[subjectId];
     const topic   = subject.years[yearId].topics[topicId];
 

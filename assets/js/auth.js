@@ -191,3 +191,41 @@ export async function getUserGroups(groupIds) {
   const docs = await Promise.all(groupIds.map(id => _db.collection('groups').doc(id).get()));
   return docs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() }));
 }
+
+// ── Eigene Inhalte ────────────────────────
+export async function saveCustomTopic(uid, data, groupId = null) {
+  const ref = _db.collection('customTopics').doc();
+  await ref.set({
+    ownerUid:    uid,
+    groupId:     groupId || null,
+    fach:        data.fach        || '',
+    klasse:      data.klasse      || '',
+    thema:       data.thema       || '',
+    description: data.description || '',
+    content:     data.content     || '',
+    questions:   data.questions   || [],
+    createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+  });
+  return ref.id;
+}
+
+export async function getMyCustomTopics(uid) {
+  const snap = await _db.collection('customTopics')
+    .where('ownerUid', '==', uid).where('groupId', '==', null).get({ source: 'server' });
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function getGroupCustomTopics(groupId) {
+  const snap = await _db.collection('customTopics')
+    .where('groupId', '==', groupId).get({ source: 'server' });
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteCustomTopic(topicId) {
+  await _db.collection('customTopics').doc(topicId).delete();
+}
+
+export async function getCustomTopicById(topicId) {
+  const doc = await _db.collection('customTopics').doc(topicId).get({ source: 'server' });
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
+}
