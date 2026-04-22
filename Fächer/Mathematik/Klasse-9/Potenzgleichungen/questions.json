@@ -1,318 +1,204 @@
 {
   "questions": [
-    {
-      "id": "p1", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Wie viele reelle Lösungen hat x² = 49?",
-      "options": ["Keine", "Genau eine (x = 7)", "Zwei (x = 7 und x = −7)", "Unendlich viele"],
-      "correct": 2, "points": 2
-    },
-    {
-      "id": "p2", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Wie viele reelle Lösungen hat x² = −9?",
-      "options": ["Keine reellen Lösungen", "x = 3", "x = ±3", "x = −3"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p3", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ist die Lösung von x³ = −27?",
-      "options": ["x = 3", "x = −3", "x = ±3", "Keine Lösung"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p4", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Löse: 2x² = 18",
-      "options": ["x = 9", "x = ±3", "x = 3", "x = ±9"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p5", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ist ³√64?",
-      "options": ["8", "4", "6", "32"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p6", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: (x − 2)³ = 8",
-      "options": ["x = 4", "x = 2", "x = 0", "x = ±4"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p7", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: x² + 11 = 36",
-      "options": ["x = 25", "x = ±5", "x = 5", "Keine Lösung"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p8", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Wie viele Lösungen hat x⁵ = 0?",
-      "options": ["Keine", "Genau eine (x = 0)", "Zwei", "Fünf"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p9", "type": "free_text", "difficulty": "medium",
-      "question": "Erkläre den Unterschied bei der Lösungsanzahl zwischen geradem und ungeradem Exponenten in einer Potenzgleichung. Gib je ein Beispiel.",
-      "maxPoints": 4,
-      "keywords": ["gerade", "ungerade", "zwei", "eine", "negativ", "±", "plus minus"],
-      "sampleAnswer": "Bei geradem Exponenten (z.B. x² = 9) gibt es zwei Lösungen (x = ±3), da sowohl 3² als auch (−3)² = 9 ergeben. Bei negativem a gibt es keine reellen Lösungen. Bei ungeradem Exponenten (z.B. x³ = −8) gibt es immer genau eine Lösung (x = −2), da ungerade Exponenten auch negative Werte annehmen können."
-    },
-    {
-      "id": "p10", "type": "free_text", "difficulty": "hard",
-      "question": "Löse die Gleichung 5x² − 80 = 0 vollständig mit Lösungsweg und Probe.",
-      "maxPoints": 6,
-      "keywords": ["x² = 16", "x = ±4", "probe", "4²", "16", "80"],
-      "sampleAnswer": "5x² − 80 = 0 | +80: 5x² = 80 | ÷5: x² = 16 | Wurzel: x = ±4. Probe: 5·(4)² − 80 = 5·16 − 80 = 80 − 80 = 0 ✓ und 5·(−4)² − 80 = 0 ✓. Lösungsmenge: {−4; 4}"
-    },
-    {
-      "id": "p11", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ist ⁴√81?",
-      "options": ["2", "3", "4", "9"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p12", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Wie viele reelle Lösungen hat x⁴ = 16?",
-      "options": ["Keine", "Genau eine (x = 2)", "Zwei (x = ±2)", "Vier"],
-      "correct": 2, "points": 2
-    },
-    {
-      "id": "p13", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Löse: 3x² = 75",
-      "options": ["x = ±5", "x = 5", "x = ±25", "x = ±15"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p14", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Welche Lösungsmenge hat x⁴ = −16?",
-      "options": ["{−2; 2}", "{−2}", "{2}", "Leere Menge (keine reellen Lösungen)"],
-      "correct": 3, "points": 2
-    },
-    {
-      "id": "p15", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ist ³√−64?",
-      "options": ["4", "−4", "±4", "Nicht definiert"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p16", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Löse: x² − 7 = 29",
-      "options": ["x = ±6", "x = 6", "x = ±22", "x = ±36"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p17", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Löse: x³ = 125",
-      "options": ["x = 5", "x = ±5", "x = 25", "x = ³√5"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p18", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ist die Lösung von x⁵ = −32?",
-      "options": ["x = 2", "x = −2", "x = ±2", "Keine reellen Lösungen"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p19", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: (x + 3)² = 25",
-      "options": ["x = 2", "x = −8", "x = 2 oder x = −8", "x = ±5"],
-      "correct": 2, "points": 2
-    },
-    {
-      "id": "p20", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Wie viele Lösungen hat x² = 0?",
-      "options": ["Keine", "Genau eine (x = 0)", "Zwei (x = ±0)", "Unendlich viele"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p21", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ergibt (−5)²?",
-      "options": ["−25", "25", "−10", "10"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p22", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Löse: 4x² = 100",
-      "options": ["x = ±5", "x = 5", "x = ±25", "x = ±10"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p23", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ergibt √0,25?",
-      "options": ["0,5", "0,05", "5", "2,5"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p24", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Wie viele reelle Lösungen hat x⁴ = 0?",
-      "options": ["Keine", "Genau eine (x = 0)", "Zwei", "Vier"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p25", "type": "multiple_choice", "difficulty": "easy",
-      "question": "Was ist der Hauptwert (positive Wurzel) von √49?",
-      "options": ["±7", "−7", "7", "2401"],
-      "correct": 2, "points": 2
-    },
-    {
-      "id": "p26", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: x³ + 8 = 0",
-      "options": ["x = 2", "x = −2", "x = ±2", "Keine Lösung"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p27", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: 2x³ = 54",
-      "options": ["x = 3", "x = 27", "x = ±3", "x = 9"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p28", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Was ergibt ⁶√64?",
-      "options": ["2", "4", "8", "32"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p29", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: (2x)² = 36",
-      "options": ["x = 6", "x = ±3", "x = 3", "x = ±6"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p30", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Wie viele reelle Lösungen hat x⁶ = 64?",
-      "options": ["Genau eine (x = 2)", "Zwei (x = ±2)", "Sechs", "Keine"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p31", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: −x² = −25",
-      "options": ["x = 5", "x = −5", "x = ±5", "Keine Lösung"],
-      "correct": 2, "points": 2
-    },
-    {
-      "id": "p32", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: x² + 25 = 0",
-      "options": ["x = 5", "x = ±5", "x = −5", "Keine reellen Lösungen"],
-      "correct": 3, "points": 2
-    },
-    {
-      "id": "p33", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: (x − 5)² = 49",
-      "options": ["x = 12", "x = −2", "x = 12 oder x = −2", "x = ±7 + 5"],
-      "correct": 2, "points": 2
-    },
-    {
-      "id": "p34", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Vereinfache ⁵√x⁵ für alle reellen x.",
-      "options": ["x²", "x", "|x|", "x⁵"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p35", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: x³ = −1",
-      "options": ["x = 1", "x = −1", "x = ±1", "Keine Lösung"],
-      "correct": 1, "points": 2
-    },
-    {
-      "id": "p36", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: x² = 1/9",
-      "options": ["x = ±1/3", "x = 1/3", "x = ±1/81", "x = 3"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p37", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Was gilt für √x² bei allen reellen x?",
-      "options": ["√x² = x", "√x² = −x", "√x² = |x|", "√x² = x²"],
-      "correct": 2, "points": 2
-    },
-    {
-      "id": "p38", "type": "multiple_choice", "difficulty": "medium",
-      "question": "Löse: x² = 0,01",
-      "options": ["x = ±0,1", "x = 0,01", "x = ±0,01", "x = 0,1"],
-      "correct": 0, "points": 2
-    },
-    {
-      "id": "p39", "type": "free_text", "difficulty": "medium",
-      "question": "Löse vollständig: (x + 4)² = 81. Zeige beide Lösungen mit Lösungsweg.",
-      "maxPoints": 4,
-      "keywords": ["x + 4 = ±9", "x = 5", "x = −13", "zwei lösungen", "wurzel"],
-      "sampleAnswer": "(x+4)² = 81 | Wurzel ziehen: x+4 = ±9 | Fall 1: x+4 = 9 → x = 5 | Fall 2: x+4 = −9 → x = −13. Lösungsmenge: {5; −13}. Probe: (5+4)² = 81 ✓ und (−13+4)² = (−9)² = 81 ✓."
-    },
-    {
-      "id": "p40", "type": "free_text", "difficulty": "medium",
-      "question": "Erkläre, warum die Gleichung x² = −9 keine reellen Lösungen besitzt.",
-      "maxPoints": 4,
-      "keywords": ["quadrat", "positiv", "negativ", "reelle", "keine", "immer", "≥0"],
-      "sampleAnswer": "Das Quadrat einer reellen Zahl ist immer ≥ 0. Jede reelle Zahl x ergibt beim Quadrieren einen nicht-negativen Wert: x² ≥ 0. Da −9 < 0, kann es keine reelle Zahl x geben, deren Quadrat gleich −9 ist. Die Lösungsmenge ist die leere Menge."
-    },
-    {
-      "id": "p41", "type": "free_text", "difficulty": "medium",
-      "question": "Löse vollständig: 3x³ − 24 = 0. Zeige den Lösungsweg und mache eine Probe.",
-      "maxPoints": 4,
-      "keywords": ["x³ = 8", "x = 2", "probe", "3·8 = 24"],
-      "sampleAnswer": "3x³ − 24 = 0 | +24: 3x³ = 24 | ÷3: x³ = 8 | ³√: x = ³√8 = 2. Probe: 3·2³ − 24 = 3·8 − 24 = 24 − 24 = 0 ✓. Lösungsmenge: {2}"
-    },
-    {
-      "id": "p42", "type": "free_text", "difficulty": "medium",
-      "question": "Löse vollständig mit Probe: 2(x − 3)³ = 54",
-      "maxPoints": 4,
-      "keywords": ["(x−3)³ = 27", "x − 3 = 3", "x = 6", "probe"],
-      "sampleAnswer": "2(x−3)³ = 54 | ÷2: (x−3)³ = 27 | ³√: x−3 = 3 | +3: x = 6. Probe: 2·(6−3)³ = 2·3³ = 2·27 = 54 ✓. Lösungsmenge: {6}"
-    },
-    {
-      "id": "p43", "type": "free_text", "difficulty": "hard",
-      "question": "Löse vollständig: (3x)² = 108. Gib die exakte und gerundete Lösung an.",
-      "maxPoints": 6,
-      "keywords": ["9x² = 108", "x² = 12", "x = ±√12", "x = ±2√3", "±3,46"],
-      "sampleAnswer": "9x² = 108 | ÷9: x² = 12 | √: x = ±√12 = ±2√3 ≈ ±3,46. Oder direkt: (3x)² = 108 → 3x = ±√108 = ±6√3 → x = ±2√3. Lösungsmenge: {−2√3; 2√3}"
-    },
-    {
-      "id": "p44", "type": "free_text", "difficulty": "hard",
-      "question": "Löse vollständig: x⁴ − 625 = 0",
-      "maxPoints": 4,
-      "keywords": ["x⁴ = 625", "x = ±5", "⁴√625", "probe"],
-      "sampleAnswer": "x⁴ − 625 = 0 | +625: x⁴ = 625 | ⁴√: x = ±⁴√625 = ±5. Probe: (±5)⁴ = 625 ✓. Lösungsmenge: {−5; 5}"
-    },
-    {
-      "id": "p45", "type": "free_text", "difficulty": "hard",
-      "question": "Welche Arten von Lösungsmengen sind bei der Potenzgleichung xⁿ = a möglich? Erkläre mindestens 3 Fälle mit je einem Beispiel.",
-      "maxPoints": 6,
-      "keywords": ["leere menge", "eine lösung", "zwei lösungen", "gerade", "ungerade", "negativ", "null"],
-      "sampleAnswer": "1) Leere Menge: bei geradem n und a < 0, z.B. x² = −4. 2) Genau eine Lösung: bei ungeradem n (alle reellen a), z.B. x³ = 8 → x = 2. Auch bei x² = 0 → x = 0. 3) Zwei Lösungen: bei geradem n und a > 0, z.B. x² = 9 → x = ±3. Regel: gerader Exponent + negativer Wert = keine Lösung; gerader Exponent + positiver Wert = ±Wurzel; ungerader Exponent = immer genau eine Lösung."
-    },
-    {
-      "id": "p46", "type": "free_text", "difficulty": "medium",
-      "question": "Ein Quadrat hat den Flächeninhalt A = 225 cm². Stelle eine Potenzgleichung auf und berechne die Seitenlänge.",
-      "maxPoints": 4,
-      "keywords": ["a² = 225", "a = 15", "positiv", "seitenlänge", "probe"],
-      "sampleAnswer": "Formel Quadratfläche: A = a² → a² = 225 | √: a = ±15. Da Seitenlänge positiv: a = 15 cm. Probe: 15² = 225 ✓."
-    },
-    {
-      "id": "p47", "type": "free_text", "difficulty": "medium",
-      "question": "Ein Würfel hat das Volumen V = 512 cm³. Stelle eine Potenzgleichung auf und berechne die Kantenlänge.",
-      "maxPoints": 4,
-      "keywords": ["a³ = 512", "a = 8", "kubikwurzel", "probe"],
-      "sampleAnswer": "Formel Würfelvolumen: V = a³ → a³ = 512 | ³√: a = ³√512 = 8 cm. Probe: 8³ = 8·8·8 = 512 ✓."
-    },
-    {
-      "id": "p48", "type": "free_text", "difficulty": "medium",
-      "question": "Löse mit Lösungsweg: x³ − 19 = 8",
-      "maxPoints": 4,
-      "keywords": ["x³ = 27", "x = 3", "probe", "+19"],
-      "sampleAnswer": "x³ − 19 = 8 | +19: x³ = 27 | ³√: x = ³√27 = 3. Probe: 3³ − 19 = 27 − 19 = 8 ✓. Lösungsmenge: {3}"
-    },
-    {
-      "id": "p49", "type": "free_text", "difficulty": "medium",
-      "question": "Erkläre den Begriff 'n-te Wurzel' als Umkehroperation zur n-ten Potenz. Nutze ein konkretes Beispiel.",
-      "maxPoints": 4,
-      "keywords": ["umkehroperation", "potenz", "wurzel", "beispiel", "aⁿ = b", "ⁿ√b"],
-      "sampleAnswer": "Die n-te Wurzel ist die Umkehroperation der n-ten Potenz: Wenn aⁿ = b gilt, dann ist a = ⁿ√b. Beispiel: 4³ = 64, also ³√64 = 4. Die Kubikwurzel macht die dritte Potenz rückgängig. Für gerade n und b > 0 gibt es zwei reelle Zahlen (±a), deren n-te Potenz gleich b ist — die Hauptwurzel ist die positive."
-    },
-    {
-      "id": "p50", "type": "free_text", "difficulty": "medium",
-      "question": "Erkläre, warum man bei x² = 16 als Lösung 'x = ±4' schreibt und nicht nur 'x = 4'.",
-      "maxPoints": 4,
-      "keywords": ["beide", "vorzeichen", "positiv", "negativ", "(−4)²", "lösungsmenge", "beide lösungen"],
-      "sampleAnswer": "Sowohl (+4)² = 16 als auch (−4)² = 16, da das Quadrat einer negativen Zahl positiv ist. Schreibt man nur x = 4, übersieht man die zweite gültige Lösung x = −4. Beide Werte erfüllen die Gleichung. Die Lösungsmenge ist {−4; 4}. Das Zeichen ± bedeutet 'plus oder minus' und steht für beide Lösungen gleichzeitig."
-    }
+    {"id":"p1","type":"multiple_choice","difficulty":"easy","question":"Wie viele reelle Lösungen hat x² = 49?","options":["Keine","Genau eine (x = 7)","Zwei (x = 7 und x = −7)","Unendlich viele"],"correct":2,"points":2},
+    {"id":"p2","type":"multiple_choice","difficulty":"easy","question":"Wie viele reelle Lösungen hat x² = −9?","options":["Keine reellen Lösungen","x = 3","x = ±3","x = −3"],"correct":0,"points":2},
+    {"id":"p3","type":"multiple_choice","difficulty":"easy","question":"Was ist die Lösung von x³ = −27?","options":["x = 3","x = −3","x = ±3","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p4","type":"multiple_choice","difficulty":"easy","question":"Löse: 2x² = 18","options":["x = 9","x = ±3","x = 3","x = ±9"],"correct":1,"points":2},
+    {"id":"p5","type":"multiple_choice","difficulty":"easy","question":"Was ist ³√64?","options":["8","4","6","32"],"correct":1,"points":2},
+    {"id":"p6","type":"multiple_choice","difficulty":"medium","question":"Löse: (x − 2)³ = 8","options":["x = 4","x = 2","x = 0","x = ±4"],"correct":0,"points":2},
+    {"id":"p7","type":"multiple_choice","difficulty":"medium","question":"Löse: x² + 11 = 36","options":["x = 25","x = ±5","x = 5","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p8","type":"multiple_choice","difficulty":"medium","question":"Wie viele Lösungen hat x⁵ = 0?","options":["Keine","Genau eine (x = 0)","Zwei","Fünf"],"correct":1,"points":2},
+    {"id":"p9","type":"free_text","difficulty":"medium","question":"Erkläre den Unterschied bei der Lösungsanzahl zwischen geradem und ungeradem Exponenten in einer Potenzgleichung. Gib je ein Beispiel.","maxPoints":4,"keywords":["gerade","ungerade","zwei","eine","negativ","±","plus minus"],"sampleAnswer":"Bei geradem Exponenten (z.B. x² = 9) gibt es zwei Lösungen (x = ±3). Bei negativem a gibt es keine reellen Lösungen. Bei ungeradem Exponenten (z.B. x³ = −8) gibt es immer genau eine Lösung (x = −2)."},
+    {"id":"p10","type":"free_text","difficulty":"hard","question":"Löse die Gleichung 5x² − 80 = 0 vollständig mit Lösungsweg und Probe.","maxPoints":6,"keywords":["x² = 16","x = ±4","probe","80"],"sampleAnswer":"5x² − 80 = 0 | +80: 5x² = 80 | ÷5: x² = 16 | Wurzel: x = ±4. Probe: 5·16 − 80 = 0 ✓. LM: {−4; 4}"},
+    {"id":"p11","type":"multiple_choice","difficulty":"easy","question":"Was ist ⁴√81?","options":["2","3","4","9"],"correct":1,"points":2},
+    {"id":"p12","type":"multiple_choice","difficulty":"easy","question":"Wie viele reelle Lösungen hat x⁴ = 16?","options":["Keine","Genau eine (x = 2)","Zwei (x = ±2)","Vier"],"correct":2,"points":2},
+    {"id":"p13","type":"multiple_choice","difficulty":"easy","question":"Löse: 3x² = 75","options":["x = ±5","x = 5","x = ±25","x = ±15"],"correct":0,"points":2},
+    {"id":"p14","type":"multiple_choice","difficulty":"easy","question":"Welche Lösungsmenge hat x⁴ = −16?","options":["{−2; 2}","{−2}","{2}","Leere Menge (keine reellen Lösungen)"],"correct":3,"points":2},
+    {"id":"p15","type":"multiple_choice","difficulty":"easy","question":"Was ist ³√−64?","options":["4","−4","±4","Nicht definiert"],"correct":1,"points":2},
+    {"id":"p16","type":"multiple_choice","difficulty":"easy","question":"Löse: x² − 7 = 29","options":["x = ±6","x = 6","x = ±22","x = ±36"],"correct":0,"points":2},
+    {"id":"p17","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ = 125","options":["x = 5","x = ±5","x = 25","x = ³√5"],"correct":0,"points":2},
+    {"id":"p18","type":"multiple_choice","difficulty":"easy","question":"Was ist die Lösung von x⁵ = −32?","options":["x = 2","x = −2","x = ±2","Keine reellen Lösungen"],"correct":1,"points":2},
+    {"id":"p19","type":"multiple_choice","difficulty":"medium","question":"Löse: (x + 3)² = 25","options":["x = 2","x = −8","x = 2 oder x = −8","x = ±5"],"correct":2,"points":2},
+    {"id":"p20","type":"multiple_choice","difficulty":"easy","question":"Wie viele Lösungen hat x² = 0?","options":["Keine","Genau eine (x = 0)","Zwei","Unendlich viele"],"correct":1,"points":2},
+    {"id":"p21","type":"multiple_choice","difficulty":"easy","question":"Was ergibt (−5)²?","options":["−25","25","−10","10"],"correct":1,"points":2},
+    {"id":"p22","type":"multiple_choice","difficulty":"easy","question":"Löse: 4x² = 100","options":["x = ±5","x = 5","x = ±25","x = ±10"],"correct":0,"points":2},
+    {"id":"p23","type":"multiple_choice","difficulty":"easy","question":"Was ergibt √0,25?","options":["0,5","0,05","5","2,5"],"correct":0,"points":2},
+    {"id":"p24","type":"multiple_choice","difficulty":"easy","question":"Wie viele reelle Lösungen hat x⁴ = 0?","options":["Keine","Genau eine (x = 0)","Zwei","Vier"],"correct":1,"points":2},
+    {"id":"p25","type":"multiple_choice","difficulty":"easy","question":"Was ist der Hauptwert (positive Wurzel) von √49?","options":["±7","−7","7","2401"],"correct":2,"points":2},
+    {"id":"p26","type":"multiple_choice","difficulty":"medium","question":"Löse: x³ + 8 = 0","options":["x = 2","x = −2","x = ±2","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p27","type":"multiple_choice","difficulty":"medium","question":"Löse: 2x³ = 54","options":["x = 3","x = 27","x = ±3","x = 9"],"correct":0,"points":2},
+    {"id":"p28","type":"multiple_choice","difficulty":"medium","question":"Was ergibt ⁶√64?","options":["2","4","8","32"],"correct":0,"points":2},
+    {"id":"p29","type":"multiple_choice","difficulty":"medium","question":"Löse: (2x)² = 36","options":["x = 6","x = ±3","x = 3","x = ±6"],"correct":1,"points":2},
+    {"id":"p30","type":"multiple_choice","difficulty":"medium","question":"Wie viele reelle Lösungen hat x⁶ = 64?","options":["Genau eine (x = 2)","Zwei (x = ±2)","Sechs","Keine"],"correct":1,"points":2},
+    {"id":"p31","type":"multiple_choice","difficulty":"medium","question":"Löse: −x² = −25","options":["x = 5","x = −5","x = ±5","Keine Lösung"],"correct":2,"points":2},
+    {"id":"p32","type":"multiple_choice","difficulty":"medium","question":"Löse: x² + 25 = 0","options":["x = 5","x = ±5","x = −5","Keine reellen Lösungen"],"correct":3,"points":2},
+    {"id":"p33","type":"multiple_choice","difficulty":"medium","question":"Löse: (x − 5)² = 49","options":["x = 12","x = −2","x = 12 oder x = −2","x = ±12"],"correct":2,"points":2},
+    {"id":"p34","type":"multiple_choice","difficulty":"medium","question":"Vereinfache ⁵√x⁵ für alle reellen x.","options":["x²","x","|x|","x⁵"],"correct":1,"points":2},
+    {"id":"p35","type":"multiple_choice","difficulty":"medium","question":"Löse: x³ = −1","options":["x = 1","x = −1","x = ±1","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p36","type":"multiple_choice","difficulty":"medium","question":"Löse: x² = 1/9","options":["x = ±1/3","x = 1/3","x = ±1/81","x = 3"],"correct":0,"points":2},
+    {"id":"p37","type":"multiple_choice","difficulty":"medium","question":"Was gilt für √x² bei allen reellen x?","options":["√x² = x","√x² = −x","√x² = |x|","√x² = x²"],"correct":2,"points":2},
+    {"id":"p38","type":"multiple_choice","difficulty":"medium","question":"Löse: x² = 0,01","options":["x = ±0,1","x = 0,01","x = ±0,01","x = 0,1"],"correct":0,"points":2},
+    {"id":"p39","type":"free_text","difficulty":"medium","question":"Löse vollständig: (x + 4)² = 81. Zeige beide Lösungen mit Lösungsweg.","maxPoints":4,"keywords":["x+4=±9","x=5","x=−13","±9"],"sampleAnswer":"(x+4)² = 81 | √: x+4 = ±9 | x = 5 oder x = −13. Probe: (5+4)² = 81 ✓ (−13+4)² = 81 ✓. LM: {5; −13}"},
+    {"id":"p40","type":"free_text","difficulty":"medium","question":"Erkläre, warum die Gleichung x² = −9 keine reellen Lösungen besitzt.","maxPoints":4,"keywords":["quadrat","positiv","≥0","keine","reelle"],"sampleAnswer":"Das Quadrat einer reellen Zahl ist immer ≥ 0. Da −9 < 0, kann kein reelles x² = −9 ergeben. LM = leere Menge."},
+    {"id":"p41","type":"free_text","difficulty":"medium","question":"Löse vollständig: 3x³ − 24 = 0. Zeige Lösungsweg und Probe.","maxPoints":4,"keywords":["x³=8","x=2","probe"],"sampleAnswer":"3x³ = 24 | ÷3: x³ = 8 | x = 2. Probe: 3·8−24 = 0 ✓. LM: {2}"},
+    {"id":"p42","type":"free_text","difficulty":"medium","question":"Löse vollständig mit Probe: 2(x − 3)³ = 54","maxPoints":4,"keywords":["(x−3)³=27","x=6","probe"],"sampleAnswer":"÷2: (x−3)³ = 27 | x−3 = 3 | x = 6. Probe: 2·27 = 54 ✓. LM: {6}"},
+    {"id":"p43","type":"free_text","difficulty":"hard","question":"Löse vollständig: (3x)² = 108. Gib exakte und gerundete Lösung an.","maxPoints":6,"keywords":["x²=12","x=±2√3","±3,46"],"sampleAnswer":"9x² = 108 | x² = 12 | x = ±√12 = ±2√3 ≈ ±3,46. LM: {−2√3; 2√3}"},
+    {"id":"p44","type":"free_text","difficulty":"hard","question":"Löse vollständig: x⁴ − 625 = 0","maxPoints":4,"keywords":["x⁴=625","x=±5","probe"],"sampleAnswer":"x⁴ = 625 | x = ±⁴√625 = ±5. Probe: 5⁴ = 625 ✓. LM: {−5; 5}"},
+    {"id":"p45","type":"free_text","difficulty":"hard","question":"Welche Arten von Lösungsmengen sind bei xⁿ = a möglich? Erkläre mindestens 3 Fälle mit Beispielen.","maxPoints":6,"keywords":["leere menge","eine lösung","zwei lösungen","gerade","ungerade","null"],"sampleAnswer":"1) Leere Menge: gerader n, a<0 (x²=−4). 2) Genau eine: ungerader n (x³=8→x=2) oder a=0 (x²=0→x=0). 3) Zwei Lösungen: gerader n, a>0 (x²=9→x=±3)."},
+    {"id":"p46","type":"free_text","difficulty":"medium","question":"Ein Quadrat hat den Flächeninhalt A = 225 cm². Stelle Potenzgleichung auf und berechne die Seitenlänge.","maxPoints":4,"keywords":["a²=225","a=15","positiv"],"sampleAnswer":"a² = 225 | a = ±15. Da Länge > 0: a = 15 cm. Probe: 15² = 225 ✓."},
+    {"id":"p47","type":"free_text","difficulty":"medium","question":"Ein Würfel hat das Volumen V = 512 cm³. Stelle Potenzgleichung auf und berechne die Kantenlänge.","maxPoints":4,"keywords":["a³=512","a=8","probe"],"sampleAnswer":"a³ = 512 | a = 8 cm. Probe: 8³ = 512 ✓."},
+    {"id":"p48","type":"free_text","difficulty":"medium","question":"Löse mit Lösungsweg: x³ − 19 = 8","maxPoints":4,"keywords":["x³=27","x=3","probe"],"sampleAnswer":"x³ = 27 | x = 3. Probe: 27−19 = 8 ✓. LM: {3}"},
+    {"id":"p49","type":"free_text","difficulty":"medium","question":"Erkläre den Begriff 'n-te Wurzel' als Umkehroperation zur n-ten Potenz. Nutze ein Beispiel.","maxPoints":4,"keywords":["umkehroperation","aⁿ=b","ⁿ√b","beispiel"],"sampleAnswer":"Wenn aⁿ = b, dann ist a = ⁿ√b. Beispiel: 4³ = 64, also ³√64 = 4. Für geraden n und b>0 gibt es ±a."},
+    {"id":"p50","type":"free_text","difficulty":"medium","question":"Erkläre, warum man bei x² = 16 als Lösung 'x = ±4' schreibt und nicht nur 'x = 4'.","maxPoints":4,"keywords":["beide","vorzeichen","(−4)²","lösungsmenge"],"sampleAnswer":"Sowohl 4² = 16 als auch (−4)² = 16. Schreibt man nur x=4, fehlt die Lösung x=−4. LM: {−4; 4}. Das ±-Zeichen steht für beide Lösungen."},
+    {"id":"p51","type":"multiple_choice","difficulty":"easy","question":"Löse: x² = 144","options":["x = 12","x = ±12","x = ±144","x = ±√12"],"correct":1,"points":2},
+    {"id":"p52","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ = 216","options":["x = ±6","x = 6","x = 72","x = ³√12"],"correct":1,"points":2},
+    {"id":"p53","type":"multiple_choice","difficulty":"easy","question":"Löse: x⁴ = 81","options":["x = ±3","x = 3","x = ±9","x = 81"],"correct":0,"points":2},
+    {"id":"p54","type":"multiple_choice","difficulty":"medium","question":"Löse: x² = 0,09","options":["x = ±0,3","x = 0,3","x = ±0,09","x = ±3"],"correct":0,"points":2},
+    {"id":"p55","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ = −125","options":["x = 5","x = −5","x = ±5","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p56","type":"multiple_choice","difficulty":"easy","question":"Löse: x⁵ = 32","options":["x = 2","x = ±2","x = 16","x = 32"],"correct":0,"points":2},
+    {"id":"p57","type":"multiple_choice","difficulty":"medium","question":"Löse: 3x³ = 81","options":["x = 27","x = 3","x = ±3","x = ³√81"],"correct":1,"points":2},
+    {"id":"p58","type":"multiple_choice","difficulty":"medium","question":"Löse: (x/2)² = 9","options":["x = ±3","x = ±6","x = 6","x = ±18"],"correct":1,"points":2},
+    {"id":"p59","type":"multiple_choice","difficulty":"easy","question":"Löse: x² − 1 = 0","options":["x = 1","x = ±1","x = −1","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p60","type":"multiple_choice","difficulty":"easy","question":"Löse: x⁷ = −1","options":["x = 1","x = −1","x = ±1","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p61","type":"multiple_choice","difficulty":"easy","question":"Löse: x² = 225","options":["x = 15","x = ±15","x = ±225","x = ±√225"],"correct":1,"points":2},
+    {"id":"p62","type":"multiple_choice","difficulty":"medium","question":"Löse: (x + 1)² = 36","options":["x = 5","x = −7","x = 5 oder x = −7","x = ±6"],"correct":2,"points":2},
+    {"id":"p63","type":"multiple_choice","difficulty":"easy","question":"Löse: x⁴ = 256","options":["x = 4","x = ±4","x = ±16","x = ±8"],"correct":1,"points":2},
+    {"id":"p64","type":"multiple_choice","difficulty":"medium","question":"Löse: 2x⁴ = 162","options":["x = ±3","x = 3","x = ±9","x = ±81"],"correct":0,"points":2},
+    {"id":"p65","type":"multiple_choice","difficulty":"easy","question":"Welche Gleichung hat genau zwei reelle Lösungen?","options":["x³ = 8","x² = 8","x⁵ = 8","x³ = −8"],"correct":1,"points":2},
+    {"id":"p66","type":"multiple_choice","difficulty":"easy","question":"Löse: x² = 169","options":["x = ±13","x = 13","x = ±169","x = ±√13"],"correct":0,"points":2},
+    {"id":"p67","type":"multiple_choice","difficulty":"medium","question":"Wie viele Lösungen hat (x − 3)² = 25?","options":["Keine","Genau eine (x = 8)","Zwei (x = 8 und x = −2)","Vier"],"correct":2,"points":2},
+    {"id":"p68","type":"multiple_choice","difficulty":"medium","question":"Löse: (x + 2)³ = −8","options":["x = −4","x = −6","x = ±4","x = 0"],"correct":0,"points":2},
+    {"id":"p69","type":"multiple_choice","difficulty":"medium","question":"Löse: 5x² = 500","options":["x = 10","x = ±10","x = ±100","x = ±50"],"correct":1,"points":2},
+    {"id":"p70","type":"multiple_choice","difficulty":"medium","question":"Löse: x⁴ − 1 = 0","options":["x = 1","x = ±1","x = 0","x = ±i"],"correct":1,"points":2},
+    {"id":"p71","type":"multiple_choice","difficulty":"hard","question":"Löse: (3x − 1)² = 0","options":["x = 0","x = 1/3","x = ±1/3","x = 1"],"correct":1,"points":2},
+    {"id":"p72","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ − 1000 = 0","options":["x = 10","x = ±10","x = 100","x = ³√10"],"correct":0,"points":2},
+    {"id":"p73","type":"multiple_choice","difficulty":"medium","question":"Löse: 6x² − 24 = 0","options":["x = ±2","x = 2","x = ±4","x = ±6"],"correct":0,"points":2},
+    {"id":"p74","type":"multiple_choice","difficulty":"medium","question":"Löse: (x − 4)² = 81","options":["x = 13","x = −5","x = 13 oder x = −5","x = ±9"],"correct":2,"points":2},
+    {"id":"p75","type":"multiple_choice","difficulty":"easy","question":"Was ergibt ³√−216?","options":["−6","6","±6","−12"],"correct":0,"points":2},
+    {"id":"p76","type":"multiple_choice","difficulty":"medium","question":"Löse: 2(x − 1)² = 50","options":["x = 6","x = −4","x = 6 oder x = −4","x = ±5"],"correct":2,"points":2},
+    {"id":"p77","type":"multiple_choice","difficulty":"medium","question":"Löse: (2x + 3)² = 49","options":["x = 2 oder x = −5","x = ±2","x = 2","x = −5"],"correct":0,"points":2},
+    {"id":"p78","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ + 27 = 0","options":["x = 3","x = −3","x = ±3","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p79","type":"multiple_choice","difficulty":"hard","question":"Löse: 8x³ = 1","options":["x = 1/8","x = 1/2","x = 1/4","x = 2"],"correct":1,"points":2},
+    {"id":"p80","type":"multiple_choice","difficulty":"medium","question":"Löse: x² = 7 (exakte Lösung)","options":["x = ±√7","x = ±7","x = 7/2","Keine reelle Lösung"],"correct":0,"points":2},
+    {"id":"p81","type":"multiple_choice","difficulty":"medium","question":"Löse: x⁶ − 64 = 0","options":["x = ±2","x = 2","x = ±8","x = ±64"],"correct":0,"points":2},
+    {"id":"p82","type":"multiple_choice","difficulty":"medium","question":"Löse: −3x² = −48","options":["x = ±4","x = 4","x = ±16","x = ±√48"],"correct":0,"points":2},
+    {"id":"p83","type":"multiple_choice","difficulty":"medium","question":"Löse: (5x)² = 225","options":["x = ±3","x = ±9","x = ±15","x = 3"],"correct":0,"points":2},
+    {"id":"p84","type":"multiple_choice","difficulty":"medium","question":"Löse: x⁶ = 729","options":["x = ±3","x = 3","x = ±729","x = ±9"],"correct":0,"points":2},
+    {"id":"p85","type":"multiple_choice","difficulty":"medium","question":"Löse: 4(x + 2)² = 16","options":["x = 0 oder x = −4","x = ±2","x = 2","x = 4"],"correct":0,"points":2},
+    {"id":"p86","type":"multiple_choice","difficulty":"medium","question":"Löse: x³ = 0,125","options":["x = 0,5","x = 0,125","x = 0,25","x = ±0,5"],"correct":0,"points":2},
+    {"id":"p87","type":"multiple_choice","difficulty":"hard","question":"Löse: x⁴ = 0,0001","options":["x = ±0,01","x = ±0,1","x = 0,1","x = ±0,001"],"correct":1,"points":2},
+    {"id":"p88","type":"multiple_choice","difficulty":"easy","question":"Wie viele reelle Lösungen hat x⁸ = −1?","options":["Keine","Genau eine (x = −1)","Zwei (x = ±1)","Acht"],"correct":0,"points":2},
+    {"id":"p89","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ = 343","options":["x = 7","x = ±7","x = 49","x = 7²"],"correct":0,"points":2},
+    {"id":"p90","type":"multiple_choice","difficulty":"hard","question":"Löse: (x − 1/2)² = 1/4","options":["x = 1 oder x = 0","x = 1/2","x = ±1/2","x = 1"],"correct":0,"points":2},
+    {"id":"p91","type":"multiple_choice","difficulty":"medium","question":"Löse: x² = 4/9","options":["x = ±2/3","x = ±4/9","x = ±2/9","x = ±2"],"correct":0,"points":2},
+    {"id":"p92","type":"multiple_choice","difficulty":"medium","question":"Löse: (x + 10)² = 100","options":["x = 0 oder x = −20","x = ±10","x = 10","x = −20"],"correct":0,"points":2},
+    {"id":"p93","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ = −512","options":["x = 8","x = −8","x = ±8","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p94","type":"multiple_choice","difficulty":"medium","question":"Löse: x⁴ = 1296","options":["x = ±6","x = ±36","x = 6","x = ±1296"],"correct":0,"points":2},
+    {"id":"p95","type":"multiple_choice","difficulty":"hard","question":"Löse: x^100 = 1","options":["x = 1","x = ±1","x = 0","Keine Lösung"],"correct":1,"points":2},
+    {"id":"p96","type":"multiple_choice","difficulty":"medium","question":"Löse: x³/27 = 1","options":["x = 3","x = ±3","x = 27","x = 9"],"correct":0,"points":2},
+    {"id":"p97","type":"multiple_choice","difficulty":"medium","question":"Was ergibt √(x²) wenn x = −5?","options":["−5","5","25","±5"],"correct":1,"points":2},
+    {"id":"p98","type":"multiple_choice","difficulty":"medium","question":"Löse: 9x² − 81 = 0","options":["x = ±3","x = 3","x = ±9","x = ±√9"],"correct":0,"points":2},
+    {"id":"p99","type":"multiple_choice","difficulty":"easy","question":"Löse: (x − 8)³ = 0","options":["x = 8","x = ±8","x = 0","x = 2"],"correct":0,"points":2},
+    {"id":"p100","type":"multiple_choice","difficulty":"medium","question":"Welche Gleichung hat genau eine Lösung?","options":["x² = 9","x² = 4","x⁴ = 16","x² = 0"],"correct":3,"points":2},
+    {"id":"p101","type":"multiple_choice","difficulty":"easy","question":"Löse: 10x² = 1000","options":["x = ±10","x = 10","x = ±100","x = ±50"],"correct":0,"points":2},
+    {"id":"p102","type":"multiple_choice","difficulty":"medium","question":"Löse: (x + 4)³ = −27","options":["x = −7","x = 7","x = ±7","x = −1"],"correct":0,"points":2},
+    {"id":"p103","type":"multiple_choice","difficulty":"easy","question":"Löse: x³ = 4³","options":["x = 4","x = ±4","x = 64","x = 3"],"correct":0,"points":2},
+    {"id":"p104","type":"multiple_choice","difficulty":"medium","question":"Löse: x² = (−3)²","options":["x = −3","x = ±3","x = 9","x = 3"],"correct":1,"points":2},
+    {"id":"p105","type":"multiple_choice","difficulty":"hard","question":"Löse: x³ = 27/8","options":["x = 3/2","x = ±3/2","x = 9/4","x = 3/4"],"correct":0,"points":2},
+    {"id":"p106","type":"multiple_choice","difficulty":"medium","question":"Löse: (2x − 6)² = 4","options":["x = 4 oder x = 2","x = ±3","x = 4","x = 2"],"correct":0,"points":2},
+    {"id":"p107","type":"multiple_choice","difficulty":"easy","question":"Löse: x² = 1/4","options":["x = ±1/2","x = 1/4","x = ±1/4","x = ±2"],"correct":0,"points":2},
+    {"id":"p108","type":"multiple_choice","difficulty":"hard","question":"Löse: x⁴ = 16/81","options":["x = ±2/3","x = ±4/9","x = 2/3","x = ±2/81"],"correct":0,"points":2},
+    {"id":"p109","type":"multiple_choice","difficulty":"medium","question":"Bei welcher Gleichung ist die Lösungsmenge leer?","options":["x³ = −1","x⁵ = −32","x⁴ = −9","x⁷ = −1"],"correct":2,"points":2},
+    {"id":"p110","type":"multiple_choice","difficulty":"medium","question":"Löse: x³ = 1/27","options":["x = 1/3","x = ±1/3","x = 1/9","x = 3"],"correct":0,"points":2},
+    {"id":"p111","type":"multiple_choice","difficulty":"medium","question":"Welcher Wert gehört NICHT zur Lösungsmenge von x² = 9?","options":["x = 3","x = −3","x = √9","x = ±9"],"correct":3,"points":2},
+    {"id":"p112","type":"multiple_choice","difficulty":"medium","question":"Löse: 4x⁶ = 4","options":["x = ±1","x = 1","x = ±4","x = 0"],"correct":0,"points":2},
+    {"id":"p113","type":"multiple_choice","difficulty":"hard","question":"Löse: x³ = −2197","options":["x = −13","x = 13","x = ±13","x = −7"],"correct":0,"points":2},
+    {"id":"p114","type":"multiple_choice","difficulty":"hard","question":"Löse: (x − √5)² = 0","options":["x = √5","x = ±√5","x = 5","x = −√5"],"correct":0,"points":2},
+    {"id":"p115","type":"free_text","difficulty":"easy","question":"Löse: x² = 196","maxPoints":2,"keywords":["±14","14"],"sampleAnswer":"x = ±14. LM: {−14; 14}"},
+    {"id":"p116","type":"free_text","difficulty":"easy","question":"Löse: x³ = −216","maxPoints":2,"keywords":["−6","x=−6"],"sampleAnswer":"x = −6. LM: {−6}"},
+    {"id":"p117","type":"free_text","difficulty":"easy","question":"Löse: x² = 81","maxPoints":2,"keywords":["±9","9"],"sampleAnswer":"x = ±9. LM: {−9; 9}"},
+    {"id":"p118","type":"free_text","difficulty":"easy","question":"Löse: x³ = 1000","maxPoints":2,"keywords":["10","x=10"],"sampleAnswer":"x = 10. LM: {10}"},
+    {"id":"p119","type":"free_text","difficulty":"easy","question":"Löse: x⁵ = 243","maxPoints":2,"keywords":["3","x=3"],"sampleAnswer":"x = ⁵√243 = 3. LM: {3}"},
+    {"id":"p120","type":"free_text","difficulty":"easy","question":"Löse: x² = 400","maxPoints":2,"keywords":["±20","20"],"sampleAnswer":"x = ±20. LM: {−20; 20}"},
+    {"id":"p121","type":"free_text","difficulty":"easy","question":"Löse: x³ = −8","maxPoints":2,"keywords":["−2","x=−2"],"sampleAnswer":"x = −2. LM: {−2}"},
+    {"id":"p122","type":"free_text","difficulty":"easy","question":"Löse: x⁴ = 1","maxPoints":2,"keywords":["±1","1"],"sampleAnswer":"x = ±1. LM: {−1; 1}"},
+    {"id":"p123","type":"free_text","difficulty":"easy","question":"Löse: x³ = 512","maxPoints":2,"keywords":["8","x=8"],"sampleAnswer":"x = ³√512 = 8. LM: {8}"},
+    {"id":"p124","type":"free_text","difficulty":"easy","question":"Löse: x⁵ = 1","maxPoints":2,"keywords":["1","x=1"],"sampleAnswer":"x = 1. LM: {1}"},
+    {"id":"p125","type":"free_text","difficulty":"easy","question":"Löse: x² = 0","maxPoints":2,"keywords":["0","x=0","eine lösung"],"sampleAnswer":"x = 0. Genau eine Lösung! LM: {0}"},
+    {"id":"p126","type":"free_text","difficulty":"easy","question":"Löse: x³ = 0","maxPoints":2,"keywords":["0","x=0"],"sampleAnswer":"x = 0. LM: {0}"},
+    {"id":"p127","type":"free_text","difficulty":"easy","question":"Löse: x⁵ = −100000","maxPoints":2,"keywords":["−10","x=−10"],"sampleAnswer":"x = ⁵√(−100000) = −10. LM: {−10}"},
+    {"id":"p128","type":"free_text","difficulty":"easy","question":"Löse: x² = 289","maxPoints":2,"keywords":["±17","17"],"sampleAnswer":"x = ±17. LM: {−17; 17}"},
+    {"id":"p129","type":"free_text","difficulty":"easy","question":"Löse: x³ = 64","maxPoints":2,"keywords":["4","x=4"],"sampleAnswer":"x = 4. LM: {4}"},
+    {"id":"p130","type":"free_text","difficulty":"easy","question":"Löse: x⁵ = −32","maxPoints":2,"keywords":["−2","x=−2"],"sampleAnswer":"x = −2. LM: {−2}"},
+    {"id":"p131","type":"free_text","difficulty":"easy","question":"Löse: x³ = −1000","maxPoints":2,"keywords":["−10","x=−10"],"sampleAnswer":"x = −10. LM: {−10}"},
+    {"id":"p132","type":"free_text","difficulty":"easy","question":"Löse: 4x² = 64","maxPoints":3,"keywords":["x²=16","±4"],"sampleAnswer":"x² = 16 | x = ±4. LM: {−4; 4}"},
+    {"id":"p133","type":"free_text","difficulty":"easy","question":"Löse: 2x³ = 16","maxPoints":3,"keywords":["x³=8","x=2"],"sampleAnswer":"x³ = 8 | x = 2. LM: {2}"},
+    {"id":"p134","type":"free_text","difficulty":"easy","question":"Löse: 9x² = 9","maxPoints":3,"keywords":["x²=1","±1"],"sampleAnswer":"x² = 1 | x = ±1. LM: {−1; 1}"},
+    {"id":"p135","type":"free_text","difficulty":"easy","question":"Löse: 3x³ = 24","maxPoints":3,"keywords":["x³=8","x=2"],"sampleAnswer":"x³ = 8 | x = 2. LM: {2}"},
+    {"id":"p136","type":"free_text","difficulty":"medium","question":"Löse mit vollständigem Lösungsweg: 2x³ = 128","maxPoints":4,"keywords":["x³=64","x=4","÷2"],"sampleAnswer":"÷2: x³ = 64 | ³√: x = 4. Probe: 2·64 = 128 ✓. LM: {4}"},
+    {"id":"p137","type":"free_text","difficulty":"medium","question":"Löse vollständig: (x + 5)² = 49","maxPoints":4,"keywords":["x+5=±7","x=2","x=−12"],"sampleAnswer":"x+5 = ±7 | x = 2 oder x = −12. Probe: 7² = 49 ✓ (−7)² = 49 ✓. LM: {2; −12}"},
+    {"id":"p138","type":"free_text","difficulty":"medium","question":"Löse vollständig: (x − 1)³ = 27","maxPoints":4,"keywords":["x−1=3","x=4","probe"],"sampleAnswer":"x−1 = 3 | x = 4. Probe: 3³ = 27 ✓. LM: {4}"},
+    {"id":"p139","type":"free_text","difficulty":"medium","question":"Löse mit Lösungsweg: 5x⁴ = 80","maxPoints":4,"keywords":["x⁴=16","x=±2"],"sampleAnswer":"x⁴ = 16 | x = ±2. LM: {−2; 2}"},
+    {"id":"p140","type":"free_text","difficulty":"medium","question":"Löse vollständig: (2x − 1)² = 25","maxPoints":4,"keywords":["2x−1=±5","x=3","x=−2"],"sampleAnswer":"2x−1 = ±5 | 2x=6→x=3 oder 2x=−4→x=−2. LM: {3; −2}"},
+    {"id":"p141","type":"free_text","difficulty":"medium","question":"Löse mit Probe: −4x² = −64","maxPoints":4,"keywords":["x²=16","x=±4","probe"],"sampleAnswer":"x² = 16 | x = ±4. Probe: −4·16 = −64 ✓. LM: {−4; 4}"},
+    {"id":"p142","type":"free_text","difficulty":"medium","question":"Löse: x³ = 0,027","maxPoints":4,"keywords":["0,3","x=0,3","³√0,027"],"sampleAnswer":"x = ³√0,027 = 0,3. (0,3³ = 0,027 ✓). LM: {0,3}"},
+    {"id":"p143","type":"free_text","difficulty":"medium","question":"Löse vollständig: 7(x + 2)² = 63","maxPoints":4,"keywords":["(x+2)²=9","x+2=±3","x=1","x=−5"],"sampleAnswer":"÷7: (x+2)² = 9 | x+2 = ±3 | x=1 oder x=−5. LM: {1; −5}"},
+    {"id":"p144","type":"free_text","difficulty":"medium","question":"Löse: (x/3)³ = 8","maxPoints":4,"keywords":["x/3=2","x=6","³√8=2"],"sampleAnswer":"x/3 = ³√8 = 2 | x = 6. Probe: (6/3)³ = 2³ = 8 ✓. LM: {6}"},
+    {"id":"p145","type":"free_text","difficulty":"medium","question":"Löse: 12x² = 3","maxPoints":4,"keywords":["x²=1/4","x=±1/2","±0,5"],"sampleAnswer":"x² = 1/4 | x = ±1/2. LM: {−1/2; 1/2}"},
+    {"id":"p146","type":"free_text","difficulty":"medium","question":"Löse vollständig: 2(x + 4)² = 72","maxPoints":4,"keywords":["(x+4)²=36","x+4=±6","x=2","x=−10"],"sampleAnswer":"÷2: (x+4)²=36 | x+4=±6 | x=2 oder x=−10. LM: {2; −10}"},
+    {"id":"p147","type":"free_text","difficulty":"medium","question":"Löse: (x − 6)² = 1","maxPoints":4,"keywords":["x−6=±1","x=7","x=5"],"sampleAnswer":"x−6 = ±1 | x=7 oder x=5. LM: {7; 5}"},
+    {"id":"p148","type":"free_text","difficulty":"medium","question":"Löse: 8x³ = 216","maxPoints":4,"keywords":["x³=27","x=3"],"sampleAnswer":"x³ = 27 | x = 3. Probe: 8·27=216 ✓. LM: {3}"},
+    {"id":"p149","type":"free_text","difficulty":"medium","question":"Löse: (x + 7)³ = −1","maxPoints":4,"keywords":["x+7=−1","x=−8"],"sampleAnswer":"x+7 = −1 | x = −8. Probe: (−1)³ = −1 ✓. LM: {−8}"},
+    {"id":"p150","type":"free_text","difficulty":"medium","question":"Löse: x⁴ − 16 = 0","maxPoints":4,"keywords":["x⁴=16","x=±2"],"sampleAnswer":"x⁴ = 16 | x = ±2. LM: {−2; 2}"},
+    {"id":"p151","type":"free_text","difficulty":"medium","question":"Löse: 0,25x² = 9","maxPoints":4,"keywords":["x²=36","x=±6"],"sampleAnswer":"x² = 36 | x = ±6. LM: {−6; 6}"},
+    {"id":"p152","type":"free_text","difficulty":"medium","question":"Löse: 4x² − 196 = 0","maxPoints":4,"keywords":["x²=49","x=±7"],"sampleAnswer":"4x²=196 | x²=49 | x=±7. LM: {−7; 7}"},
+    {"id":"p153","type":"free_text","difficulty":"medium","question":"Löse: (x + 3)³ = 125","maxPoints":4,"keywords":["x+3=5","x=2"],"sampleAnswer":"x+3 = 5 | x = 2. Probe: 5³=125 ✓. LM: {2}"},
+    {"id":"p154","type":"free_text","difficulty":"medium","question":"Löse: x⁵ + 32 = 0","maxPoints":4,"keywords":["x⁵=−32","x=−2"],"sampleAnswer":"x⁵ = −32 | x = −2. LM: {−2}"},
+    {"id":"p155","type":"free_text","difficulty":"medium","question":"Löse: 2x³ − 250 = 0","maxPoints":4,"keywords":["x³=125","x=5"],"sampleAnswer":"x³=125 | x=5. Probe: 2·125=250 ✓. LM: {5}"},
+    {"id":"p156","type":"free_text","difficulty":"medium","question":"Löse: 3x⁴ = 768","maxPoints":4,"keywords":["x⁴=256","x=±4"],"sampleAnswer":"x⁴=256 | x=±4. LM: {−4; 4}"},
+    {"id":"p157","type":"free_text","difficulty":"medium","question":"Löse: x³ = 3375","maxPoints":4,"keywords":["15","x=15","15³"],"sampleAnswer":"x = ³√3375 = 15. (15³=3375 ✓). LM: {15}"},
+    {"id":"p158","type":"free_text","difficulty":"medium","question":"Löse: (4x)² = 100","maxPoints":4,"keywords":["4x=±10","x=±2,5","16x²=100"],"sampleAnswer":"4x=±10 | x=±2,5. LM: {−2,5; 2,5}"},
+    {"id":"p159","type":"free_text","difficulty":"medium","question":"Löse: 5x³ = 40","maxPoints":4,"keywords":["x³=8","x=2"],"sampleAnswer":"x³=8 | x=2. Probe: 5·8=40 ✓. LM: {2}"},
+    {"id":"p160","type":"free_text","difficulty":"medium","question":"Löse: 6x³ = 162","maxPoints":4,"keywords":["x³=27","x=3"],"sampleAnswer":"x³=27 | x=3. Probe: 6·27=162 ✓. LM: {3}"},
+    {"id":"p161","type":"free_text","difficulty":"medium","question":"Löse vollständig mit Probe: 3x² − 27 = 0","maxPoints":4,"keywords":["x²=9","x=±3","probe"],"sampleAnswer":"3x²=27 | x²=9 | x=±3. Probe: 3·9−27=0 ✓. LM: {−3; 3}"},
+    {"id":"p162","type":"free_text","difficulty":"medium","question":"Löse: 4(x − 1)² = 36","maxPoints":4,"keywords":["(x−1)²=9","x=4","x=−2"],"sampleAnswer":"(x−1)²=9 | x−1=±3 | x=4 oder x=−2. LM: {4; −2}"},
+    {"id":"p163","type":"free_text","difficulty":"medium","question":"Löse: x³ = 0,001","maxPoints":4,"keywords":["0,1","x=0,1"],"sampleAnswer":"x = ³√0,001 = 0,1. (0,1³=0,001 ✓). LM: {0,1}"},
+    {"id":"p164","type":"free_text","difficulty":"medium","question":"Löse: x³ = −27/8","maxPoints":4,"keywords":["−3/2","x=−1,5","x=−3/2"],"sampleAnswer":"x = ³√(−27/8) = −3/2. Probe: (−3/2)³=−27/8 ✓. LM: {−3/2}"},
+    {"id":"p165","type":"free_text","difficulty":"medium","question":"Löse: 100x² = 400","maxPoints":4,"keywords":["x²=4","x=±2"],"sampleAnswer":"x²=4 | x=±2. LM: {−2; 2}"},
+    {"id":"p166","type":"free_text","difficulty":"medium","question":"Löse: x⁶ = 1","maxPoints":4,"keywords":["x=±1","gerader exponent"],"sampleAnswer":"x=±1. (gerader Exponent, 1>0 → zwei Lösungen). LM: {−1; 1}"},
+    {"id":"p167","type":"free_text","difficulty":"medium","question":"Löse: (3x + 2)² = 16","maxPoints":4,"keywords":["3x+2=±4","x=2/3","x=−2"],"sampleAnswer":"3x+2=±4 | 3x=2→x=2/3 oder 3x=−6→x=−2. LM: {2/3; −2}"},
+    {"id":"p168","type":"free_text","difficulty":"medium","question":"Fehleranalyse: 'x²=36, also x=6.' Finde und korrigiere den Fehler.","maxPoints":4,"keywords":["zweite lösung","x=−6","±6","beide vorzeichen"],"sampleAnswer":"Fehler: Es fehlt die zweite Lösung x=−6. Da (−6)²=36, gilt x=±6. Korrekt: LM = {−6; 6}."},
+    {"id":"p169","type":"free_text","difficulty":"medium","question":"Löse: x² = 5 (gib exakte Lösung an)","maxPoints":3,"keywords":["±√5","irrational","exakt"],"sampleAnswer":"x = ±√5 ≈ ±2,24. LM: {−√5; √5}"},
+    {"id":"p170","type":"free_text","difficulty":"medium","question":"Löse: 2x² = 7 (exakte Lösung)","maxPoints":4,"keywords":["x²=7/2","x=±√(7/2)","±√3,5"],"sampleAnswer":"x² = 7/2 | x = ±√(7/2) = ±√3,5 ≈ ±1,87. LM: {−√3,5; √3,5}"},
+    {"id":"p171","type":"free_text","difficulty":"medium","question":"Berechne die Seitenlänge eines Quadrats mit A = 484 cm².","maxPoints":4,"keywords":["a²=484","a=22","positiv"],"sampleAnswer":"a²=484 | a=±22. Da Länge>0: a=22 cm. Probe: 22²=484 ✓."},
+    {"id":"p172","type":"free_text","difficulty":"medium","question":"Berechne die Kantenlänge eines Würfels mit V = 1331 cm³.","maxPoints":4,"keywords":["a³=1331","a=11","11³"],"sampleAnswer":"a³=1331 | a=³√1331=11 cm. Probe: 11³=1331 ✓."},
+    {"id":"p173","type":"free_text","difficulty":"medium","question":"Berechne den Radius eines Kreises mit A = 36π cm² (A = r²·π).","maxPoints":4,"keywords":["r²=36","r=6","positiv"],"sampleAnswer":"r²·π=36π | r²=36 | r=6 cm (positiv). Probe: 36π ✓."},
+    {"id":"p174","type":"free_text","difficulty":"hard","question":"Löse vollständig mit Probe: 2(x + 3)² = 50","maxPoints":4,"keywords":["(x+3)²=25","x+3=±5","x=2","x=−8"],"sampleAnswer":"(x+3)²=25 | x+3=±5 | x=2 oder x=−8. Probe: 2·25=50 ✓. LM: {2; −8}"},
+    {"id":"p175","type":"free_text","difficulty":"hard","question":"Löse vollständig: (x + 1)⁴ = 16","maxPoints":6,"keywords":["x+1=±2","x=1","x=−3","⁴√16=2"],"sampleAnswer":"x+1=±⁴√16=±2 | x=1 oder x=−3. Probe: 2⁴=16 ✓ (−2)⁴=16 ✓. LM: {1; −3}"},
+    {"id":"p176","type":"free_text","difficulty":"hard","question":"Löse vollständig: 6x⁵ = 192","maxPoints":6,"keywords":["x⁵=32","x=2"],"sampleAnswer":"x⁵=32 | x=2. Probe: 6·32=192 ✓. LM: {2}"},
+    {"id":"p177","type":"free_text","difficulty":"hard","question":"Löse vollständig: (x − 4)⁴ = 81","maxPoints":6,"keywords":["x−4=±3","x=7","x=1"],"sampleAnswer":"x−4=±3 | x=7 oder x=1. Probe: 3⁴=81 ✓. LM: {7; 1}"},
+    {"id":"p178","type":"free_text","difficulty":"hard","question":"Löse vollständig: 8(x − 2)³ = 64","maxPoints":6,"keywords":["(x−2)³=8","x−2=2","x=4"],"sampleAnswer":"(x−2)³=8 | x−2=2 | x=4. Probe: 8·8=64 ✓. LM: {4}"},
+    {"id":"p179","type":"free_text","difficulty":"hard","question":"Erkläre den allgemeinen Lösungsweg für (x + a)ⁿ = b.","maxPoints":6,"keywords":["n-te wurzel","x+a=ⁿ√b","±","gerade","ungerade"],"sampleAnswer":"Schritt 1: n-te Wurzel beider Seiten: x+a = ⁿ√b (ungerades n) oder x+a = ±ⁿ√b (gerades n, b>0). Schritt 2: a subtrahieren: x = ⁿ√b − a. Bei geradem n und b<0: keine reelle Lösung."},
+    {"id":"p180","type":"free_text","difficulty":"hard","question":"Gib drei verschiedene Potenzgleichungen mit leerer Lösungsmenge an und erkläre jeweils warum.","maxPoints":4,"keywords":["gerade","negativ","keine","leere menge"],"sampleAnswer":"1) x²=−1: gerader Exponent, a<0. 2) x⁴=−7: gerader Exponent, a<0. 3) x^100=−0,5: gerader Exponent, a<0. Begründung: Bei geradem Exponenten ist xⁿ immer ≥ 0 für reelle x."},
+    {"id":"p181","type":"free_text","difficulty":"hard","question":"Vergleiche die Lösungen von x² = 27 und x³ = 27.","maxPoints":4,"keywords":["x²=27","±√27","x³=27","³√27","3"],"sampleAnswer":"x²=27: x=±√27=±3√3≈±5,20 (zwei Lösungen). x³=27: x=³√27=3 (genau eine Lösung). Unterschied: gerader vs. ungerader Exponent."},
+    {"id":"p182","type":"free_text","difficulty":"hard","question":"Löse vollständig: (x − 1)⁶ = 64","maxPoints":6,"keywords":["x−1=±2","x=3","x=−1"],"sampleAnswer":"x−1=±⁶√64=±2 | x=3 oder x=−1. Probe: 2⁶=64 ✓. LM: {3; −1}"},
+    {"id":"p183","type":"free_text","difficulty":"hard","question":"Löse vollständig: (x − 3)⁵ = −32","maxPoints":6,"keywords":["x−3=−2","x=1","⁵√(−32)=−2"],"sampleAnswer":"x−3=⁵√(−32)=−2 | x=1. Probe: (−2)⁵=−32 ✓. LM: {1}"},
+    {"id":"p184","type":"free_text","difficulty":"hard","question":"Löse: 0,04x² = 1","maxPoints":4,"keywords":["x²=25","x=±5"],"sampleAnswer":"x²=25 | x=±5. Probe: 0,04·25=1 ✓. LM: {−5; 5}"},
+    {"id":"p185","type":"free_text","difficulty":"hard","question":"Berechne die Kantenlänge eines Würfels mit V = 27000 cm³.","maxPoints":4,"keywords":["a³=27000","a=30"],"sampleAnswer":"a³=27000 | a=³√27000=30 cm. Probe: 30³=27000 ✓."},
+    {"id":"p186","type":"free_text","difficulty":"hard","question":"Löse: x⁴ = 2401","maxPoints":4,"keywords":["x=±7","7⁴=2401"],"sampleAnswer":"x=±7. (7⁴=7·7·7·7=2401 ✓). LM: {−7; 7}"},
+    {"id":"p187","type":"free_text","difficulty":"hard","question":"Löse vollständig: 3(x + 1)³ = 81","maxPoints":4,"keywords":["(x+1)³=27","x+1=3","x=2"],"sampleAnswer":"(x+1)³=27 | x+1=3 | x=2. Probe: 3·27=81 ✓. LM: {2}"},
+    {"id":"p188","type":"free_text","difficulty":"hard","question":"Löse vollständig: 4x⁶ = 256","maxPoints":6,"keywords":["x⁶=64","x=±2"],"sampleAnswer":"x⁶=64 | x=±2. Probe: 4·64=256 ✓. LM: {−2; 2}"},
+    {"id":"p189","type":"free_text","difficulty":"hard","question":"Löse: x³ = 2744","maxPoints":4,"keywords":["14","x=14","14³"],"sampleAnswer":"x=³√2744=14. (14³=2744 ✓). LM: {14}"},
+    {"id":"p190","type":"free_text","difficulty":"hard","question":"Löse vollständig: (2x − 6)³ = −27","maxPoints":6,"keywords":["2x−6=−3","x=1,5","x=3/2"],"sampleAnswer":"2x−6=³√(−27)=−3 | 2x=3 | x=1,5. Probe: (2·1,5−6)³=(−3)³=−27 ✓. LM: {1,5}"},
+    {"id":"p191","type":"free_text","difficulty":"hard","question":"Erkläre: Was ändert sich am Lösungsweg, wenn n gerade vs. ungerade ist?","maxPoints":6,"keywords":["gerade","±","zwei","ungerade","eine","vorzeichen"],"sampleAnswer":"Gerades n (z.B. n=2,4): xⁿ=b ergibt x=±ⁿ√b (zwei Lösungen für b>0, keine für b<0). Ungerader n (z.B. n=3,5): xⁿ=b ergibt immer genau eine Lösung x=ⁿ√b, auch für negative b."},
+    {"id":"p192","type":"free_text","difficulty":"hard","question":"Löse vollständig: 9x⁴ = 729","maxPoints":6,"keywords":["x⁴=81","x=±3"],"sampleAnswer":"x⁴=81 | x=±3. Probe: 9·81=729 ✓. LM: {−3; 3}"},
+    {"id":"p193","type":"free_text","difficulty":"hard","question":"Erkläre mit Beispiel, warum bei x² = k mit k>0 die Lösung x=±√k ist und nicht nur x=√k.","maxPoints":4,"keywords":["beide","vorzeichen","negativ","quadrat","positiv","beispiel"],"sampleAnswer":"Weil sowohl (+√k)²=k als auch (−√k)²=k gilt – das Quadrat einer negativen Zahl ist positiv. Beispiel: x²=9 → x=3 ✓ und x=−3 ✓, da (−3)²=9. Nur x=3 wäre unvollständig."},
+    {"id":"p194","type":"free_text","difficulty":"hard","question":"Erkläre, was eine Potenzgleichung ist. Gib die allgemeine Form an und drei Beispiele.","maxPoints":4,"keywords":["xⁿ=a","exponent","basis","beispiele","ganze zahl"],"sampleAnswer":"Allgemeine Form: xⁿ = a, wobei n eine natürliche Zahl ist und x die Unbekannte. Beispiele: x²=16, x³=−27, x⁵=100. Ziel: x bestimmen."},
+    {"id":"p195","type":"free_text","difficulty":"hard","question":"Löse vollständig: x² = 10000","maxPoints":2,"keywords":["±100","x=±100"],"sampleAnswer":"x=±100. LM: {−100; 100}"},
+    {"id":"p196","type":"free_text","difficulty":"hard","question":"Löse: (x − 0,5)² = 0,25","maxPoints":4,"keywords":["x−0,5=±0,5","x=1","x=0"],"sampleAnswer":"x−0,5=±0,5 | x=1 oder x=0. Probe: 0,5²=0,25 ✓. LM: {0; 1}"},
+    {"id":"p197","type":"free_text","difficulty":"hard","question":"Gib Beispiele für Potenzgleichungen mit 0, 1 und 2 Lösungen und erkläre jeweils.","maxPoints":6,"keywords":["0 lösungen","1 lösung","2 lösungen","gerade","ungerade","beispiel"],"sampleAnswer":"0 Lösungen: x²=−4 (gerader Exponent, negativer Wert). 1 Lösung: x³=8 (ungerader Exponent) oder x²=0. 2 Lösungen: x²=9 (gerader Exponent, positiver Wert → x=±3)."},
+    {"id":"p198","type":"free_text","difficulty":"hard","question":"Löse vollständig: 5x⁵ = 160","maxPoints":4,"keywords":["x⁵=32","x=2"],"sampleAnswer":"x⁵=32 | x=2. Probe: 5·32=160 ✓. LM: {2}"},
+    {"id":"p199","type":"free_text","difficulty":"hard","question":"Erkläre: Warum ist eine Probe bei Potenzgleichungen sinnvoll?","maxPoints":4,"keywords":["überprüfen","fehler","richtig","einsetzen","kontrolle"],"sampleAnswer":"Die Probe überprüft das Ergebnis: Man setzt x in die ursprüngliche Gleichung ein und prüft, ob LHS=RHS. Sie deckt Rechenfehler auf und bestätigt die Lösung. Besonders bei mehreren Lösungsschritten sinnvoll."},
+    {"id":"p200","type":"free_text","difficulty":"hard","question":"Löse: (x + 2)⁶ = 64","maxPoints":6,"keywords":["x+2=±2","x=0","x=−4"],"sampleAnswer":"x+2=±⁶√64=±2 | x=0 oder x=−4. Probe: 2⁶=64 ✓ (−2)⁶=64 ✓. LM: {0; −4}"}
   ]
 }
