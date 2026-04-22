@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -96,6 +96,9 @@ function route() {
     else location.hash = '#/';
   } else if (parts[0] === 'builder') {
     renderBuilder();
+  } else if (parts[0] === 'gruppen') {
+    if (parts[1]) renderGroupDetail(parts[1]);
+    else renderGroups();
   } else {
     renderDashboard();
   }
@@ -125,6 +128,7 @@ function renderNav(breadcrumbs = []) {
           <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
           <a class="nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken'">Statistiken</a>
           <a class="nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste'">Rangliste</a>
+          <a class="nav-link ${act('Gruppen')}"      onclick="location.hash='#/gruppen'">Gruppen</a>
           <a class="nav-link ${act('Builder')}"      onclick="location.hash='#/builder'">Builder</a>
           <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
           <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
@@ -150,6 +154,7 @@ function renderNav(breadcrumbs = []) {
             <a onclick="location.hash='#/profil'">Profil</a>
             <a onclick="location.hash='#/statistiken'">Statistiken</a>
             <a onclick="location.hash='#/rangliste'">Rangliste</a>
+            <a onclick="location.hash='#/gruppen'">Gruppen</a>
             <a onclick="location.hash='#/builder'">Builder</a>
             <a onclick="location.hash='#/einstellungen'">Einstellungen</a>
             ${currentUser?.email === ADMIN_EMAIL ? `<a onclick="location.hash='#/admin'" style="color:var(--accent);font-weight:600">Admin-Panel</a>` : ''}
@@ -163,6 +168,7 @@ function renderNav(breadcrumbs = []) {
       <a class="mobile-nav-link ${!breadcrumbs.length ? 'mnl-active' : ''}" onclick="location.hash='#/';window.LF.closeMobileMenu()">Start</a>
       <a class="mobile-nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken';window.LF.closeMobileMenu()">Statistiken</a>
       <a class="mobile-nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste';window.LF.closeMobileMenu()">Rangliste</a>
+      <a class="mobile-nav-link ${act('Gruppen')}"      onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">Gruppen</a>
       <a class="mobile-nav-link ${act('Builder')}"      onclick="location.hash='#/builder';window.LF.closeMobileMenu()">Builder</a>
       <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
       <a class="mobile-nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">Einstellungen</a>
@@ -1045,6 +1051,178 @@ async function renderLeaderboard() {
     ${subjectGridHtml ? `<div class="section-title" style="margin-top:32px;margin-bottom:16px">Nach Fach</div><div class="lb-grid">${subjectGridHtml}</div>` : ''}`;
 }
 
+// ── Gruppen ──────────────────────────────
+async function renderGroups() {
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Gruppen' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>Lerngruppen</h1>
+        <div class="sub">Lerne gemeinsam — max. 2 Gruppen pro Konto.</div>
+      </div>
+      <div id="groupsContent"><div class="spinner" style="margin:40px auto"></div></div>
+    </div>`;
+
+  const groupIds = userData?.groupIds || [];
+  const groups   = await getUserGroups(groupIds);
+
+  const myCount  = groups.length;
+  const canJoin  = myCount < 2;
+
+  const groupCards = groups.map(g => {
+    const memberCount = Object.keys(g.members || {}).length;
+    const isCreator   = g.creatorUid === currentUser.uid;
+    return `
+      <div class="group-card" onclick="location.hash='#/gruppen/${g.id}'">
+        <div class="group-card-info">
+          <div class="group-card-name">${g.name}</div>
+          <div class="group-card-meta">${memberCount} Mitglied${memberCount !== 1 ? 'er' : ''} · ${isCreator ? 'Admin' : 'Mitglied'}</div>
+        </div>
+        <div class="group-card-arrow">›</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('groupsContent').innerHTML = `
+    ${groups.length > 0 ? `<div class="group-list">${groupCards}</div>` : ''}
+    ${groups.length === 0 ? `<div class="empty-state" style="margin-bottom:24px"><div class="empty-icon">👥</div>Du bist noch in keiner Gruppe.</div>` : ''}
+
+    <div class="group-actions-grid">
+      <div class="card" style="padding:20px">
+        <div class="section-title" style="margin-bottom:12px">Gruppe erstellen</div>
+        ${canJoin
+          ? `<div class="form-group">
+               <input class="form-input" id="newGroupName" placeholder="Gruppenname" maxlength="40">
+             </div>
+             <button class="btn btn-primary" onclick="window.LF.groupCreate()">Erstellen</button>`
+          : `<p style="color:var(--text-muted);font-size:14px">Du bist bereits in 2 Gruppen (Maximum erreicht).</p>`
+        }
+      </div>
+      <div class="card" style="padding:20px">
+        <div class="section-title" style="margin-bottom:12px">Gruppe beitreten</div>
+        ${canJoin
+          ? `<div class="form-group">
+               <input class="form-input" id="joinCode" placeholder="Einladungscode (6 Zeichen)" maxlength="6"
+                      style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+             </div>
+             <button class="btn btn-secondary" onclick="window.LF.groupJoin()">Beitreten</button>`
+          : `<p style="color:var(--text-muted);font-size:14px">Du bist bereits in 2 Gruppen (Maximum erreicht).</p>`
+        }
+      </div>
+    </div>`;
+}
+
+async function renderGroupDetail(groupId) {
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Gruppen', href: '#/gruppen' }, { label: '…' }])}
+    <div class="page">
+      <div id="groupDetailContent"><div class="spinner" style="margin:40px auto"></div></div>
+    </div>`;
+
+  let groupSnap;
+  try {
+    groupSnap = await db().collection('groups').doc(groupId).get();
+  } catch(e) {
+    document.getElementById('groupDetailContent').innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
+    return;
+  }
+  if (!groupSnap.exists) { location.hash = '#/gruppen'; return; }
+
+  const group     = { id: groupSnap.id, ...groupSnap.data() };
+  const isCreator = group.creatorUid === currentUser.uid;
+  const members   = Object.entries(group.members || {});
+  const memberUids = members.map(([uid]) => uid);
+
+  // Re-render nav with group name
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Gruppen', href: '#/gruppen' }, { label: group.name }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>${group.name}</h1>
+        <div class="sub">${members.length} Mitglied${members.length !== 1 ? 'er' : ''}</div>
+      </div>
+      <div id="groupDetailContent"><div class="spinner" style="margin:40px auto"></div></div>
+    </div>`;
+
+  // Mitgliederliste
+  const memberRows = members.map(([uid, m]) => `
+    <div class="group-member-row">
+      <div class="group-member-avatar">${(m.displayName||'?')[0].toUpperCase()}</div>
+      <div class="group-member-info">
+        <div class="group-member-name">${m.displayName || 'Unbekannt'} ${m.role === 'admin' ? '<span class="group-admin-badge">Admin</span>' : ''}</div>
+      </div>
+      ${isCreator && uid !== currentUser.uid
+        ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.groupKick('${groupId}','${uid}','${(m.displayName||'').replace(/'/g,"\\'")}')">Entfernen</button>`
+        : ''}
+    </div>`).join('');
+
+  // Gruppen-Rangliste (Leaderboard gefiltert auf Mitglieder)
+  let lbHtml = '<div class="spinner" style="margin:16px auto"></div>';
+
+  document.getElementById('groupDetailContent').innerHTML = `
+    <div class="group-detail-grid">
+      <div>
+        <div class="section-title">Mitglieder</div>
+        <div class="group-member-list">${memberRows}</div>
+
+        ${isCreator
+          ? `<div class="group-invite-box">
+               <span class="group-invite-label">Einladungscode:</span>
+               <code class="group-invite-code">${group.code}</code>
+               <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${group.code}');window.LF.showToast('Code kopiert!','success')">Kopieren</button>
+             </div>`
+          : ''}
+
+        <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">
+          ${isCreator
+            ? `<button class="btn btn-danger btn-sm" onclick="window.LF.groupDelete('${groupId}','${group.name.replace(/'/g,"\\'")}')">Gruppe löschen</button>`
+            : `<button class="btn btn-secondary btn-sm" onclick="window.LF.groupLeave('${groupId}','${group.name.replace(/'/g,"\\'")}')">Gruppe verlassen</button>`
+          }
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Gruppen-Rangliste</div>
+        <div id="groupLbContent">${lbHtml}</div>
+      </div>
+    </div>`;
+
+  // Rangliste laden
+  try {
+    const allLb = await getLeaderboard();
+    const groupLb = allLb
+      .filter(u => memberUids.includes(u.uid))
+      .map(u => {
+        const sc  = Object.values(u.scores || {});
+        const total = sc.reduce((a, b) => a + b, 0);
+        return { ...u, total, testCount: sc.length };
+      })
+      .filter(u => u.testCount > 0)
+      .sort((a, b) => b.total - a.total);
+
+    const medals = ['🥇','🥈','🥉'];
+    const lbRows = groupLb.map((u, i) => {
+      const av = u.photoURL
+        ? `<img src="${u.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+        : (u.displayName||'?')[0].toUpperCase();
+      const isMe = u.uid === currentUser.uid;
+      return `
+        <div class="lb-row${isMe ? ' lb-me' : ''}">
+          <div class="lb-rank">${i < 3 ? medals[i] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`}</div>
+          <div class="lb-avatar">${av}</div>
+          <div class="lb-name">${u.displayName||'Unbekannt'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+          <div class="lb-meta">${u.testCount} Test${u.testCount!==1?'s':''}</div>
+          <div class="lb-score" style="color:var(--accent)">${u.total}</div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('groupLbContent').innerHTML = groupLb.length
+      ? lbRows
+      : '<div class="empty-state" style="padding:16px;font-size:14px">Noch keine Tests gemacht.</div>';
+  } catch(e) {
+    document.getElementById('groupLbContent').innerHTML = `<div class="empty-state" style="padding:16px;font-size:14px">Rangliste nicht verfügbar.</div>`;
+  }
+}
+
 // ── Admin-Panel ──────────────────────────
 async function renderAdmin() {
   document.getElementById('app').innerHTML = `
@@ -1502,6 +1680,66 @@ window.LF = {
       document.getElementById('vocabInput')?.focus();
     }
   },
+
+  // ── Gruppen ──────────────────────────────
+  groupCreate: async () => {
+    const name = document.getElementById('newGroupName')?.value.trim();
+    if (!name) { showToast('Bitte einen Gruppennamen eingeben.', 'error'); return; }
+    const groupIds = userData?.groupIds || [];
+    if (groupIds.length >= 2) { showToast('Maximum: 2 Gruppen pro Konto.', 'error'); return; }
+    try {
+      const gid = await createGroup(currentUser.uid, currentUser.displayName||'Nutzer', currentUser.photoURL, name);
+      if (!userData) userData = {};
+      userData.groupIds = [...groupIds, gid];
+      showToast('Gruppe erstellt!', 'success');
+      location.hash = `#/gruppen/${gid}`;
+    } catch(e) { showToast(e.message, 'error'); }
+  },
+
+  groupJoin: async () => {
+    const code = document.getElementById('joinCode')?.value.trim();
+    if (!code || code.length !== 6) { showToast('Bitte gültigen 6-stelligen Code eingeben.', 'error'); return; }
+    const groupIds = userData?.groupIds || [];
+    if (groupIds.length >= 2) { showToast('Maximum: 2 Gruppen pro Konto.', 'error'); return; }
+    try {
+      const gid = await joinGroupByCode(currentUser.uid, currentUser.displayName||'Nutzer', currentUser.photoURL, code);
+      if (!userData) userData = {};
+      userData.groupIds = [...groupIds, gid];
+      showToast('Gruppe beigetreten!', 'success');
+      location.hash = `#/gruppen/${gid}`;
+    } catch(e) { showToast(e.message, 'error'); }
+  },
+
+  groupLeave: async (groupId, name) => {
+    if (!confirm(`Gruppe „${name}" wirklich verlassen?`)) return;
+    try {
+      await leaveGroup(currentUser.uid, groupId);
+      if (userData?.groupIds) userData.groupIds = userData.groupIds.filter(id => id !== groupId);
+      showToast('Gruppe verlassen.', 'info');
+      location.hash = '#/gruppen';
+    } catch(e) { showToast(e.message, 'error'); }
+  },
+
+  groupDelete: async (groupId, name) => {
+    if (!confirm(`Gruppe „${name}" wirklich löschen? Alle Mitglieder werden entfernt.`)) return;
+    try {
+      await leaveGroup(currentUser.uid, groupId);
+      if (userData?.groupIds) userData.groupIds = userData.groupIds.filter(id => id !== groupId);
+      showToast('Gruppe gelöscht.', 'success');
+      location.hash = '#/gruppen';
+    } catch(e) { showToast(e.message, 'error'); }
+  },
+
+  groupKick: async (groupId, targetUid, targetName) => {
+    if (!confirm(`${targetName} aus der Gruppe entfernen?`)) return;
+    try {
+      await kickFromGroup(groupId, targetUid);
+      showToast(`${targetName} entfernt.`, 'success');
+      renderGroupDetail(groupId);
+    } catch(e) { showToast(e.message, 'error'); }
+  },
+
+  showToast: (msg, type) => showToast(msg, type),
 
   // ── Admin ────────────────────────────────
   adminBan: async (uid, name) => {

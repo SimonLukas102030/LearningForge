@@ -122,3 +122,72 @@ export async function getAllUsers() {
 export async function setBanStatus(uid, banned) {
   await _db.collection('users').doc(uid).set({ isBanned: banned }, { merge: true });
 }
+
+// ── Gruppen ───────────────────────────────
+function _genCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+export async function createGroup(uid, displayName, photoURL, groupName) {
+  const code     = _genCode();
+  const groupRef = _db.collection('groups').doc();
+  await groupRef.set({
+    name: groupName, code,
+    creatorUid: uid,
+    members: { [uid]: { displayName, photoURL: photoURL || null, role: 'admin' } },
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  await _db.collection('users').doc(uid).set(
+    { groupIds: firebase.firestore.FieldValue.arrayUnion(groupRef.id) }, { merge: true }
+  );
+  return groupRef.id;
+}
+
+export async function joinGroupByCode(uid, displayName, photoURL, code) {
+  const snap = await _db.collection('groups').where('code', '==', code.trim().toUpperCase()).limit(1).get();
+  if (snap.empty) throw new Error('Kein Gruppe mit diesem Code gefunden.');
+  const doc  = snap.docs[0];
+  if (doc.data().members?.[uid]) throw new Error('Du bist bereits in dieser Gruppe.');
+  await doc.ref.update({
+    [`members.${uid}`]: { displayName, photoURL: photoURL || null, role: 'member' }
+  });
+  await _db.collection('users').doc(uid).set(
+    { groupIds: firebase.firestore.FieldValue.arrayUnion(doc.id) }, { merge: true }
+  );
+  return doc.id;
+}
+
+export async function leaveGroup(uid, groupId) {
+  const ref  = _db.collection('groups').doc(groupId);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+  const data = snap.data();
+  if (data.creatorUid === uid) {
+    const batch    = _db.batch();
+    const members  = Object.keys(data.members || {});
+    members.forEach(m => batch.update(_db.collection('users').doc(m),
+      { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) }));
+    batch.delete(ref);
+    await batch.commit();
+  } else {
+    await ref.update({ [`members.${uid}`]: firebase.firestore.FieldValue.delete() });
+    await _db.collection('users').doc(uid).update(
+      { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) }
+    );
+  }
+}
+
+export async function kickFromGroup(groupId, targetUid) {
+  await _db.collection('groups').doc(groupId).update({
+    [`members.${targetUid}`]: firebase.firestore.FieldValue.delete()
+  });
+  await _db.collection('users').doc(targetUid).update(
+    { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) }
+  );
+}
+
+export async function getUserGroups(groupIds) {
+  if (!groupIds?.length) return [];
+  const docs = await Promise.all(groupIds.map(id => _db.collection('groups').doc(id).get()));
+  return docs.filter(d => d.exists).map(d => ({ id: d.id, ...d.data() }));
+}

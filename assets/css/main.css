@@ -1768,3 +1768,89 @@ input, textarea, select { font-family: var(--font); }
   font-size: 14px;
 }
 [data-theme="dark"] .success-msg { background: #064e3b; color: #6ee7b7; }
+
+/* ── 37. Gruppen ────────────────────────── */
+.group-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+
+.group-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.group-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
+}
+.group-card-info { flex: 1; }
+.group-card-name { font-weight: 700; font-size: 16px; }
+.group-card-meta { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.group-card-arrow { font-size: 22px; color: var(--text-muted); }
+
+.group-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 600px) { .group-actions-grid { grid-template-columns: 1fr; } }
+
+.group-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 700px) { .group-detail-grid { grid-template-columns: 1fr; } }
+
+.group-member-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; margin-bottom: 16px; }
+.group-member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.group-member-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.group-member-info { flex: 1; }
+.group-member-name { font-size: 14px; font-weight: 600; }
+.group-admin-badge {
+  background: var(--accent); color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 6px; border-radius: 4px;
+  margin-left: 6px; vertical-align: middle;
+}
+
+.group-invite-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+.group-invite-label { font-size: 13px; color: var(--text-muted); }
+.group-invite-code {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
