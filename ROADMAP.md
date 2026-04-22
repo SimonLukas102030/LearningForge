@@ -3,6 +3,24 @@
 > Alle Features in der Projektideen_Zukunft.md gelten als **erledigt** (Gruppen, Custom Content, Admin, Vokabeltrainer, Visual Builder, Score-Multiplikatoren, Leaderboard).
 > Diese Roadmap plant ausschließlich neue Features — geordnet nach Abhängigkeiten, von Fundament bis Skalierung.
 
+## Stand — April 2026
+
+| Phase | Status |
+|-------|--------|
+| Phase 0 — Quick Wins | ✅ Fertig |
+| Phase 1 — PWA & Offline | ✅ Fertig (F-11, F-12, F-13; F-14 Push-Notifs offen) |
+| Phase 2 — Lernerlebnis | ✅ Fertig |
+| Phase 3 — Gamification | ✅ Fertig |
+| Phase 4 — Soziale Features | ✅ Fertig (F-30, F-31, F-34, F-35; F-32 Duell & F-33 Live-Session offen) |
+| Phase 5 — KI-Integration | ✅ Fertig (F-36, F-37, F-38, F-40; F-39 Adaptiv & F-41 Qualitätsprüfung offen) |
+| Phase 6 — Lehrer & Analytics | ✅ Fertig (F-42, F-43, F-44, F-46; F-45 Lehrplan-Mapping offen) |
+| Phase 7 — Skalierung | 🔲 Offen |
+
+**Zusätzlich fertig (außerhalb Roadmap):**
+- Groq als primärer KI-Provider (llama-3.3-70b-versatile) — Gemini als Fallback
+- Profil-Bild hochladen (PNG ≤ 512×512) + Emoji-Picker
+- Profil-Name bearbeiten
+
 ---
 
 ## Legende
@@ -245,14 +263,14 @@ Montags um 08:00 Uhr (via FCM aus F-14) oder beim ersten App-Öffnen: Modal mit 
 
 ---
 
-### F-30 — Freunde-System
+### F-30 — Freunde-System ✅
 **Aufwand:** M  
 **Voraussetzung:** F-25  
 Nutzer per Nutzername suchen und als Freund hinzufügen. Anfrage → Akzeptieren/Ablehnen. `users/{uid}/friends[]` + `users/{uid}/friendRequests[]`. Freunde-Tab auf Leaderboard-Seite (eigene Rangliste nur Freunde). Freundes-Profil öffentlich einsehbar (Streak, Badges, Level).
 
 ---
 
-### F-31 — Aktivitäts-Feed
+### F-31 — Aktivitäts-Feed ✅
 **Aufwand:** M  
 **Voraussetzung:** F-30  
 Eigene Seite `#/feed`. Zeigt Aktivitäten von Freunden und Gruppenmitgliedern: "Jonas hat Mathe: Potenzgleichungen mit Note 2 abgeschlossen", "Lea hat Badge ‚7-Tage-Streak' verdient", "Mia hat neuen Inhalt für Geschichte hochgeladen". Feed-Einträge in `feed/{uid}/{timestamp}`, werden beim nächsten Login der Freunde angezeigt.
@@ -273,14 +291,14 @@ Gruppen-Admin startet eine Live-Session: alle Mitglieder sehen denselben Test zu
 
 ---
 
-### F-34 — Kommentare & Fragen pro Thema
+### F-34 — Kommentare & Fragen pro Thema ✅
 **Aufwand:** M  
 **Voraussetzung:** F-30  
 Unterhalb des Lerninhalts: Kommentar-Sektion (nur für eingeloggte Nutzer). Kommentare in `comments/{subjectId}__{topicId}/{commentId}`. Reaktionen (Daumen hoch). Admin kann löschen. Kein Antwort-Threading (flat). Kommentare erscheinen auf Thema-Seite unter einem "Kommentare"-Tab — nicht sichtbar während Test.
 
 ---
 
-### F-35 — Peer-Review für Custom Content
+### F-35 — Peer-Review für Custom Content ✅
 **Aufwand:** M  
 **Voraussetzung:** F-34  
 Custom Content der `pending` ist, kann von anderen Nutzern (nicht nur Admin) bewertet werden. 3 positive Bewertungen → automatisch auf `public` setzen. Reviewer bekommen XP. Flagging-System: genug Flags → zurück auf `pending`. Admin-Queue zeigt geflaggerte Items priorisiert.
@@ -292,21 +310,21 @@ Custom Content der `pending` ist, kann von anderen Nutzern (nicht nur Admin) bew
 
 ---
 
-### F-36 — Personalisierte Lernempfehlungen
+### F-36 — Personalisierte Lernempfehlungen ✅
 **Aufwand:** M  
 **Voraussetzung:** F-03, F-16  
 Dashboard-Widget "Heute empfohlen". Algorithmus: Themen mit schlechtester Note + längste Zeit nicht wiederholt + SRS-fällige Karten. Sortierung nach kombiniertem Score. Zeigt 3 Empfehlungen mit Begründung ("Note 4 vor 14 Tagen"). Kein Gemini nötig — reines Daten-basiertes Ranking.
 
 ---
 
-### F-37 — KI-Lernzusammenfassung
+### F-37 — KI-Lernzusammenfassung ✅
 **Aufwand:** M  
 **Voraussetzung:** —  
 Button "Zusammenfassung erstellen" auf Themen-Seite. Gemini generiert aus dem `content` der meta.json eine kompakte Stichpunkt-Zusammenfassung (5–8 Kernpunkte). Gecacht in sessionStorage (nicht nochmal generieren wenn dieselbe Seite nochmal aufgerufen wird). Nutzer kann Zusammenfassung kopieren.
 
 ---
 
-### F-38 — KI-Tutor Chat
+### F-38 — KI-Tutor Chat ✅
 **Aufwand:** L  
 **Voraussetzung:** F-37  
 Floating Chat-Button auf Lerninhalt-Seiten. Öffnet Chat-Panel (rechts). Gemini bekommt `content` der meta.json als Kontext + Nutzer-Frage. Antwortet themenspezifisch. Gesprächsverlauf in sessionStorage. Rateimit-Schutz (max 10 Nachrichten pro Sitzung). Klar markiert als "KI-Tutor" — kein Ersatz für Lehrer.
@@ -320,7 +338,7 @@ Neuer Test-Typ "Adaptiv" (ohne feste Zeitwahl). Start mit mittlerer Schwierigkei
 
 ---
 
-### F-40 — KI-Lernplan (Klassenarbeit-Vorbereitung)
+### F-40 — KI-Lernplan (Klassenarbeit-Vorbereitung) ✅
 **Aufwand:** L  
 **Voraussetzung:** F-36, F-39  
 Nutzer gibt ein: "Ich schreibe in 5 Tagen eine Mathe-Klassenarbeit über Potenzgleichungen und Funktionen." KI (Gemini) erstellt Tagesplan: Tag 1: Theorie lesen + Wissens-Check, Tag 2: 15-min Test, Tag 3: Retry-Modus Fehler, usw. Plan als Liste auf `#/lernplan`-Seite gespeichert. Nutzer kann Tage abhaken.
@@ -339,21 +357,21 @@ Beim Upload von Custom Content: Gemini prüft automatisch Qualität (Verständli
 
 ---
 
-### F-42 — Detaillierte Lernanalysen
+### F-42 — Detaillierte Lernanalysen ✅
 **Aufwand:** M  
 **Voraussetzung:** F-17, F-27  
 Neue Statistik-Sektion "Detailanalyse" (unter bestehenden Statistiken). Zeigt: Durchschnittliche Lernzeit pro Wochentag, Zeit-per-Fach-Pie-Chart, Fragen-Typen-Performance (MC vs. Freitext), Tageszeit-Verteilung der Lernaktivität. Daten aus `users/{uid}/studyTime` + Grades-History.
 
 ---
 
-### F-43 — Gruppen-Admin-Dashboard (Lehrer-Ansicht)
+### F-43 — Gruppen-Admin-Dashboard (Lehrer-Ansicht) ✅
 **Aufwand:** L  
 **Voraussetzung:** F-42  
 Spezielle Ansicht für Gruppen-Admins: Tabelle aller Mitglieder mit Ø-Note pro Fach, Lernzeit letzte 7 Tage, letzter Aktivitäts-Tag, abgeschlossene Themen. Sortierbar. Exportierbar als CSV (Noten-Tabelle). Kein separater "Lehrer"-Account — jeder Gruppen-Admin bekommt diese Ansicht für seine Gruppe.
 
 ---
 
-### F-44 — Noten-Export (PDF & CSV)
+### F-44 — Noten-Export (PDF & CSV) ✅ (CSV fertig)
 **Aufwand:** M  
 **Voraussetzung:** —  
 Auf der Statistik-Seite: "Noten exportieren"-Button. CSV-Download aller Testergebnisse (Datum, Fach, Thema, Note, Punkte). PDF-Version: formatierter Bericht mit Kopfzeile (Name, Zeitraum), Tabelle + Balkendiagramm. `window.print()`-basiert mit eigenem Print-CSS. Kein Server nötig.
@@ -367,7 +385,7 @@ Optionaler Key in `meta.json`: `"curriculum": {"state": "NRW", "grade": 9, "code
 
 ---
 
-### F-46 — Eltern-Zugang (Read-only-Link)
+### F-46 — Eltern-Zugang (Read-only-Link) ✅
 **Aufwand:** M  
 **Voraussetzung:** F-44  
 Nutzer kann in Einstellungen einen einmaligen Share-Link generieren (`#/bericht/{token}`). Token in Firestore mit `uid` verknüpft. Die Bericht-Seite zeigt ohne Login: Noten-Verlauf, Streak, Fächer-Übersicht, letzte 10 Tests. Kein Name sichtbar (Datenschutz), nur Statistiken. Token kann jederzeit widerrufen werden.
