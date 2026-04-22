@@ -236,6 +236,35 @@ export async function getCustomTopicById(topicId) {
   return doc.exists ? { id: doc.id, ...doc.data() } : null;
 }
 
+// ── Lesezeichen (F-19) ─────────────────────
+export async function toggleBookmark(uid, key, isBookmarked) {
+  const op = isBookmarked
+    ? firebase.firestore.FieldValue.arrayRemove(key)
+    : firebase.firestore.FieldValue.arrayUnion(key);
+  await _db.collection('users').doc(uid).update({ bookmarks: op });
+}
+
+// ── Notizen (F-18) ─────────────────────────
+export async function saveNote(uid, key, text) {
+  await _db.collection('users').doc(uid).set({ notes: { [key]: text } }, { merge: true });
+}
+
+// ── SRS speichern (F-16) ───────────────────
+export async function saveSRS(uid, srsData) {
+  await _db.collection('users').doc(uid).set({ srs: srsData }, { merge: true });
+}
+
+// ── Lernzeit speichern (F-17) ──────────────
+export async function addStudyTime(uid, minutes) {
+  if (!uid || minutes <= 0) return;
+  const key = new Date().toISOString().slice(0, 10);
+  await _db.collection('users').doc(uid).update({
+    [`studyTime.${key}`]: firebase.firestore.FieldValue.increment(minutes)
+  }).catch(() =>
+    _db.collection('users').doc(uid).set({ studyTime: { [key]: minutes } }, { merge: true })
+  );
+}
+
 // ── Schwache Fragen tracken (F-03) ─────────
 export async function saveWeakQuestions(uid, questionIds) {
   if (!questionIds.length) return;

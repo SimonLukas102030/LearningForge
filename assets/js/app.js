@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -30,6 +30,10 @@ let loginBanError      = false;
 let _navRO             = null;
 let _pendingIconUrls   = {};
 let _installPrompt     = null;
+let flashcardState     = null;
+let pomodoroState      = null;
+let _notesSaveTimer    = null;
+let srsState           = null;
 
 // ── Online/Offline-Banner (F-11) ─────────
 function updateOnlineStatus(isOnline) {
@@ -145,6 +149,7 @@ export function startApp() {
 function route() {
   unmountCalculator();
   unmountTafelwerk();
+  unmountPomodoro();
   const hash  = location.hash.replace('#/', '') || '';
   const parts = hash.split('/').filter(Boolean);
 
@@ -177,6 +182,10 @@ function route() {
   } else if (parts[0] === 'gruppen') {
     if (parts[1]) renderGroupDetail(parts[1]);
     else renderGroups();
+  } else if (parts[0] === 'lesezeichen') {
+    renderLesezeichen();
+  } else if (parts[0] === 'srs') {
+    renderSRS();
   } else {
     renderDashboard();
   }
@@ -493,6 +502,10 @@ function renderDashboard() {
         <div class="stat-chip" onclick="location.hash='#/statistiken'" style="cursor:pointer">
           <span class="stat-val">📊</span><span class="stat-lbl">Statistiken</span>
         </div>
+        ${getSRSDueCount() > 0 ? `
+        <div class="stat-chip srs-chip" onclick="location.hash='#/srs'" style="cursor:pointer">
+          <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">🧠 SRS fällig</span>
+        </div>` : ''}
       </div>
       ${attentionHtml}
       ${_installPrompt && !localStorage.getItem('lf_install_dismissed') ? `
@@ -562,6 +575,8 @@ function renderYear(subjectId, yearId) {
         const gp = g ? _gp(g) : null;
         const gradeInfo = gp ? calcGrade(gp.pts, gp.max) : null;
         const attempts = g?.history?.length ?? (g ? 1 : 0);
+        const tKey = `${subjectId}__${yearId}__${t.id}`;
+        const isBm = (userData?.bookmarks || []).includes(tKey);
         return `
           <div class="topic-card" onclick="location.hash='#/fach/${subjectId}/${yearId}/${t.id}'">
             <div class="t-info">
@@ -570,6 +585,8 @@ function renderYear(subjectId, yearId) {
             </div>
             <div class="t-right">
               ${gradeInfo ? `<div class="t-grade" style="background:${gradeInfo.color}">${g.grade}</div>` : ''}
+              <button class="bm-icon-btn ${isBm ? 'active' : ''}" title="Lesezeichen"
+                onclick="event.stopPropagation();window.LF.toggleBookmarkTopic('${tKey}')">🔖</button>
               <div class="t-arrow">›</div>
             </div>
           </div>`;
@@ -601,6 +618,7 @@ async function renderTopic(subjectId, yearId, topicId) {
   const subjectTools = getSubjectTools(subjectId);
   if (subjectTools.calculator) mountCalculator();
   if (subjectTools.tafelwerk)  mountTafelwerk();
+  mountPomodoro();
 
   document.getElementById('app').innerHTML = `
     ${renderNav([
@@ -642,6 +660,29 @@ async function renderTopic(subjectId, yearId, topicId) {
   const hasVocab = vocabQuestions.length > 0;
   if (hasVocab) vocabState = { allCards: vocabQuestions, cards: [], index: 0, correct: 0, wrong: [] };
 
+  // F-15: Karteikarten
+  const hasFlashcards = questions.length > 0;
+  const topicKey = `${subjectId}__${yearId}__${topicId}`;
+  flashcardState = null;
+
+  // F-19: Lesezeichen
+  const isBookmarked = (userData?.bookmarks || []).includes(topicKey);
+
+  // F-23: Lernpfade / Voraussetzungen
+  const prereqs = meta.prerequisites || [];
+  const missedPrereqs = prereqs.filter(p =>
+    !Object.keys(userData?.grades || {}).some(k => k.endsWith('__' + p))
+  );
+
+  // F-20: Wissens-Check (2–3 easy Fragen am Ende des Lerninhalts)
+  const easyQ = questions.filter(q => q.difficulty === 'easy' || !q.difficulty).slice(0, 3);
+  const wissensCheckHtml = (easyQ.length > 0 && meta.content && !meta.subtopics?.length)
+    ? buildWissensCheck(easyQ, topicKey)
+    : '';
+
+  // Lernen-Tab mit Wissens-Check
+  const lernenTabFull = `${lernenTab}${wissensCheckHtml}`;
+
   const prevGp   = prevGrade ? _gp(prevGrade) : null;
   const gradeInfo = prevGp ? calcGrade(prevGp.pts, prevGp.max) : null;
   const prevAttempts = prevGrade?.history?.length ?? (prevGrade ? 1 : 0);
@@ -665,17 +706,60 @@ async function renderTopic(subjectId, yearId, topicId) {
       </div>
     </div>` : `<div class="empty-state" style="padding:40px">Keine Testfragen vorhanden.</div>`;
 
+  // F-15: Flashcard-Tab
+  const flashcardTab = hasFlashcards
+    ? `<div class="fc-start" id="fcStart">
+        <div class="fc-start-icon">🃏</div>
+        <h2>Karteikarten</h2>
+        <p>${questions.length} Karte${questions.length !== 1 ? 'n' : ''} verfügbar</p>
+        <button class="btn btn-primary btn-lg" onclick="window.LF.startFlashcards('${subjectId}','${yearId}','${topicId}')">Lernen starten</button>
+       </div>`
+    : `<div class="empty-state" style="padding:40px">Keine Fragen vorhanden.</div>`;
+
+  // F-18: Notizen
+  const savedNote = userData?.notes?.[topicKey] || '';
+
   document.getElementById('topicBody').innerHTML = `
+    ${missedPrereqs.length ? `
+      <div class="prereq-banner">
+        ⚠️ Empfohlene Voraussetzungen noch nicht abgeschlossen:
+        ${missedPrereqs.map(p => `<span class="prereq-tag">${decodeURIComponent(p).replace(/-/g,' ')}</span>`).join('')}
+      </div>` : ''}
+    <div class="topic-toolbar">
+      <button class="bookmark-btn ${isBookmarked ? 'active' : ''}" id="bookmarkBtn"
+              onclick="window.LF.toggleBookmarkTopic('${topicKey}')">
+        ${isBookmarked ? '🔖 Gespeichert' : '🔖 Lesezeichen'}
+      </button>
+    </div>
     <div class="topic-tabs" style="--subject-color:${color}">
       <button class="tab-btn active" id="tabBtnLernen"  onclick="window.LF.switchTab('Lernen')">Lernen</button>
       <button class="tab-btn"        id="tabBtnUeben"   onclick="window.LF.switchTab('Ueben')">Üben</button>
       <button class="tab-btn"        id="tabBtnTest"    onclick="window.LF.switchTab('Test')">Test</button>
+      ${hasFlashcards ? `<button class="tab-btn" id="tabBtnKarten" onclick="window.LF.switchTab('Karten')">🃏 Karten</button>` : ''}
       ${hasVocab ? `<button class="tab-btn" id="tabBtnVokabeln" onclick="window.LF.switchTab('Vokabeln')">Vokabeln</button>` : ''}
     </div>
-    <div id="tabLernen"  class="tab-panel">${lernenTab}</div>
+    <div id="tabLernen"  class="tab-panel">${lernenTabFull}</div>
     <div id="tabUeben"   class="tab-panel" style="display:none">${uebenTab}</div>
     <div id="tabTest"    class="tab-panel" style="display:none">${testTab}</div>
-    ${hasVocab ? `<div id="tabVokabeln" class="tab-panel" style="display:none">${renderVocabStart(vocabQuestions)}</div>` : ''}`;
+    ${hasFlashcards ? `<div id="tabKarten"  class="tab-panel" style="display:none">${flashcardTab}</div>` : ''}
+    ${hasVocab ? `<div id="tabVokabeln" class="tab-panel" style="display:none">${renderVocabStart(vocabQuestions)}</div>` : ''}
+    <div class="notes-panel" id="notesPanel">
+      <button class="notes-toggle" onclick="window.LF.toggleNotes()">
+        📝 Notizen <span id="notesArrow">▼</span>
+      </button>
+      <div class="notes-body" id="notesBody" style="display:none">
+        <textarea class="notes-textarea" id="notesInput" placeholder="Deine Notizen zu diesem Thema…"
+          oninput="window.LF.onNoteInput('${topicKey}',this.value)">${savedNote}</textarea>
+        <div class="notes-status" id="notesStatus"></div>
+      </div>
+    </div>`;
+
+  // F-21: LaTeX laden wenn $$ im Content
+  if ((meta.content || '').includes('$$') || (meta.content || '').includes('\\(')) {
+    maybeLoadMathJax();
+  }
+  // F-22: Prism für Informatik
+  if (subjectId === 'Informatik') maybeLoadPrism();
 }
 
 function renderSubtopicGrid(subtopics) {
@@ -862,6 +946,107 @@ function getSubjectProgress(subjectId) {
   const gradeVals  = tested.map(k => grades[k].grade).filter(Boolean);
   const avgGrade   = gradeVals.length ? gradeVals.reduce((a, b) => a + b, 0) / gradeVals.length : null;
   return { total: allTopics.length, tested: tested.length, avgGrade };
+}
+
+// ── SRS: Fällige Karten zählen (F-16) ──────
+function getSRSDueCount() {
+  const srs = userData?.srs || {};
+  const today = new Date().toISOString().slice(0, 10);
+  return Object.values(srs).filter(c => !c.nextReview || c.nextReview <= today).length;
+}
+
+function getSRSDueCards() {
+  const srs = userData?.srs || {};
+  const today = new Date().toISOString().slice(0, 10);
+  return Object.entries(srs)
+    .filter(([, c]) => !c.nextReview || c.nextReview <= today)
+    .map(([id, c]) => ({ id, ...c }));
+}
+
+function sm2Update(card, q) {
+  let { interval = 1, repetitions = 0, ef = 2.5 } = card;
+  if (q < 3) {
+    repetitions = 0;
+    interval = 1;
+  } else {
+    if (repetitions === 0)      interval = 1;
+    else if (repetitions === 1) interval = 6;
+    else                        interval = Math.round(interval * ef);
+    repetitions++;
+  }
+  ef = Math.max(1.3, ef + 0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+  const d = new Date();
+  d.setDate(d.getDate() + interval);
+  return { interval, repetitions, ef, nextReview: d.toISOString().slice(0, 10) };
+}
+
+async function updateSRSCard(q, rating) {
+  if (!currentUser || !q.id) return;
+  const existing = userData?.srs?.[q.id] || {};
+  const updated = sm2Update(existing, rating);
+  const correctAnswer = q.type === 'multiple_choice'
+    ? (q.options?.[q.correct] || q.shuffledOptions?.[q.shuffledCorrectIndex] || '')
+    : (q.answer || q.sampleAnswer || '');
+  const srsEntry = { ...updated, question: q.question, answer: correctAnswer, topicKey: flashcardState?.topicKey };
+  userData = userData || {};
+  if (!userData.srs) userData.srs = {};
+  userData.srs[q.id] = srsEntry;
+  await saveSRS(currentUser.uid, userData.srs).catch(console.error);
+}
+
+// ── Wissens-Check (F-20) ────────────────────
+function buildWissensCheck(questions, topicKey) {
+  if (!questions.length) return '';
+  const items = questions.map((q, i) => {
+    if (q.type === 'multiple_choice') {
+      const opts = (q.options || []).map((o, j) =>
+        `<button class="wc-opt" onclick="window.LF.wissensCheckMC('${topicKey}',${i},${j},${q.correct})" id="wcOpt_${topicKey}_${i}_${j}">${o}</button>`
+      ).join('');
+      return `<div class="wc-item" id="wcItem_${topicKey}_${i}">
+        <div class="wc-q">${i+1}. ${q.question}</div>
+        <div class="wc-opts">${opts}</div>
+        <div class="wc-fb" id="wcFb_${topicKey}_${i}" style="display:none"></div>
+      </div>`;
+    }
+    return `<div class="wc-item" id="wcItem_${topicKey}_${i}">
+      <div class="wc-q">${i+1}. ${q.question}</div>
+      <button class="btn btn-ghost btn-sm" onclick="window.LF.wissensCheckReveal('${topicKey}',${i})" id="wcRevealBtn_${topicKey}_${i}">Antwort anzeigen</button>
+      <div class="wc-fb" id="wcFb_${topicKey}_${i}" style="display:none"><strong>✓ ${q.answer || ''}</strong></div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="wissens-check">
+      <div class="wissens-check-title">🧪 Schnell-Check</div>
+      <div class="wc-items">${items}</div>
+    </div>`;
+}
+
+// ── LaTeX / MathJax laden (F-21) ───────────
+function maybeLoadMathJax() {
+  if (window.MathJax) { MathJax.typesetPromise?.(); return; }
+  if (document.getElementById('mathjax-script')) return;
+  window.MathJax = { tex: { inlineMath: [['$','$'],['\\(','\\)']] }, startup: { ready() { MathJax.startup.defaultReady(); MathJax.typesetPromise(); } } };
+  const s = document.createElement('script');
+  s.id = 'mathjax-script';
+  s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js';
+  s.async = true;
+  document.head.appendChild(s);
+}
+
+// ── Prism.js laden (F-22) ──────────────────
+function maybeLoadPrism() {
+  if (window.Prism) { Prism.highlightAll(); return; }
+  if (document.getElementById('prism-css')) return;
+  const link = document.createElement('link');
+  link.id = 'prism-css';
+  link.rel = 'stylesheet';
+  link.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css';
+  document.head.appendChild(link);
+  const s = document.createElement('script');
+  s.id = 'prism-script';
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js';
+  s.onload = () => Prism.highlightAll();
+  document.head.appendChild(s);
 }
 
 // ── Fachfarbe abrufen (Nutzer > Standard) ─
@@ -1134,6 +1319,229 @@ function renderStatistics() {
         </div>
       `}
     </div>`;
+}
+
+// ── Lesezeichen-Seite (F-19) ─────────────
+function renderLesezeichen() {
+  const bookmarks = userData?.bookmarks || [];
+  const cards = bookmarks.map(key => {
+    const [subjectId, yearId, topicId] = key.split('__');
+    const subject = structure?.[subjectId];
+    const topic   = subject?.years?.[yearId]?.topics?.[topicId];
+    if (!subject || !topic) return '';
+    const g  = userData?.grades?.[key];
+    const gp = g ? _gp(g) : null;
+    return `
+      <div class="topic-card" onclick="location.hash='#/fach/${subjectId}/${yearId}/${topicId}'">
+        <div class="t-info">
+          <div class="t-name">${getSubjectIcon(subjectId)} ${topic.name}</div>
+          <div class="t-desc">${subject.name} · ${subject.years[yearId]?.name || yearId}</div>
+        </div>
+        <div class="t-right">
+          ${g ? `<div class="t-grade" style="background:${gradeColor(g.grade)}">${g.grade}</div>` : ''}
+          <button class="bm-icon-btn active" title="Entfernen"
+            onclick="event.stopPropagation();window.LF.toggleBookmarkTopic('${key}')">🔖</button>
+          <div class="t-arrow">›</div>
+        </div>
+      </div>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Lesezeichen' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>🔖 Lesezeichen</h1>
+        <div class="sub">Gespeicherte Themen</div>
+      </div>
+      ${cards
+        ? `<div class="topic-list">${cards}</div>`
+        : `<div class="empty-state"><div class="empty-icon">🔖</div>Noch keine Lesezeichen.<br>Öffne ein Thema und klicke auf 🔖.</div>`}
+    </div>`;
+}
+
+// ── SRS-Seite (F-16) ─────────────────────
+function renderSRS() {
+  const due = getSRSDueCards();
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'SRS — Wiederholung' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>🧠 Spaced Repetition</h1>
+        <div class="sub">${due.length} Karte${due.length !== 1 ? 'n' : ''} heute fällig</div>
+      </div>
+      <div id="srsArea">
+        ${due.length === 0
+          ? `<div class="empty-state"><div class="empty-icon">🧠</div>Alle Karten für heute erledigt!<br>Mach weiter beim <a href="#/" onclick="location.hash='#/'">Dashboard</a>.</div>`
+          : renderSRSCard(due, 0)}
+      </div>
+    </div>`;
+
+  if (due.length > 0) srsState = { cards: due, current: 0, done: 0 };
+}
+
+function renderSRSCard(cards, idx) {
+  if (idx >= cards.length) {
+    return `<div class="srs-done"><div class="srs-done-icon">🎉</div><h2>Session abgeschlossen!</h2>
+      <p>${cards.length} Karte${cards.length!==1?'n':''} wiederholt.</p>
+      <button class="btn btn-primary" onclick="location.hash='#/'">Zurück</button></div>`;
+  }
+  const card = cards[idx];
+  return `
+    <div class="srs-progress-bar"><div class="srs-progress-fill" style="width:${Math.round(idx/cards.length*100)}%"></div></div>
+    <div class="srs-counter">${idx+1} / ${cards.length}</div>
+    <div class="srs-card" id="srsCard">
+      <div class="srs-card-front" id="srsFront">
+        <div class="srs-q">${card.question}</div>
+        <button class="btn btn-primary" onclick="window.LF.srsReveal()">Antwort anzeigen</button>
+      </div>
+      <div class="srs-card-back" id="srsBack" style="display:none">
+        <div class="srs-q">${card.question}</div>
+        <div class="srs-answer">${card.answer}</div>
+        <div class="srs-rate-row">
+          <button class="srs-rate-btn rate-bad"   onclick="window.LF.rateSRS(1)">✗ Nicht gewusst</button>
+          <button class="srs-rate-btn rate-ok"    onclick="window.LF.rateSRS(3)">~ Schwer</button>
+          <button class="srs-rate-btn rate-good"  onclick="window.LF.rateSRS(4)">✓ Gut</button>
+          <button class="srs-rate-btn rate-great" onclick="window.LF.rateSRS(5)">⚡ Leicht</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Flashcard-Rendering (F-15) ────────────
+function renderFlashcardSession(questions, subjectId, yearId, topicId) {
+  const topicKey = `${subjectId}__${yearId}__${topicId}`;
+  const shuffled = [...questions].sort(() => Math.random() - 0.5);
+  flashcardState = { cards: shuffled, current: 0, flipped: false, knew: 0, didntKnow: 0, topicKey };
+  document.getElementById('tabKarten').innerHTML = renderFlashcard();
+}
+
+function renderFlashcard() {
+  const { cards, current, knew, didntKnow } = flashcardState;
+  if (current >= cards.length) {
+    const total = knew + didntKnow;
+    return `
+      <div class="fc-done">
+        <div class="fc-done-icon">🎉</div>
+        <h2>Fertig!</h2>
+        <div class="fc-score">
+          <span class="fc-score-knew">${knew} ✓ gewusst</span>
+          <span class="fc-score-didnt">${didntKnow} ✗ nicht gewusst</span>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="window.LF.startFlashcards(flashcardState?.topicKey?.split('__')[0]??'','',flashcardState?.topicKey?.split('__')[2]??'')">Nochmal</button>
+          ${getSRSDueCount() > 0 ? `<button class="btn btn-secondary" onclick="location.hash='#/srs'">SRS wiederholen (${getSRSDueCount()})</button>` : ''}
+        </div>
+      </div>`;
+  }
+
+  const q = cards[current];
+  const correctAnswer = q.type === 'multiple_choice'
+    ? (q.options?.[q.correct] || '')
+    : (q.answer || q.sampleAnswer || '(siehe Inhalt)');
+
+  return `
+    <div class="fc-progress-bar"><div class="fc-progress-fill" style="width:${Math.round(current/cards.length*100)}%"></div></div>
+    <div class="fc-counter">${current+1} / ${cards.length} &nbsp;·&nbsp; ✓ ${knew} &nbsp; ✗ ${didntKnow}</div>
+    <div class="fc-card-scene" onclick="window.LF.flipCard()">
+      <div class="fc-card-inner" id="fcCardInner">
+        <div class="fc-face fc-front">
+          <div class="fc-label">Frage</div>
+          <div class="fc-text">${q.question}</div>
+          <div class="fc-hint">Klicken zum Umdrehen</div>
+        </div>
+        <div class="fc-face fc-back">
+          <div class="fc-label">Antwort</div>
+          <div class="fc-text">${correctAnswer}</div>
+        </div>
+      </div>
+    </div>
+    <div class="fc-actions" id="fcActions" style="display:none">
+      <button class="fc-btn fc-btn-no" onclick="window.LF.fcDidntKnow()">✗ Nicht gewusst</button>
+      <button class="fc-btn fc-btn-yes" onclick="window.LF.fcKnew()">✓ Gewusst</button>
+    </div>
+    <div class="fc-actions-hint" id="fcActionsHint">Drehe die Karte um, um die Antwort zu sehen.</div>`;
+}
+
+// ── Pomodoro mounten/unmounten (F-17) ─────
+function mountPomodoro() {
+  if (document.getElementById('pomodoroWidget')) return;
+  pomodoroState = { mode: 'work', seconds: 25*60, workMins: 25, breakMins: 5, timer: null, sessions: 0 };
+  const el = document.createElement('div');
+  el.id = 'pomodoroWidget';
+  el.className = 'pomo-widget';
+  el.innerHTML = pomodoroHTML();
+  document.body.appendChild(el);
+}
+
+function pomodoroHTML() {
+  if (!pomodoroState) return '';
+  const { mode, seconds, sessions, workMins, breakMins } = pomodoroState;
+  const running = !!pomodoroState.timer;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  return `
+    <button class="pomo-toggle-btn" onclick="window.LF.pomodoroOpen()">
+      ⏱ ${m}:${s} <span class="pomo-mode-pill ${mode}">${mode==='work'?'Fokus':'Pause'}</span>
+    </button>
+    <div class="pomo-panel" id="pomoPanel" style="display:none">
+      <div class="pomo-display">
+        <div class="pomo-time" id="pomoTime">${m}:${s}</div>
+        <div class="pomo-label">${mode==='work'?'🎯 Fokuszeit':'☕ Pause'} · ${sessions} Session${sessions!==1?'s':''}</div>
+      </div>
+      <div class="pomo-controls">
+        <button class="btn btn-primary btn-sm" onclick="window.LF.pomodoroToggle()">${running?'⏸ Pause':'▶ Start'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.pomodoroReset()">↺</button>
+      </div>
+      <div class="pomo-config">
+        <label>Fokus: <input type="number" id="pomoWork" value="${workMins}" min="1" max="90" style="width:48px"
+          onchange="window.LF.pomodoroSetWork(+this.value)"> min</label>
+        <label>Pause: <input type="number" id="pomoBreak" value="${breakMins}" min="1" max="30" style="width:48px"
+          onchange="window.LF.pomodoroSetBreak(+this.value)"> min</label>
+      </div>
+    </div>`;
+}
+
+function unmountPomodoro() {
+  if (pomodoroState?.timer) {
+    clearInterval(pomodoroState.timer);
+    const elapsed = Math.floor((pomodoroState.workMins * 60 - pomodoroState.seconds) / 60);
+    if (pomodoroState.mode === 'work' && elapsed >= 1 && currentUser) {
+      addStudyTime(currentUser.uid, elapsed).catch(console.error);
+    }
+  }
+  pomodoroState = null;
+  document.getElementById('pomodoroWidget')?.remove();
+}
+
+function pomodoroTick() {
+  if (!pomodoroState) return;
+  pomodoroState.seconds--;
+  if (pomodoroState.seconds <= 0) {
+    if (pomodoroState.mode === 'work') {
+      pomodoroState.sessions++;
+      if (currentUser) addStudyTime(currentUser.uid, pomodoroState.workMins).catch(console.error);
+      pomodoroState.mode = 'break';
+      pomodoroState.seconds = pomodoroState.breakMins * 60;
+      showToast('☕ Fokuszeit vorbei! Pause genießen.', 'info');
+    } else {
+      pomodoroState.mode = 'work';
+      pomodoroState.seconds = pomodoroState.workMins * 60;
+      showToast('🎯 Pause vorbei! Weiter geht\'s.', 'info');
+    }
+  }
+  _updatePomodoroDisplay();
+}
+
+function _updatePomodoroDisplay() {
+  if (!pomodoroState) return;
+  const { seconds } = pomodoroState;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  const t = document.getElementById('pomoTime');
+  const b = document.querySelector('.pomo-toggle-btn');
+  if (t) t.textContent = `${m}:${s}`;
+  if (b) b.innerHTML = `⏱ ${m}:${s} <span class="pomo-mode-pill ${pomodoroState.mode}">${pomodoroState.mode==='work'?'Fokus':'Pause'}</span>`;
 }
 
 // ── Profil-Seite ─────────────────────────
@@ -2342,6 +2750,198 @@ window.LF = {
     document.getElementById('installCard')?.remove();
   },
 
+  // ── Lesezeichen (F-19) ───────────────────
+  toggleBookmarkTopic: async (key) => {
+    const bm = userData?.bookmarks || [];
+    const isBm = bm.includes(key);
+    await toggleBookmark(currentUser.uid, key, isBm);
+    userData = userData || {};
+    if (isBm) {
+      userData.bookmarks = bm.filter(k => k !== key);
+      showToast('Lesezeichen entfernt.', 'info');
+    } else {
+      userData.bookmarks = [...bm, key];
+      showToast('Lesezeichen gespeichert! 🔖', 'success');
+    }
+    // Update UI immediately
+    const btn = document.getElementById('bookmarkBtn');
+    if (btn) {
+      btn.className = `bookmark-btn${isBm ? '' : ' active'}`;
+      btn.textContent = isBm ? '🔖 Lesezeichen' : '🔖 Gespeichert';
+    }
+    // Update any bm-icon-btn for this key
+    document.querySelectorAll(`.bm-icon-btn`).forEach(b => {
+      if (b.getAttribute('onclick')?.includes(key)) {
+        b.classList.toggle('active', !isBm);
+      }
+    });
+  },
+
+  // ── Notizen (F-18) ───────────────────────
+  toggleNotes: () => {
+    const body  = document.getElementById('notesBody');
+    const arrow = document.getElementById('notesArrow');
+    if (!body) return;
+    const open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if (arrow) arrow.textContent = open ? '▼' : '▲';
+    if (!open) document.getElementById('notesInput')?.focus();
+  },
+
+  onNoteInput: (key, value) => {
+    clearTimeout(_notesSaveTimer);
+    const status = document.getElementById('notesStatus');
+    if (status) status.textContent = 'Tippen…';
+    _notesSaveTimer = setTimeout(async () => {
+      if (!currentUser) return;
+      userData = userData || {};
+      if (!userData.notes) userData.notes = {};
+      userData.notes[key] = value;
+      await saveNote(currentUser.uid, key, value).catch(console.error);
+      const s = document.getElementById('notesStatus');
+      if (s) { s.textContent = '✓ Gespeichert'; setTimeout(() => { if(s) s.textContent=''; }, 2000); }
+    }, 1500);
+  },
+
+  // ── Karteikarten / Flashcards (F-15) ─────
+  startFlashcards: (subjectId, yearId, topicId) => {
+    const parts = topicId ? [subjectId, yearId, topicId]
+      : (flashcardState?.topicKey || '').split('__');
+    const [sid, yid, tid] = parts;
+    const questions = sid && structure?.[sid]?.years?.[yid]?.topics?.[tid]
+      ? null : null; // will be re-fetched
+    // Use already-loaded questions from current topic context
+    if (flashcardState !== null || !sid) return;
+    // Actually: topic questions are already in scope via closure... need different approach
+    // We'll trigger re-render with stored questions
+    showToast('Karten laden…', 'info');
+    getTopicQuestions(sid, yid, tid).then(qs => {
+      if (!qs.length) { showToast('Keine Fragen vorhanden.', 'error'); return; }
+      renderFlashcardSession(qs, sid, yid, tid);
+    });
+  },
+
+  flipCard: () => {
+    const inner = document.getElementById('fcCardInner');
+    const actions = document.getElementById('fcActions');
+    const hint = document.getElementById('fcActionsHint');
+    if (!inner || !flashcardState) return;
+    flashcardState.flipped = !flashcardState.flipped;
+    inner.classList.toggle('flipped', flashcardState.flipped);
+    if (actions) actions.style.display = flashcardState.flipped ? 'flex' : 'none';
+    if (hint)    hint.style.display    = flashcardState.flipped ? 'none' : 'block';
+  },
+
+  fcKnew: async () => {
+    if (!flashcardState) return;
+    const q = flashcardState.cards[flashcardState.current];
+    await updateSRSCard(q, 5);
+    flashcardState.knew++;
+    flashcardState.current++;
+    flashcardState.flipped = false;
+    const tab = document.getElementById('tabKarten');
+    if (tab) tab.innerHTML = renderFlashcard();
+  },
+
+  fcDidntKnow: async () => {
+    if (!flashcardState) return;
+    const q = flashcardState.cards[flashcardState.current];
+    await updateSRSCard(q, 1);
+    flashcardState.didntKnow++;
+    flashcardState.current++;
+    flashcardState.flipped = false;
+    const tab = document.getElementById('tabKarten');
+    if (tab) tab.innerHTML = renderFlashcard();
+  },
+
+  // ── SRS-Session (F-16) ───────────────────
+  srsReveal: () => {
+    document.getElementById('srsFront')?.style.setProperty('display', 'none');
+    document.getElementById('srsBack')?.style.setProperty('display', 'block');
+  },
+
+  rateSRS: async (rating) => {
+    if (!srsState) return;
+    const card = srsState.cards[srsState.current];
+    // Update SM-2
+    const existing = userData?.srs?.[card.id] || card;
+    const updated = sm2Update(existing, rating);
+    userData = userData || {};
+    if (!userData.srs) userData.srs = {};
+    userData.srs[card.id] = { ...existing, ...updated };
+    await saveSRS(currentUser.uid, userData.srs).catch(console.error);
+    srsState.current++;
+    srsState.done++;
+    const area = document.getElementById('srsArea');
+    if (area) area.innerHTML = renderSRSCard(srsState.cards, srsState.current);
+  },
+
+  // ── Pomodoro (F-17) ──────────────────────
+  pomodoroOpen: () => {
+    const panel = document.getElementById('pomoPanel');
+    if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  },
+
+  pomodoroToggle: () => {
+    if (!pomodoroState) return;
+    if (pomodoroState.timer) {
+      clearInterval(pomodoroState.timer);
+      pomodoroState.timer = null;
+    } else {
+      pomodoroState.timer = setInterval(pomodoroTick, 1000);
+    }
+    const btn = document.querySelector('#pomoPanel .btn-primary');
+    if (btn) btn.textContent = pomodoroState.timer ? '⏸ Pause' : '▶ Start';
+  },
+
+  pomodoroReset: () => {
+    if (!pomodoroState) return;
+    clearInterval(pomodoroState.timer);
+    pomodoroState.timer = null;
+    pomodoroState.mode = 'work';
+    pomodoroState.seconds = pomodoroState.workMins * 60;
+    _updatePomodoroDisplay();
+    const btn = document.querySelector('#pomoPanel .btn-primary');
+    if (btn) btn.textContent = '▶ Start';
+  },
+
+  pomodoroSetWork: (mins) => {
+    if (!pomodoroState || isNaN(mins) || mins < 1) return;
+    pomodoroState.workMins = mins;
+    if (pomodoroState.mode === 'work') {
+      pomodoroState.seconds = mins * 60;
+      _updatePomodoroDisplay();
+    }
+  },
+
+  pomodoroSetBreak: (mins) => {
+    if (!pomodoroState || isNaN(mins) || mins < 1) return;
+    pomodoroState.breakMins = mins;
+    if (pomodoroState.mode === 'break') {
+      pomodoroState.seconds = mins * 60;
+      _updatePomodoroDisplay();
+    }
+  },
+
+  // ── Wissens-Check (F-20) ─────────────────
+  wissensCheckMC: (topicKey, qIdx, chosenIdx, correctIdx) => {
+    const opts = document.querySelectorAll(`[id^="wcOpt_${topicKey}_${qIdx}_"]`);
+    opts.forEach(b => b.disabled = true);
+    const chosen = document.getElementById(`wcOpt_${topicKey}_${qIdx}_${chosenIdx}`);
+    const correct = document.getElementById(`wcOpt_${topicKey}_${qIdx}_${correctIdx}`);
+    if (chosen)  chosen.classList.add(chosenIdx === correctIdx ? 'wc-correct' : 'wc-wrong');
+    if (correct && chosenIdx !== correctIdx) correct.classList.add('wc-correct');
+    const fb = document.getElementById(`wcFb_${topicKey}_${qIdx}`);
+    if (fb) { fb.style.display = 'block'; fb.textContent = chosenIdx === correctIdx ? '✓ Richtig!' : '✗ Falsch'; fb.className = `wc-fb ${chosenIdx===correctIdx?'correct':'wrong'}`; }
+  },
+
+  wissensCheckReveal: (topicKey, qIdx) => {
+    const btn = document.getElementById(`wcRevealBtn_${topicKey}_${qIdx}`);
+    const fb  = document.getElementById(`wcFb_${topicKey}_${qIdx}`);
+    if (btn) btn.style.display = 'none';
+    if (fb)  fb.style.display = 'block';
+  },
+
   // ── Admin ────────────────────────────────
   adminBan: async (uid, name) => {
     if (!confirm(`${name} wirklich sperren?`)) return;
@@ -2687,7 +3287,7 @@ window.LF = {
   },
 
   switchTab: (name) => {
-    ['Lernen','Ueben','Test','Vokabeln'].forEach(t => {
+    ['Lernen','Ueben','Test','Karten','Vokabeln'].forEach(t => {
       document.getElementById(`tab${t}`)?.style.setProperty('display', t === name ? 'block' : 'none');
       document.getElementById(`tabBtn${t}`)?.classList.toggle('active', t === name);
     });
