@@ -29,6 +29,26 @@ let customTopicData    = null;
 let loginBanError      = false;
 let _navRO             = null;
 let _pendingIconUrls   = {};
+let _installPrompt     = null;
+
+// ── Online/Offline-Banner (F-11) ─────────
+function updateOnlineStatus(isOnline) {
+  const existing = document.getElementById('offlineBanner');
+  if (!isOnline) {
+    if (!existing) {
+      const el = document.createElement('div');
+      el.id = 'offlineBanner';
+      el.className = 'offline-banner';
+      el.innerHTML = '📶 Offline — Inhalte aus dem Cache';
+      document.body.appendChild(el);
+    }
+  } else {
+    if (existing) {
+      existing.remove();
+      showToast('Wieder online ✓', 'success');
+    }
+  }
+}
 
 // Gibt bestPoints/bestMaxPoints aus altem und neuem Format zurück
 function _gp(g) {
@@ -97,6 +117,20 @@ export function startApp() {
 
   window.addEventListener('hashchange', route);
   initKeyboardShortcuts();
+
+  // Offline-Banner (F-11)
+  window.addEventListener('online',  () => updateOnlineStatus(true));
+  window.addEventListener('offline', () => updateOnlineStatus(false));
+
+  // Install-Prompt speichern (F-13)
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _installPrompt = e;
+  });
+  window.addEventListener('appinstalled', () => {
+    _installPrompt = null;
+    document.getElementById('installCard')?.remove();
+  });
   document.addEventListener('click', () => {
     document.getElementById('userChip')?.classList.remove('open');
     document.getElementById('mobileNav')?.classList.remove('open');
@@ -461,6 +495,18 @@ function renderDashboard() {
         </div>
       </div>
       ${attentionHtml}
+      ${_installPrompt && !localStorage.getItem('lf_install_dismissed') ? `
+        <div class="install-card" id="installCard">
+          <div class="install-card-icon">⚡</div>
+          <div class="install-card-info">
+            <div class="install-card-title">App installieren</div>
+            <div class="install-card-sub">Offline nutzen &amp; schneller laden</div>
+          </div>
+          <div class="install-card-actions">
+            <button class="btn btn-primary btn-sm" onclick="window.LF.installApp()">Installieren</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.LF.dismissInstall()">Nicht jetzt</button>
+          </div>
+        </div>` : ''}
       <div class="section-title" style="margin-top:${attention.length?'32px':'0'}">📚 Fächer</div>
       <div class="subjects-grid">${subjectCards}</div>
       ${recentHtml}
@@ -2280,6 +2326,21 @@ window.LF = {
   },
 
   showToast: (msg, type) => showToast(msg, type),
+
+  // ── PWA Install (F-13) ───────────────────
+  installApp: async () => {
+    if (!_installPrompt) return;
+    _installPrompt.prompt();
+    const { outcome } = await _installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      _installPrompt = null;
+      document.getElementById('installCard')?.remove();
+    }
+  },
+  dismissInstall: () => {
+    localStorage.setItem('lf_install_dismissed', '1');
+    document.getElementById('installCard')?.remove();
+  },
 
   // ── Admin ────────────────────────────────
   adminBan: async (uid, name) => {

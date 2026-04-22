@@ -11,5 +11,12 @@ initTheme();
 // Firebase initialisieren
 initFirebase();
 
+// Service Worker registrieren (F-11)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(err =>
+    console.warn('[SW] Registrierung fehlgeschlagen:', err)
+  );
+}
+
 // App starten (Auth-Listener + Routing)
 startApp();

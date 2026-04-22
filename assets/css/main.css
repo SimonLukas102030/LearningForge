@@ -2240,6 +2240,37 @@ input, textarea, select { font-family: var(--font); }
 }
 .icon-upload-label:hover { background: var(--border); }
 
+/* ── Offline-Banner (F-11) ───────────────── */
+.offline-banner {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+  background: #1e293b; color: #f1f5f9;
+  font-size: 13px; font-weight: 600;
+  text-align: center; padding: 10px 16px;
+  box-shadow: 0 -2px 12px rgba(0,0,0,.3);
+}
+
+/* ── Install-Card (F-13) ─────────────────── */
+.install-card {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff; border-radius: var(--radius);
+  padding: 14px 18px; margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(99,102,241,.35);
+}
+.install-card-icon { font-size: 28px; flex-shrink: 0; }
+.install-card-info { flex: 1; }
+.install-card-title { font-size: 15px; font-weight: 700; }
+.install-card-sub   { font-size: 13px; opacity: .85; margin-top: 2px; }
+.install-card-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+.install-card .btn-primary  { background: #fff; color: #4f46e5; }
+.install-card .btn-primary:hover { background: #e0e7ff; }
+.install-card .btn-ghost    { color: #fff; border-color: rgba(255,255,255,.4); }
+.install-card .btn-ghost:hover { background: rgba(255,255,255,.15); }
+@media (max-width: 480px) {
+  .install-card { flex-wrap: wrap; }
+  .install-card-actions { width: 100%; justify-content: flex-end; }
+}
+
 /* ── Tafelwerk-Widget ───────────────────── */
 .tw-widget {
   bottom: 24px; left: 24px; right: auto;
