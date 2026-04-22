@@ -229,3 +229,12 @@ export async function getCustomTopicById(topicId) {
   const doc = await _db.collection('customTopics').doc(topicId).get({ source: 'server' });
   return doc.exists ? { id: doc.id, ...doc.data() } : null;
 }
+
+// ── Schwache Fragen tracken (F-03) ─────────
+export async function saveWeakQuestions(uid, questionIds) {
+  if (!questionIds.length) return;
+  const inc = firebase.firestore.FieldValue.increment(1);
+  const updates = {};
+  questionIds.forEach(id => { updates[`weakQuestions.${id}`] = inc; });
+  await _db.collection('users').doc(uid).update(updates).catch(console.error);
+}

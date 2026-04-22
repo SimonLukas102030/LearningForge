@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
-import { auth, db, logout, getUserData, saveGrade, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById } from './auth.js';
 import {
   selectQuestions, evaluateAnswers, calcGrade,
   generateCopyText, TIME_OPTIONS, getTimeConfig,
@@ -86,6 +86,7 @@ export function startApp() {
   });
 
   window.addEventListener('hashchange', route);
+  initKeyboardShortcuts();
   document.addEventListener('click', () => {
     document.getElementById('userChip')?.classList.remove('open');
     document.getElementById('mobileNav')?.classList.remove('open');
@@ -259,6 +260,85 @@ function renderLogin() {
     </div>`;
   document.getElementById('authEmail').addEventListener('keydown', e => { if(e.key==='Enter') window.LF.submitAuth(); });
   document.getElementById('authPass').addEventListener('keydown',  e => { if(e.key==='Enter') window.LF.submitAuth(); });
+}
+
+// ── Keyboard Shortcuts (F-08) ────────────
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', e => {
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (document.activeElement?.isContentEditable) return;
+
+    if (e.key === '?' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      showShortcutsDialog();
+      return;
+    }
+    if (e.altKey && !e.ctrlKey && !e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'h': e.preventDefault(); location.hash = '#/'; break;
+        case 's': e.preventDefault(); location.hash = '#/statistiken'; break;
+        case 'p': e.preventDefault(); location.hash = '#/profil'; break;
+        case 'e': e.preventDefault(); location.hash = '#/einstellungen'; break;
+      }
+    }
+  });
+}
+
+function showShortcutsDialog() {
+  if (document.querySelector('.kb-overlay')) return;
+  const el = document.createElement('div');
+  el.className = 'kb-overlay';
+  el.addEventListener('click', ev => { if (ev.target === el) el.remove(); });
+  el.innerHTML = `
+    <div class="kb-dialog">
+      <h3>Tastenkürzel</h3>
+      <div class="kb-row"><span class="kb-key">?</span><span class="kb-desc">Diese Hilfe anzeigen</span></div>
+      <div class="kb-row"><span class="kb-key">Alt + H</span><span class="kb-desc">Dashboard</span></div>
+      <div class="kb-row"><span class="kb-key">Alt + S</span><span class="kb-desc">Statistiken</span></div>
+      <div class="kb-row"><span class="kb-key">Alt + P</span><span class="kb-desc">Profil</span></div>
+      <div class="kb-row"><span class="kb-key">Alt + E</span><span class="kb-desc">Einstellungen</span></div>
+      <div style="margin-top:20px;text-align:right">
+        <button class="btn btn-secondary" onclick="this.closest('.kb-overlay').remove()">Schließen</button>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') el.remove(); }, { once: true });
+}
+
+// ── Skeleton-Hilfsfunktionen (F-09) ──────
+function skeletonTopicBody() {
+  const lines = [100, 90, 95, 75, 85, 60, 80];
+  return `
+    <div class="sk-tabs-row">
+      <span class="skeleton sk-tab"></span>
+      <span class="skeleton sk-tab"></span>
+      <span class="skeleton sk-tab"></span>
+    </div>
+    <div class="sk-block">
+      <span class="skeleton sk-title" style="width:55%"></span>
+      ${lines.map(w => `<span class="skeleton sk-line" style="width:${w}%"></span>`).join('')}
+    </div>
+    <div class="sk-block">
+      <span class="skeleton sk-title" style="width:38%"></span>
+      <span class="skeleton sk-line" style="width:100%"></span>
+      <span class="skeleton sk-line" style="width:80%"></span>
+    </div>`;
+}
+
+function skeletonCustomCards(n = 3) {
+  const cards = Array.from({ length: n }, () => `
+    <div class="sk-card">
+      <div>
+        <span class="skeleton sk-line" style="width:70px;height:12px;margin-bottom:8px"></span>
+        <span class="skeleton sk-line" style="width:150px;height:17px;margin-bottom:0"></span>
+      </div>
+      <div class="sk-card-r">
+        <span class="skeleton sk-arr"></span>
+      </div>
+    </div>`).join('');
+  return `
+    <span class="skeleton sk-title" style="width:180px;margin-bottom:16px"></span>
+    ${cards}`;
 }
 
 // ── Dashboard ────────────────────────────
@@ -472,7 +552,7 @@ async function renderTopic(subjectId, yearId, topicId) {
         <span class="badge">${getSubjectIcon(subjectId)} ${subject.name} · ${year.name}</span>
         <h1>${topic.name}</h1>
       </div>
-      <div id="topicBody"><div class="spinner" style="margin:40px auto"></div></div>
+      <div id="topicBody">${skeletonTopicBody()}</div>
     </div>`;
 
   const meta      = await getTopicMeta(subjectId, yearId, topicId);
@@ -1094,7 +1174,7 @@ async function renderMyContent() {
         <h1>Meine Inhalte</h1>
         <div class="sub">Selbst erstellte und Gruppen-Themen</div>
       </div>
-      <div id="myContentBody"><div class="spinner" style="margin:60px auto"></div></div>
+      <div id="myContentBody">${skeletonCustomCards(4)}</div>
     </div>`;
 
   const uid = currentUser.uid;
@@ -2676,6 +2756,42 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
       </div>`;
   }).join('');
 
+  // ── F-03 Fehler-Analyse ─────────────────
+  const wrongQuestions = questions.filter((q, i) => (results[i].points || 0) < results[i].maxPoints);
+  const wrongQIds      = wrongQuestions.map(q => q.id).filter(Boolean);
+
+  if (wrongQIds.length > 0 && currentUser) {
+    saveWeakQuestions(currentUser.uid, wrongQIds).catch(console.error);
+  }
+
+  const wrongItems = questions.map((q, i) => {
+    const r = results[i];
+    if ((r.points || 0) === r.maxPoints) return '';
+    const userAnswer = q.type === 'multiple_choice'
+      ? (q.shuffledOptions?.[parseInt(answers[i])] || '(keine Wahl)')
+      : (answers[i] || '(keine Antwort)');
+    const correctAnswer = q.type === 'multiple_choice'
+      ? (q.shuffledOptions?.[q.shuffledCorrectIndex] ?? q.options?.[q.correct] ?? '–')
+      : (q.sampleAnswer || '— siehe Musterantwort im Lerninhalt');
+    return `
+      <div class="wrong-item">
+        <div class="wrong-q">${q.question}</div>
+        <div class="wrong-user">Deine Antwort: <span class="wrong-val">${userAnswer}</span></div>
+        <div class="wrong-correct">Richtige Antwort: <span class="correct-val">${correctAnswer}</span></div>
+      </div>`;
+  }).filter(Boolean).join('');
+
+  const wrongSection = wrongItems
+    ? `<div class="section-title" style="margin-top:28px">Was war falsch?</div>
+       <div class="wrong-list">${wrongItems}</div>`
+    : `<div class="all-correct-banner">Alle Aufgaben korrekt beantwortet!</div>`;
+
+  // ── F-04 Retry-Button ────────────────────
+  testState._wrongQuestions = wrongQuestions;
+  const retryBtn = wrongQuestions.length > 0
+    ? `<button class="btn btn-secondary" onclick="window.LF.startRetryTest()">Falsche Fragen nochmal ueben</button>`
+    : '';
+
   // Print-Items (DIN A4)
   const printItems = questions.map((q, i) => {
     const r = results[i];
@@ -2707,6 +2823,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
         </div>
         <div class="section-title">Aufgaben im Detail</div>
         <div class="results-list">${resultItems}</div>
+        ${wrongSection}
         <div class="copy-section">
           <p>Fragen + Antworten kopieren — z.B. für ChatGPT-Feedback</p>
           <div style="display:flex;gap:8px">
@@ -2718,6 +2835,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <button class="btn btn-primary" onclick="window.LF.startTest('${testState.subjectId}','${testState.yearId}','${testState.topicId}')">
             Nochmal testen
           </button>
+          ${retryBtn}
           <button class="btn btn-secondary" onclick="location.hash='#/'">Zurück</button>
         </div>
       </div>
@@ -2751,6 +2869,33 @@ window.LF.copyResults = async () => {
   if (!testState?._copyText) return;
   await navigator.clipboard.writeText(testState._copyText).catch(() => {});
   showToast('Ergebnis kopiert! ✓', 'success');
+};
+
+// ── F-04 Retry-Modus ─────────────────────
+window.LF.startRetryTest = () => {
+  const wrongQs = testState?._wrongQuestions;
+  if (!wrongQs?.length) return;
+
+  const shuffled = [...wrongQs].sort(() => Math.random() - 0.5).map(q => {
+    if (q.type === 'multiple_choice' && q.options) {
+      const indexed = q.options.map((opt, i) => ({ opt, correct: i === q.correct }));
+      indexed.sort(() => Math.random() - 0.5);
+      return { ...q, shuffledOptions: indexed.map(x => x.opt), shuffledCorrectIndex: indexed.findIndex(x => x.correct) };
+    }
+    return q;
+  });
+
+  uebenState = { questions: shuffled, current: 0, correct: 0 };
+
+  document.getElementById('testArea').innerHTML = `
+    <div style="margin-bottom:16px">
+      <div class="badge" style="background:var(--accent-subtle);color:var(--accent);padding:6px 12px;border-radius:var(--radius-pill);font-size:13px;font-weight:600;display:inline-block">
+        Wiederholung — ${shuffled.length} falsche Frage${shuffled.length !== 1 ? 'n' : ''}
+      </div>
+    </div>
+    <div id="uebenArea"></div>`;
+
+  renderUebenQuestion();
 };
 
 function updateProgress() {
