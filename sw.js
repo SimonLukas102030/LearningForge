@@ -2,17 +2,19 @@
 //  LearningForge — Service Worker (F-11)
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'lf-v1';
+const CACHE_NAME = 'lf-v2';
 
 // Minimales App-Shell-Precache
 const PRECACHE_URLS = ['/', '/index.html', '/manifest.json'];
 
-// Hosts die nie gecacht werden (Firebase, CDNs)
+// Hosts die nie gecacht werden (Firebase, CDNs).
+// WICHTIG: googleapis.com pauschal — Firestore-Listen-Channel läuft über
+// firestore.googleapis.com und sendet Long-Poll-Streams als GET-Requests.
+// Cachen davon korrumpiert den Stream-State → "INTERNAL ASSERTION FAILED".
 const SKIP_HOSTS = [
-  'firebaseio.com', 'firebase.googleapis.com',
-  'identitytoolkit.googleapis.com', 'securetoken.googleapis.com',
+  'firebaseio.com', 'googleapis.com',
   'gstatic.com', 'cdnjs.cloudflare.com',
-  'fonts.googleapis.com', 'fonts.gstatic.com'
+  'fonts.gstatic.com'
 ];
 
 // ── Install: App-Shell cachen ──────────────
