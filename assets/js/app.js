@@ -598,16 +598,18 @@ function renderChangelogSection() {
   if (!changelog || changelog.length === 0) return '';
   const TYPE_LABEL = { added: 'Neu', expanded: 'Erweitert', fixed: 'Korrigiert' };
   const items = changelog.slice(0, 8).map(e => {
-    const subjectColor = getSubjectColor(e.subject);
-    const subjectIcon  = getSubjectIcon(e.subject);
     const dateStr      = formatRelativeDate(e.date);
-    const subjectName  = structure?.[e.subject]?.name || e.subject;
-    const yearName     = structure?.[e.subject]?.years?.[e.year]?.name || idToName(e.year || '');
-    const topicName    = structure?.[e.subject]?.years?.[e.year]?.topics?.[e.topic]?.name || idToName(e.topic || '');
+    const hasSubject   = !!e.subject;
+    const subjectColor = hasSubject ? getSubjectColor(e.subject) : 'var(--accent)';
+    const subjectIcon  = hasSubject ? getSubjectIcon(e.subject) : '⚙️';
+    const subjectName  = hasSubject ? (structure?.[e.subject]?.name || e.subject) : 'App';
+    const yearName     = e.year  ? (structure?.[e.subject]?.years?.[e.year]?.name || idToName(e.year))   : '';
+    const topicName    = e.topic ? (structure?.[e.subject]?.years?.[e.year]?.topics?.[e.topic]?.name || idToName(e.topic)) : '';
     const href         = (e.subject && e.year && e.topic)
       ? `#/fach/${e.subject}/${e.year}/${e.topic}`
       : (e.subject ? `#/fach/${e.subject}` : '#/');
     const typeLabel    = TYPE_LABEL[e.type] || 'Update';
+    const subParts     = [subjectName, yearName, topicName].filter(Boolean);
     return `
       <div class="changelog-item" onclick="location.hash='${href}'"
            style="--subject-color:${subjectColor}">
@@ -618,7 +620,7 @@ function renderChangelogSection() {
             <span class="cl-date">${dateStr}</span>
           </div>
           <div class="cl-title">${e.title || topicName}</div>
-          <div class="cl-sub">${subjectName} · ${yearName} · ${topicName}</div>
+          ${subParts.length ? `<div class="cl-sub">${subParts.join(' · ')}</div>` : ''}
           ${e.description ? `<div class="cl-desc">${e.description}</div>` : ''}
         </div>
         <span class="cl-arrow">›</span>
@@ -3439,15 +3441,27 @@ async function getDailyChallengeQuestions() {
 
   if (!allTopics.length) return [];
 
-  const shuffled = [...allTopics].sort(() => rand() - 0.5);
-  const picked   = shuffled.slice(0, Math.min(3, shuffled.length));
+  // Deterministisch shuffeln (Fisher-Yates mit Seed) — nicht mit rand()-0.5
+  const shuffled = [...allTopics];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  // Mehr Topics einbeziehen (vorher 3 → oft zu wenig MC-Fragen für 6 Slots)
+  const picked   = shuffled.slice(0, Math.min(5, shuffled.length));
 
+  // getTopicQuestions returnt ein ARRAY — nicht {questions: [...]}
   const sets = await Promise.all(
-    picked.map(t => getTopicQuestions(t.subjectId, t.yearId, t.topicId).catch(() => ({ questions: [] })))
+    picked.map(t => getTopicQuestions(t.subjectId, t.yearId, t.topicId).catch(() => []))
   );
 
-  const mc = sets.flatMap(r => (r.questions || []).filter(q => q.type === 'multiple_choice'));
-  const shuffledQ = [...mc].sort(() => rand() - 0.5);
+  const mc = sets.flatMap(arr => (arr || []).filter(q => q.type === 'multiple_choice'));
+  // Auch hier deterministisch shuffeln
+  const shuffledQ = [...mc];
+  for (let i = shuffledQ.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffledQ[i], shuffledQ[j]] = [shuffledQ[j], shuffledQ[i]];
+  }
   return shuffledQ.slice(0, 6);
 }
 

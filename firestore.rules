@@ -1,0 +1,129 @@
+rules_version = '2';
+
+// ════════════════════════════════════════════════════════════════════════════
+//  LearningForge — Firestore Security Rules
+//
+//  DEPLOY:
+//    Option A (einfach):
+//      → Firebase Console → Firestore → Rules
+//      → Inhalt unten reinkopieren → "Veröffentlichen"
+//
+//    Option B (CLI, falls firebase-tools installiert):
+//      cd <repo>
+//      firebase deploy --only firestore:rules
+// ════════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── helper functions ──────────────────────────────────────────────────
+    function isAuth()        { return request.auth != null; }
+    function isOwner(uid)    { return isAuth() && request.auth.uid == uid; }
+    function changed(field)  { return request.resource.data.diff(resource.data).affectedKeys().hasAny([field]); }
+    function onlyChanged(fs) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fs); }
+
+    // ── users ─────────────────────────────────────────────────────────────
+    // Read/List: jeder authentifizierte User darf User-Profile lesen (Leaderboard, Friend-Search, Group-Members).
+    // Create:    nur eigenes Doc bei Registrierung.
+    // Update:
+    //   (a) eigenes Doc: alles erlaubt
+    //   (b) fremdes Doc: NUR die eigene friendRequests-Eintrag setzen oder entfernen
+    //                    (also Friend-Request senden bzw. zurückziehen)
+    // Delete:    nur eigenes Doc.
+    match /users/{uid} {
+      allow read, list: if isAuth();
+      allow create:     if isOwner(uid);
+      allow update:     if isOwner(uid)
+                         || (isAuth()
+                             && onlyChanged(['friendRequests'])
+                             && request.resource.data.friendRequests.diff(resource.data.friendRequests)
+                                .affectedKeys().hasOnly([request.auth.uid]));
+      allow delete:     if isOwner(uid);
+    }
+
+    // ── groups ────────────────────────────────────────────────────────────
+    // List/Read: jeder authentifizierte User darf Gruppen lesen (Code-Lookup beim Beitritt).
+    //            Code ist 6-stellig random → nicht raten-bar.
+    // Create:    Auth user darf Gruppen erstellen, wenn er sich als creator + admin-member einträgt.
+    // Update:
+    //   (a) creator: alles erlaubt
+    //   (b) member: NUR sich selbst zur members-Map hinzufügen (Beitritt) oder entfernen (Austritt)
+    // Delete:    nur creator.
+    match /groups/{groupId} {
+      allow read, list: if isAuth();
+      allow create:     if isAuth()
+                         && request.resource.data.creatorUid == request.auth.uid;
+      allow update:     if isAuth()
+                         && (resource.data.creatorUid == request.auth.uid
+                             || (onlyChanged(['members'])
+                                 && request.resource.data.members.diff(resource.data.members)
+                                    .affectedKeys().hasOnly([request.auth.uid])));
+      allow delete:     if isAuth() && resource.data.creatorUid == request.auth.uid;
+    }
+
+    // ── leaderboard ───────────────────────────────────────────────────────
+    // Read/List: alle authentifizierten User
+    // Write:     nur eigenes Doc (uid als doc-id)
+    match /leaderboard/{uid} {
+      allow read, list: if isAuth();
+      allow write:      if isOwner(uid);
+    }
+
+    // ── customTopics ──────────────────────────────────────────────────────
+    // Read:   own + group-shared (wenn user in groupIds drin ist)
+    // Create: own
+    // Update: only owner
+    // Delete: only owner
+    match /customTopics/{topicId} {
+      allow read:   if isAuth()
+                     && (resource.data.ownerUid == request.auth.uid
+                         || resource.data.groupId == null
+                         || resource.data.groupId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupIds);
+      allow list:   if isAuth();
+      allow create: if isAuth() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isAuth() && resource.data.ownerUid == request.auth.uid;
+      allow delete: if isAuth() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ── pendingTopics (für Topic-Review-Queue) ────────────────────────────
+    match /pendingTopics/{topicId} {
+      allow read, list: if isAuth();
+      allow create:     if isAuth() && request.resource.data.submittedBy == request.auth.uid;
+      allow update:     if isAuth();
+      allow delete:     if isAuth();
+    }
+
+    // ── dailyScores (pro Tag pro User) ────────────────────────────────────
+    match /dailyScores/{date}/users/{uid} {
+      allow read, list: if isAuth();
+      allow write:      if isOwner(uid);
+    }
+    match /dailyScores/{date} {
+      allow read, list: if isAuth();
+    }
+
+    // ── feed (Activity-Feed für Friends) ──────────────────────────────────
+    match /feed/{entryId} {
+      allow read, list: if isAuth();
+      allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow update:     if isAuth();
+      allow delete:     if isAuth() && resource.data.uid == request.auth.uid;
+    }
+
+    // ── comments (auf Topic/Custom-Topic) ─────────────────────────────────
+    match /comments/{commentId} {
+      allow read, list: if isAuth();
+      allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow update:     if isAuth() && (resource.data.uid == request.auth.uid
+                                         || onlyChanged(['likes']));
+      allow delete:     if isAuth() && resource.data.uid == request.auth.uid;
+    }
+
+    // ── shareTokens (für getShareData) ────────────────────────────────────
+    match /shareTokens/{tokenId} {
+      allow read, list: if true;     // public — wird über Token-URL aufgerufen
+      allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow delete:     if isAuth() && resource.data.uid == request.auth.uid;
+    }
+  }
+}

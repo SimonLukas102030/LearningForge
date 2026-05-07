@@ -3,6 +3,15 @@
   "entries": [
     {
       "date": "2026-05-07",
+      "type": "fixed",
+      "subject": "",
+      "year": "",
+      "topic": "",
+      "title": "Daily Challenges generieren wieder",
+      "description": "Bug behoben: Auto-Generator filterte auf falscher Datenstruktur und ergab immer 0 Fragen. Jetzt werden täglich 6 Fragen aus 5 zufälligen Themen ausgewählt."
+    },
+    {
+      "date": "2026-05-07",
       "type": "expanded",
       "subject": "Physik",
       "year": "Klasse-9",

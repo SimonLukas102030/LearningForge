@@ -2,7 +2,7 @@
 //  LearningForge — Service Worker (F-11)
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'lf-v2';
+const CACHE_NAME = 'lf-v3';
 
 // Minimales App-Shell-Precache
 const PRECACHE_URLS = ['/', '/index.html', '/manifest.json'];
