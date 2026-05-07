@@ -1,25 +1,60 @@
 // =============================================================
-//  LearningForge - Cloud Functions Client Wrapper
+//  LearningForge - Cloudflare Workers Client Wrapper
 // -------------------------------------------------------------
-//  Wraps firebase.functions(REGION).httpsCallable(...) for the
-//  three onCall endpoints + a plain fetch() for the unauth
-//  onRequest endpoint (getParentShareReport).
+//  Calls the learning-forge-api Worker (deployed to
+//  learning-forge-api.simonkoper27.workers.dev) which mirrors
+//  the four endpoints that used to live as Firebase Cloud
+//  Functions.
 //
-//  Region pinning matters: the server functions are deployed to
-//  europe-west1 (close to Germany), and the client SDK has to
-//  be told about that or it defaults to us-central1 and 404s.
+//  Why HTTP instead of httpsCallable? Workers are plain HTTP
+//  endpoints; they don't speak the Firebase callable protocol.
+//  We forward the firebase ID token as `Authorization: Bearer`
+//  so the Worker can verify it server-side (same auth model as
+//  the old onCall functions).
 //
-//  Requires firebase-functions-compat to be loaded BEFORE this
-//  module imports (Ethan: add the SDK script tag in index.html).
+//  Response contract:
+//    Worker returns the result object DIRECTLY (no `.data`
+//    wrapper that httpsCallable would add). On non-2xx the
+//    body is { success:false, error:"<msg>" } and we throw.
+//
+//  CORS is handled Worker-side (Access-Control-Allow-Origin:*
+//  + OPTIONS preflight returns 204), so the browser fetches
+//  cross-origin from learning-forge.simonsstudios.de without
+//  extra setup.
 // =============================================================
 
-const REGION     = 'europe-west1';
-const PROJECT_ID = 'learningforge-e995e';
+const WORKER_BASE = 'https://learning-forge-api.simonkoper27.workers.dev';
 
-let _functions = null;
-function _fns() {
-  if (!_functions) _functions = firebase.functions(REGION);
-  return _functions;
+// Returns the current Firebase ID-Token (JWT). Worker verifies
+// the signature against Google's public keys and trusts the
+// `sub` claim as the uid. Cached by the SDK; we don't force-
+// refresh - the Worker gets a fresh-ish token (<1h old).
+async function _idToken() {
+  const u = firebase.auth().currentUser;
+  if (!u) throw new Error('Nicht eingeloggt');
+  return await u.getIdToken(false);
+}
+
+// Generic POST wrapper. `auth:false` skips the bearer header
+// (used by getParentShareReport - that endpoint is unauth).
+async function _call(endpoint, body, { auth = true } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth) headers.Authorization = `Bearer ${await _idToken()}`;
+
+  const res = await fetch(`${WORKER_BASE}/${endpoint}`, {
+    method:  'POST',
+    headers,
+    body:    JSON.stringify(body || {})
+  });
+
+  let data;
+  try { data = await res.json(); }
+  catch { throw new Error(`Worker ${endpoint}: HTTP ${res.status}, ungueltiges JSON`); }
+
+  if (!res.ok || data?.success === false) {
+    throw new Error(data?.error || `Worker ${endpoint}: HTTP ${res.status}`);
+  }
+  return data;
 }
 
 // -----------------------------------------------------------
@@ -56,11 +91,10 @@ function _fns() {
 //        }
 //      ]
 //    }
+//  returns: { grade, points, max, xpAwarded, achievementsGranted, leaderboardUpdated }
 // -----------------------------------------------------------
 export async function submitTestResult(payload) {
-  const callable = _fns().httpsCallable('submitTestResult');
-  const result = await callable(payload);
-  return result.data;  // { grade, points, max, xpAwarded, achievementsGranted, leaderboardUpdated }
+  return await _call('submitTestResult', payload);
 }
 
 // -----------------------------------------------------------
@@ -68,45 +102,30 @@ export async function submitTestResult(payload) {
 //  setActiveOutline ownership checks. The server enforces:
 //    - outlines: tier.level <= calcLevel(xp)
 //    - themes: drop earned (in users.themeDrops) OR default
+//  returns: { unlocked: bool, reason: string }
 // -----------------------------------------------------------
 export async function unlockCosmetic(kind, id) {
-  const callable = _fns().httpsCallable('unlockCosmetic');
-  const result = await callable({ kind, id });
-  return result.data;  // { unlocked: bool, reason: string }
+  return await _call('unlockCosmetic', { kind, id });
 }
 
 // -----------------------------------------------------------
 //  markTestAccount - replaces markAsClaude / markAsHacker.
-//  Server checks request.auth.token.email is on the
-//  TEST_ACCOUNT_EMAILS whitelist (hardcoded in functions/
-//  index.js).
+//  Server checks the firebase ID-token email against the
+//  TEST_ACCOUNT_EMAILS whitelist (hardcoded in workers/).
+//  returns: { marked: bool, kind }
 // -----------------------------------------------------------
 export async function markTestAccount(kind) {
-  const callable = _fns().httpsCallable('markTestAccount');
-  const result = await callable({ kind });  // kind: 'claude' | 'hacker'
-  return result.data;  // { marked: bool, kind }
+  return await _call('markTestAccount', { kind });  // kind: 'claude' | 'hacker'
 }
 
 // -----------------------------------------------------------
-//  getParentShareReport - onRequest endpoint, no auth.
-//  Returns a CURATED subset of the user-doc, never email /
-//  friendIds / role / etc. (closes Cheat #17).
+//  getParentShareReport - UNAUTH endpoint, validated via the
+//  share-token in the body (not via firebase auth). Returns a
+//  CURATED subset of the user-doc, never email / friendIds /
+//  role / etc. (closes Cheat #17).
+//  shape: { name, klasse, totalGrades, avgGradePerSubject,
+//           xp, level, achievementsCount, streak, createdAt }
 // -----------------------------------------------------------
-const PARENT_SHARE_URL = `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/getParentShareReport`;
-
 export async function getParentShareReport(token) {
-  const res = await fetch(PARENT_SHARE_URL, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ token })
-  });
-  if (!res.ok) {
-    let msg;
-    try { msg = (await res.json()).error || `HTTP ${res.status}`; }
-    catch { msg = `HTTP ${res.status}`; }
-    throw new Error(`Share-Lookup fehlgeschlagen: ${msg}`);
-  }
-  return await res.json();
-  // shape: { name, klasse, totalGrades, avgGradePerSubject,
-  //          xp, level, achievementsCount, streak, createdAt }
+  return await _call('getParentShareReport', { token }, { auth: false });
 }

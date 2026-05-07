@@ -1,0 +1,15 @@
+name = "learning-forge-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Workers.dev URL: learning-forge-api.<account-subdomain>.workers.dev
+# Custom domain (Phase 2): routes block on the simonsstudios.de zone
+
+[vars]
+PROJECT_ID = "learningforge-e995e"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/SimonLukas102030/LearningForge/master"
+
+# Secrets set via `wrangler secret put NAME`:
+#   SA_CLIENT_EMAIL  -> service account client_email
+#   SA_PRIVATE_KEY   -> service account private_key (PEM, with newlines preserved)
