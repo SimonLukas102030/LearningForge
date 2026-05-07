@@ -111,6 +111,11 @@ export async function markAsClaude(uid) {
     role: 'admin',
     name: 'Claude (Test)'
   }, { merge: true });
+  // Spiegel auf leaderboard, damit der !e.isClaude-Filter in getLeaderboard()
+  // wirklich greift (Filter las bisher ein Feld, das auf leaderboard nicht existierte).
+  await _db.collection('leaderboard').doc(uid)
+    .set({ isClaude: true }, { merge: true })
+    .catch(() => {});
 }
 
 export async function loginAsClaude() {
@@ -162,16 +167,82 @@ export async function unlockTheme(uid, themeId) {
 
 export async function setActiveTheme(uid, themeId) {
   await _db.collection('users').doc(uid).set({ activeTheme: themeId }, { merge: true });
+  // Mirror auf leaderboard, damit Theme-Wechsel ohne Test-Save sichtbar wird.
+  // Silent catch — wenn Mirror scheitert, soll der User-Pick nicht broken sein.
+  await _db.collection('leaderboard').doc(uid)
+    .set({ activeTheme: themeId }, { merge: true })
+    .catch(() => {});
 }
 
 export async function setActiveOutline(uid, outlineId) {
   await _db.collection('users').doc(uid).set({ activeOutline: outlineId }, { merge: true });
+  // Mirror auf leaderboard, damit Outline-Wechsel ohne Test-Save sichtbar wird.
+  // Silent catch — wenn Mirror scheitert, soll der User-Pick nicht broken sein.
+  await _db.collection('leaderboard').doc(uid)
+    .set({ activeOutline: outlineId }, { merge: true })
+    .catch(() => {});
 }
 
 // ── Admin-Tools (für Testing-Tab) ───────────────────────
 export async function adminPatchUser(uid, patch) {
   // Setzt beliebige Felder auf einem User-Doc — nur via Admin-Rolle in Rules erlaubt
   await _db.collection('users').doc(uid).set(patch, { merge: true });
+  // Mirror leaderboard-relevanter Felder, sonst zeigt Rangliste alte Werte
+  // bis der Target-User selbst einen Test macht. Cross-User-Write erlaubt
+  // weil isAdmin() die leaderboard-Rule deckt. Silent catch: Patch ist trotzdem
+  // erfolgreich auf users/, falls Mirror scheitert.
+  if (patch && typeof patch === 'object') {
+    const lbMirror = {};
+    if (patch.klasse        !== undefined) lbMirror.klasse        = String(patch.klasse);
+    if (patch.activeOutline !== undefined) lbMirror.activeOutline = patch.activeOutline;
+    if (patch.activeTheme   !== undefined) lbMirror.activeTheme   = patch.activeTheme;
+    if (typeof patch.xp === 'number')      lbMirror.xp            = patch.xp;
+    if (patch.role          !== undefined) lbMirror.role          = patch.role;
+    if (patch.isBanned      !== undefined) lbMirror.isBanned      = patch.isBanned;
+    if (patch.displayName   !== undefined) lbMirror.displayName   = patch.displayName;
+    if (patch.name          !== undefined) lbMirror.displayName   = patch.name;
+    if (patch.photoURL      !== undefined) lbMirror.photoURL      = patch.photoURL || null;
+    if (Object.keys(lbMirror).length) {
+      await _db.collection('leaderboard').doc(uid)
+        .set(lbMirror, { merge: true })
+        .catch(() => {});
+    }
+  }
+}
+
+// ── Onboarding-Helper ───────────────────────────────────
+// Markiert User als Wizard-abgeschlossen. Frontend ruft das einmal am Wizard-Ende.
+export async function markOnboarded(uid) {
+  if (!uid) return;
+  await _db.collection('users').doc(uid).set({
+    onboardedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+// ── Klassen-Save (string-standardisiert) ────────────────
+// Eine Quelle für klasse-Schreibe, mirror direkt auf leaderboard. Verwendet
+// String — userData.klasse war historisch number-or-string, ab jetzt string.
+export async function setUserKlasse(uid, klasse) {
+  if (!uid) return;
+  const k = String(klasse);
+  await _db.collection('users').doc(uid).set({ klasse: k }, { merge: true });
+  await _db.collection('leaderboard').doc(uid)
+    .set({ klasse: k }, { merge: true })
+    .catch(() => {});
+}
+
+// ── Banned-Live-Kick (Open Q6) ──────────────────────────
+// Realtime-Listener auf users/{uid}. Wenn Admin den User bannt, feuert der
+// Snapshot mit isBanned === true und das Frontend kann sofort logout() triggern.
+// Returnt die unsubscribe-Function.
+export function watchBannedStatus(uid, callback) {
+  if (!uid || typeof callback !== 'function') return () => {};
+  return _db.collection('users').doc(uid).onSnapshot(
+    snap => {
+      if (snap.exists && snap.data().isBanned === true) callback();
+    },
+    () => {} // silent catch — Listener-Fehler sollen den Login nicht crashen
+  );
 }
 
 export async function adminUnlockAllForUser(uid, allOutlines, allThemes) {
@@ -198,29 +269,51 @@ export function onAuthStateChanged(callback) {
 }
 
 // ── Rangliste ────────────────────────────
-export async function updateLeaderboard(uid, displayName, photoURL, subjectId, yearId, topicId, gradeNum, totalPoints) {
+// extras: { klasse, activeOutline, activeTheme, xp, role, streak, studyMins, isClaude }
+// Felder, die undefined sind, werden bewusst NICHT geschrieben — Idempotenz, kein
+// versehentliches Ueberschreiben mit null bei einem Feld, das gar nicht uebergeben wurde.
+export async function updateLeaderboard(uid, displayName, photoURL, subjectId, yearId, topicId, gradeNum, totalPoints, extras = {}) {
   const pts = typeof totalPoints === 'number' ? totalPoints : 0;
+  const meta = {};
+  if (extras.klasse        !== undefined) meta.klasse        = String(extras.klasse);
+  if (extras.activeOutline !== undefined) meta.activeOutline = extras.activeOutline;
+  if (extras.activeTheme   !== undefined) meta.activeTheme   = extras.activeTheme;
+  if (typeof extras.xp        === 'number') meta.xp        = extras.xp;
+  if (extras.role          !== undefined) meta.role          = extras.role;
+  if (typeof extras.streak    === 'number') meta.streak    = extras.streak;
+  if (typeof extras.studyMins === 'number') meta.studyMins = extras.studyMins;
+  if (extras.isClaude      !== undefined) meta.isClaude      = !!extras.isClaude;
   await _db.collection('leaderboard').doc(uid).set({
     displayName,
     photoURL: photoURL || null,
     scores: { [`${subjectId}__${yearId}__${topicId}`]: pts },
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    ...meta
   }, { merge: true });
 }
 
 export async function resetLeaderboard(uid) {
+  // merge:true beibehalten, damit displayName/photoURL/klasse/activeOutline/xp/role
+  // nicht weggeloescht werden. scores: {} ueberschreibt gezielt nur das Map-Feld.
+  // (Hard rule 5: kein delete() — empty-map via set+merge ist das richtige Pattern.)
   await _db.collection('leaderboard').doc(uid).set({
     scores: {},
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
+  }, { merge: true });
 }
 
-export async function getLeaderboard() {
-  const snap = await _db.collection('leaderboard').get({ source: 'server' });
+// klasseFilter: null = global, string = klassenspezifisch.
+// Server-side where() nutzt den Auto-Index auf single-field — kein manueller Index noetig.
+export async function getLeaderboard(klasseFilter = null) {
+  let query = _db.collection('leaderboard');
+  if (klasseFilter !== null && klasseFilter !== undefined && klasseFilter !== '') {
+    query = query.where('klasse', '==', String(klasseFilter));
+  }
+  const snap = await query.get({ source: 'server' });
   return snap.docs
     .map(d => ({ uid: d.id, ...d.data() }))
     .filter(e => Object.keys(e.scores || {}).length > 0)
-    .filter(e => !e.isClaude); // Claude-Test-Account ausblenden
+    .filter(e => !e.isClaude); // Claude-Test-Account ausblenden (greift jetzt dank markAsClaude-Mirror)
 }
 
 export async function getAllUsers() {

@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, unlockedOutlines, themeById, rollThemeDrop, resolveOutlineClass, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -58,19 +58,20 @@ function showThemeDropToast(themeId) {
 
 function outlineFor(userInfo) {
   if (!userInfo) return '';
-  if (userInfo.role === 'admin')  return 'role-glow-admin';
-  if (userInfo.role === 'tester') return 'role-glow-tester';
-  // User-Wahl
+  // 1. User-Wahl gewinnt IMMER (Bug-Fix Mission 1: Role-Glow != Outline-Pick).
+  //    Role wird separat als Crown-/Beaker-Badge neben dem Namen angezeigt
+  //    via roleBadge() — NICHT mehr automatisch auf den Avatar.
   if (userInfo.activeOutline) {
     const tier = OUTLINE_TIERS.find(t => t.id === userInfo.activeOutline);
     if (tier?.css) return tier.css;
   }
-  // Default: höchste freigeschaltene Outline
+  // 2. Default basierend auf Level
   if (typeof userInfo.xp === 'number') {
     const lvl = calcLevel(userInfo.xp).level;
     const tier = outlineForLevel(lvl);
     return tier.css;
   }
+  // 3. Fallback
   return '';
 }
 
@@ -109,7 +110,7 @@ function updateOnlineStatus(isOnline) {
       const el = document.createElement('div');
       el.id = 'offlineBanner';
       el.className = 'offline-banner';
-      el.innerHTML = '📶 Offline — Inhalte aus dem Cache';
+      el.innerHTML = '📶 Offline — du siehst gespeicherte Inhalte';
       document.body.appendChild(el);
     }
   } else {
@@ -198,10 +199,13 @@ function startAutoUpdate() {
 }
 
 // ── App starten ──────────────────────────
+let _bannedUnsub = null;
 export function startApp() {
   startAutoUpdate();
   onAuthStateChanged(async user => {
     currentUser = user;
+    // Vorherigen Banned-Listener abräumen, falls Re-Login
+    if (_bannedUnsub) { try { _bannedUnsub(); } catch(e){} _bannedUnsub = null; }
     if (user) {
       userData = await getUserData(user.uid);
       if (userData?.isBanned) {
@@ -241,6 +245,58 @@ export function startApp() {
       });
       await loadToolsOverride();
       checkAndShowWeeklySummary();
+
+      // Banned-Live-Kick (Mission 1 Open-Q-6, Adrian: JA): Real-Time-Listener
+      // auf users/{uid}.isBanned. Wenn Admin den User bannt während Session
+      // läuft → sofort logout + Toast.
+      try {
+        _bannedUnsub = watchBannedStatus(user.uid, async () => {
+          showToast('Dein Account wurde gesperrt', 'error');
+          try { _bannedUnsub?.(); } catch(e){}
+          _bannedUnsub = null;
+          await logout();
+          location.hash = '#/';
+        });
+      } catch(e) { console.warn('[banned-watcher]', e); }
+
+      // Migration fuer Bestands-User: Leaderboard-Doc-Meta-Felder backfillen
+      // (klasse, activeOutline, activeTheme, xp, role, streak, studyMins, isClaude).
+      // Idempotent — laeuft jeden Start, schreibt nur was fehlt. Kein Doc-create
+      // wenn der User noch nie einen Test gemacht hat (scores-Filter).
+      try {
+        const lbRef  = db().collection('leaderboard').doc(user.uid);
+        const lbSnap = await lbRef.get({ source: 'server' });
+        if (lbSnap.exists && Object.keys(lbSnap.data()?.scores || {}).length > 0) {
+          const lb = lbSnap.data();
+          const patch = {};
+          if (lb.klasse        === undefined && userData?.klasse != null)      patch.klasse        = String(userData.klasse);
+          if (lb.activeOutline === undefined && userData?.activeOutline)       patch.activeOutline = userData.activeOutline;
+          if (lb.activeTheme   === undefined && userData?.activeTheme)         patch.activeTheme   = userData.activeTheme;
+          if (lb.xp            === undefined && userData?.xp != null)          patch.xp            = userData.xp;
+          if (lb.role          === undefined && userData?.role)                patch.role          = userData.role;
+          if (lb.streak        === undefined && userData?.streakCount != null) patch.streak        = userData.streakCount;
+          if (lb.studyMins     === undefined && userData?.studyTime) {
+            patch.studyMins = Object.values(userData.studyTime).reduce((a, b) => a + b, 0);
+          }
+          if (lb.isClaude      === undefined && userData?.isClaude)            patch.isClaude      = true;
+          if (Object.keys(patch).length) await lbRef.set(patch, { merge: true });
+        }
+      } catch(e) { console.warn('[lb-migration]', e); }
+
+      // Onboarding-Wizard triggern wenn noch nicht gemacht (oder Klasse fehlt
+      // bei Bestands-User, dann nur Schritt 2+4). Claude-Test-Account skippt.
+      // Skipt auch in Share-Report-Views (`#/bericht/...`) — dort ist kein User.
+      if (!isClaudeAccount() && !userData?.onboardedAt && !location.hash.startsWith('#/bericht')) {
+        // Bestands-User = hat bereits irgendwelche Daten (XP/Noten/Tests/createdAt),
+        // braucht aber noch Klasse → Wizard zeigt nur Schritt 2 + 4. Brand-new Login
+        // (alle Felder leer) sieht alle 4 Schritte.
+        const hasPriorActivity = !!(userData?.xp
+                                  || userData?.createdAt
+                                  || Object.keys(userData?.grades || {}).length
+                                  || (userData?.totalQuestionsAnswered || 0) > 0);
+        const existingMissingKlasse = !userData?.klasse && hasPriorActivity;
+        setTimeout(() => renderOnboarding({ existingMissingKlasse }), 250);
+      }
     }
     route();
   });
@@ -271,6 +327,17 @@ export function startApp() {
     .observe(document.getElementById('app'), { childList: true });
 }
 
+// ── Hash-Param-Helper ─────────────────────
+// Mission 1: `#/profil?tab=erfolge` → returnt 'erfolge'. Dahinter liegt
+// die Logik der Profil-Tabs + Direktlinks.
+function _hashParam(name) {
+  const h = location.hash || '';
+  const q = h.indexOf('?');
+  if (q < 0) return null;
+  const params = new URLSearchParams(h.slice(q + 1));
+  return params.get(name);
+}
+
 // ── Router ───────────────────────────────
 function route() {
   unmountCalculator();
@@ -295,19 +362,29 @@ function route() {
     if (topic)    renderTopic(subject, year, topic);
     else if (year) renderYear(subject, year);
     else           renderSubject(subject);
-  } else if (parts[0] === 'profil') {
+  } else if (parts[0]?.startsWith('profil')) {
+    // Profil hat ?tab=… als Query-Param am Hash. Parse hier raus, parts[0] kann
+    // 'profil' oder 'profil?tab=erfolge' sein.
     renderProfile();
   } else if (parts[0] === 'einstellungen') {
     renderSettings();
   } else if (parts[0] === 'statistiken') {
-    renderStatistics();
+    // Mission 1: Statistiken-Route bleibt für Bookmarks, redirected aber
+    // ins Profil-Tab. Stat-Inhalt selbst lebt in renderProfile()'s "stats"-Tab.
+    location.hash = '#/profil?tab=stats';
+    return;
   } else if (parts[0] === 'rangliste') {
     renderLeaderboard();
+  } else if (parts[0] === 'lernen') {
+    renderLernen();
   } else if (parts[0] === 'admin') {
     if (isAdmin()) renderAdmin();
     else location.hash = '#/';
   } else if (parts[0] === 'inventar') {
-    renderInventory();
+    // Mission 1: Inventar-Route redirected ins Profil-Tab. Originalrender
+    // bleibt aber als Tab-Inhalt verfügbar.
+    location.hash = '#/profil?tab=inventar';
+    return;
   } else if (parts[0] === 'testing') {
     if (isAdmin() || userData?.role === 'tester') renderTesting();
     else location.hash = '#/';
@@ -339,9 +416,18 @@ function route() {
 }
 
 // ── Navbar rendern ───────────────────────
+// Mission 1: Nav slim-down — 4 Primärlinks (Start / Lernen / Rangliste / Hilfe) +
+// Right-Cluster mit Streak-Badge, XP-Chip, Inventar-Icon, Theme-Toggle, User-Dropdown.
+// Sekundär-Routen leben im User-Dropdown. Mobile bekommt eine Bottom-Tab-Bar (5 slots).
 function renderNav(breadcrumbs = []) {
   const theme = document.documentElement.getAttribute('data-theme');
   const act   = (label) => breadcrumbs[0]?.label === label ? 'active' : '';
+  const streak = (() => { try { return calcStreak(); } catch { return 0; } })();
+  const friendReqCount = Object.keys(userData?.friendRequests || {}).length;
+  const xi = userData ? calcLevel(userData.xp || 0) : null;
+  const role = userRole();
+  const ddItem = (href, icon, label, badge = '') =>
+    `<a onclick="location.hash='${href}'"><span class="dd-icon">${icon}</span><span class="dd-label">${label}</span>${badge ? `<span class="dd-badge">${badge}</span>` : ''}</a>`;
   return `
     <nav class="navbar">
       <div class="nav-brand" onclick="location.hash='#/'">
@@ -360,70 +446,88 @@ function renderNav(breadcrumbs = []) {
         <span class="nav-sep-bar">|</span>
         <div class="nav-links">
           <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
-          <a class="nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken'">Statistiken</a>
-          <a class="nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste'">Rangliste</a>
-          <a class="nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen'">Gruppen</a>
-          <a class="nav-link ${act('Freunde')}"        onclick="location.hash='#/freunde'">Freunde${(() => { const reqs = Object.keys(userData?.friendRequests || {}).length; return reqs ? `<span class="nav-badge">${reqs}</span>` : ''; })()}</a>
-          <a class="nav-link ${act('Meine Inhalte')}" onclick="location.hash='#/meine-inhalte'">Meine Inhalte</a>
-          <a class="nav-link ${act('Builder')}"        onclick="location.hash='#/builder'">Builder</a>
-          <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
-          <a class="nav-link ${act('Inventar')}"      onclick="location.hash='#/inventar'">Inventar</a>
-          <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
-          <a class="nav-link ${act('Hilfe')}" onclick="location.hash='#/hilfe'">Hilfe</a>
-          ${(isAdmin() || userData?.role === 'tester') ? `<a class="nav-link nav-link-admin ${act('Testing')}" onclick="location.hash='#/testing'">Testing</a>` : ''}
+          <a class="nav-link ${act('Lernen')}"     onclick="location.hash='#/lernen'">Lernen</a>
+          <a class="nav-link ${act('Rangliste')}"  onclick="location.hash='#/rangliste'">Rangliste</a>
+          <a class="nav-link ${act('Hilfe')}"      onclick="location.hash='#/hilfe'">Hilfe</a>
         </div>
       </div>
       <div class="nav-right">
-        ${(() => { const xi = userData ? calcLevel(userData.xp || 0) : null; return xi ? `
-        <div class="nav-xp-chip" title="Level ${xi.level} — ${xi.title} | ${xi.xpCurrent}/${xi.xpNeeded} XP" onclick="location.hash='#/profil'">
+        ${streak > 1 ? `
+        <button class="nav-streak-chip" title="${streak} Tage Streak" onclick="location.hash='#/profil'">
+          🔥 <span class="nav-streak-num">${streak}</span>
+        </button>` : ''}
+        ${xi ? `
+        <div class="nav-xp-chip" title="Stufe ${xi.level} (${xi.title}) · Noch ${xi.xpNeeded - xi.xpCurrent} XP bis Stufe ${xi.level + 1}" onclick="location.hash='#/profil'">
           <span class="nav-xp-level">Lv.${xi.level}</span>
           <div class="nav-xp-track"><div class="nav-xp-fill" id="navXPFill" style="width:${xi.pct}%"></div></div>
-        </div>` : ''; })()}
+        </div>` : ''}
+        <button class="btn-icon nav-inv-btn" title="Inventar" onclick="location.hash='#/profil?tab=inventar'">🎒</button>
         <button class="btn-icon" id="themeBtn" onclick="window.LF.toggleTheme()" title="Theme wechseln">
           ${theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-        <button class="btn-icon hamburger" onclick="window.LF.toggleMobileMenu(event)" aria-label="Menü">
-          <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor">
-            <rect width="16" height="2" rx="1"/><rect y="6" width="16" height="2" rx="1"/><rect y="12" width="16" height="2" rx="1"/>
-          </svg>
         </button>
         <div class="user-chip" id="userChip" onclick="window.LF.toggleUserMenu(event)">
           <div class="avatar">${(userData?.photoURL || currentUser.photoURL)
             ? `<img src="${userData?.photoURL || currentUser.photoURL}" alt="">`
             : (userData?.name || currentUser.displayName || 'U')[0].toUpperCase()
           }</div>
-          <span class="uname">${(userData?.name || currentUser.displayName)?.split(' ')[0] || 'Nutzer'}</span>
-          <div class="user-dropdown">
-            <a onclick="location.hash='#/profil'">Profil</a>
-            <a onclick="location.hash='#/statistiken'">Statistiken</a>
-            <a onclick="location.hash='#/rangliste'">Rangliste</a>
-            <a onclick="location.hash='#/gruppen'">Gruppen</a>
-            <a onclick="location.hash='#/freunde'">Freunde</a>
-            <a onclick="location.hash='#/feed'">Feed</a>
-            <a onclick="location.hash='#/builder'">Builder</a>
-            <a onclick="location.hash='#/einstellungen'">Einstellungen</a>
-            ${isAdmin() ? `<a onclick="location.hash='#/admin'" style="color:var(--accent);font-weight:600">Admin-Panel</a>` : ''}
+          <span class="uname">${(userData?.name || currentUser.displayName)?.split(' ')[0] || 'Nutzer'}${friendReqCount ? `<span class="nav-badge">${friendReqCount}</span>` : ''}</span>
+          <div class="user-dropdown user-dropdown-rich">
+            <div class="dd-header">
+              <div class="dd-name">${escapeHtml(userData?.name || currentUser.displayName || 'Nutzer')} ${roleBadge(role)}</div>
+              <div class="dd-meta">${userData?.klasse ? `Klasse ${userData.klasse}` : 'Klasse nicht gesetzt'}${xi ? ` · Lv.${xi.level} ${xi.title}` : ''}</div>
+            </div>
             <div class="divider"></div>
-            <button class="danger" onclick="window.LF.doLogout()">Abmelden</button>
+            ${ddItem('#/profil',                '👤', 'Mein Profil')}
+            ${ddItem('#/profil?tab=stats',      '📊', 'Statistiken')}
+            ${ddItem('#/profil?tab=erfolge',    '🏅', 'Erfolge')}
+            ${ddItem('#/profil?tab=inventar',   '🎒', 'Inventar')}
+            <div class="divider"></div>
+            ${ddItem('#/freunde',               '👥', 'Freunde', friendReqCount ? String(friendReqCount) : '')}
+            ${ddItem('#/gruppen',               '🏠', 'Gruppen')}
+            ${ddItem('#/feed',                  '📰', 'Feed')}
+            <div class="divider"></div>
+            ${ddItem('#/builder',               '🔨', 'Builder')}
+            ${ddItem('#/meine-inhalte',         '📚', 'Meine Inhalte')}
+            <div class="divider"></div>
+            ${ddItem('#/einstellungen',         '⚙️', 'Einstellungen')}
+            ${isAdmin() ? ddItem('#/admin',     '👑', 'Admin-Panel') : ''}
+            ${(isAdmin() || role === 'tester') ? ddItem('#/testing', '🧪', 'Testing-Bereich') : ''}
+            <div class="divider"></div>
+            <button class="danger" onclick="window.LF.doLogout()">🚪 Abmelden</button>
           </div>
         </div>
       </div>
     </nav>
+    <div class="bottom-tab-bar">
+      <a class="bottom-tab ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">
+        <span class="bt-icon">🏠</span><span class="bt-label">Start</span>
+      </a>
+      <a class="bottom-tab ${act('Lernen')}" onclick="location.hash='#/lernen'">
+        <span class="bt-icon">📚</span><span class="bt-label">Lernen</span>
+      </a>
+      <a class="bottom-tab ${act('Rangliste')}" onclick="location.hash='#/rangliste'">
+        <span class="bt-icon">🏆</span><span class="bt-label">Rang</span>
+      </a>
+      <a class="bottom-tab ${act('Profil')}" onclick="location.hash='#/profil'">
+        <span class="bt-icon">👤</span><span class="bt-label">Profil</span>
+      </a>
+      <a class="bottom-tab" onclick="window.LF.toggleMobileMenu(event)">
+        <span class="bt-icon">☰</span><span class="bt-label">Mehr</span>
+      </a>
+    </div>
     <div class="mobile-nav" id="mobileNav">
-      <a class="mobile-nav-link ${!breadcrumbs.length ? 'mnl-active' : ''}" onclick="location.hash='#/';window.LF.closeMobileMenu()">Start</a>
-      <a class="mobile-nav-link ${act('Statistiken')}"  onclick="location.hash='#/statistiken';window.LF.closeMobileMenu()">Statistiken</a>
-      <a class="mobile-nav-link ${act('Rangliste')}"    onclick="location.hash='#/rangliste';window.LF.closeMobileMenu()">Rangliste</a>
-      <a class="mobile-nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">Gruppen</a>
-      <a class="mobile-nav-link ${act('Freunde')}"        onclick="location.hash='#/freunde';window.LF.closeMobileMenu()">Freunde${(() => { const reqs = Object.keys(userData?.friendRequests || {}).length; return reqs ? ` (${reqs})` : ''; })()}</a>
-      <a class="mobile-nav-link ${act('Feed')}"           onclick="location.hash='#/feed';window.LF.closeMobileMenu()">Feed</a>
-      <a class="mobile-nav-link ${act('Meine Inhalte')}" onclick="location.hash='#/meine-inhalte';window.LF.closeMobileMenu()">Meine Inhalte</a>
-      <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">Builder</a>
-      <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
-      <a class="mobile-nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">Einstellungen</a>
-      <a class="mobile-nav-link ${act('Hilfe')}" onclick="location.hash='#/hilfe';window.LF.closeMobileMenu()">Hilfe</a>
-      ${isAdmin() ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">Admin-Panel</a>` : ''}
+      <a class="mobile-nav-link ${act('Hilfe')}"          onclick="location.hash='#/hilfe';window.LF.closeMobileMenu()">❓ Hilfe</a>
+      <a class="mobile-nav-link ${act('Statistiken')}"    onclick="location.hash='#/profil?tab=stats';window.LF.closeMobileMenu()">📊 Statistiken</a>
+      <a class="mobile-nav-link ${act('Freunde')}"        onclick="location.hash='#/freunde';window.LF.closeMobileMenu()">👥 Freunde${friendReqCount ? ` (${friendReqCount})` : ''}</a>
+      <a class="mobile-nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">🏠 Gruppen</a>
+      <a class="mobile-nav-link ${act('Feed')}"           onclick="location.hash='#/feed';window.LF.closeMobileMenu()">📰 Feed</a>
+      <a class="mobile-nav-link ${act('Meine Inhalte')}"  onclick="location.hash='#/meine-inhalte';window.LF.closeMobileMenu()">📚 Meine Inhalte</a>
+      <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">🔨 Builder</a>
+      <a class="mobile-nav-link ${act('Einstellungen')}"  onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">⚙️ Einstellungen</a>
+      ${isAdmin() ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">👑 Admin-Panel</a>` : ''}
+      ${(isAdmin() || role === 'tester') ? `<a class="mobile-nav-link" onclick="location.hash='#/testing';window.LF.closeMobileMenu()">🧪 Testing</a>` : ''}
       <div class="mobile-nav-sep"></div>
-      <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">Abmelden</a>
+      <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">🚪 Abmelden</a>
     </div>`;
 }
 
@@ -443,7 +547,7 @@ function renderLogin() {
           <h1>LearningForge</h1>
           <p>Dein persönlicher Lernhub</p>
         </div>
-        ${loginBanError ? `<div class="error-msg" style="margin-bottom:12px">Dein Konto wurde gesperrt. Wende dich an den Administrator.</div>` : ''}
+        ${loginBanError ? `<div class="error-msg" style="margin-bottom:12px">Dein Konto wurde gesperrt. Frag Simon, was los ist.</div>` : ''}
         <div id="authError"></div>
         <div id="loginForm">
           <div id="nameGroup" style="display:none" class="form-group">
@@ -452,7 +556,7 @@ function renderLogin() {
           </div>
           <div class="form-group">
             <label class="form-label">E-Mail</label>
-            <input class="form-input" id="authEmail" type="email" placeholder="name@schule.de">
+            <input class="form-input" id="authEmail" type="email" placeholder="z.B. dein-name@schule.de">
           </div>
           <div class="form-group">
             <label class="form-label">Passwort</label>
@@ -629,10 +733,23 @@ function renderDashboard() {
   const recent         = getRecentTests();
   const recommendations = getRecommendations();
 
+  // Top-3 zuletzt benutzte Fächer (Schnellstart) — Mission 1, Open-Q-5
+  const recentSubjectIds = [];
+  Object.entries(grades)
+    .map(([k, g]) => ({ k, ts: g.date?.seconds || 0 }))
+    .sort((a, b) => b.ts - a.ts)
+    .forEach(e => {
+      const sid = e.k.split('__')[0];
+      if (sid && !recentSubjectIds.includes(sid)) recentSubjectIds.push(sid);
+    });
+  const top3Subjects = recentSubjectIds.slice(0, 3)
+    .map(id => subjects.find(s => s.id === id))
+    .filter(Boolean);
+
   // Subject cards mit Fortschrittsring
-  const subjectCards = subjects.length === 0
-    ? `<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden.<br>Füge Ordner unter <code>Fächer/</code> hinzu.</div>`
-    : subjects.map(s => {
+  const subjectCards = top3Subjects.length === 0
+    ? ''
+    : top3Subjects.map(s => {
         const prog   = getSubjectProgress(s.id);
         const pct    = prog.total > 0 ? prog.tested / prog.total : 0;
         const circ   = 100.48; // Umfang r=16
@@ -645,7 +762,7 @@ function renderDashboard() {
             <div class="s-card-top">
               <div>
                 <div class="s-icon">${getSubjectIcon(s.id)}</div>
-                <div class="s-name">${s.name}</div>
+                <div class="s-name">${escapeHtml(s.name)}</div>
                 <div class="s-meta">${Object.keys(s.years||{}).length} Klassen · ${prog.total} Themen</div>
               </div>
               <svg class="progress-ring" viewBox="0 0 36 36">
@@ -708,20 +825,23 @@ function renderDashboard() {
         <div class="stat-chip"><span class="stat-val">${subjects.length}</span><span class="stat-lbl">Fächer</span></div>
         <div class="stat-chip"><span class="stat-val">${totalTests}</span><span class="stat-lbl">Tests gemacht</span></div>
         <div class="stat-chip"><span class="stat-val">${avgGrade}</span><span class="stat-lbl">Ø Note</span></div>
-        <div class="stat-chip" onclick="location.hash='#/statistiken'" style="cursor:pointer">
+        <div class="stat-chip" onclick="location.hash='#/profil?tab=stats'" style="cursor:pointer">
           <span class="stat-val">📊</span><span class="stat-lbl">Statistiken</span>
         </div>
         ${getSRSDueCount() > 0 ? `
         <div class="stat-chip srs-chip" onclick="location.hash='#/srs'" style="cursor:pointer">
-          <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">SRS fällig</span>
+          <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">Wiederholen</span>
         </div>` : ''}
+        <div class="stat-chip stat-chip-bug" onclick="window.LF.openBugReport()" style="cursor:pointer">
+          <span class="stat-val">🐛</span><span class="stat-lbl">Problem melden</span>
+        </div>
       </div>
       ${!userData?.klasse && !isClaudeAccount() ? `
         <div class="klasse-prompt" onclick="location.hash='#/profil'">
           <span class="klasse-prompt-icon">&#9888;&#65039;</span>
           <div class="klasse-prompt-text">
             <div class="klasse-prompt-title">Klassenstufe noch nicht gesetzt</div>
-            <div class="klasse-prompt-sub">Setze deine Klasse im Profil &mdash; sonst kommen Daily-Challenge-Fragen aus allen Klassen.</div>
+            <div class="klasse-prompt-sub">Wähle deine Klasse — wir zeigen dir dann passende Aufgaben.</div>
           </div>
           <span class="klasse-prompt-arrow">&rsaquo;</span>
         </div>` : ''}
@@ -754,12 +874,25 @@ function renderDashboard() {
             <button class="btn btn-ghost btn-sm" onclick="window.LF.dismissInstall()">Nicht jetzt</button>
           </div>
         </div>` : ''}
-      <div class="section-title" style="margin-top:${attention.length?'32px':'0'}">📚 Fächer</div>
-      <div class="subjects-grid">${subjectCards}</div>
+      ${top3Subjects.length ? `
+        <div class="section-title" style="margin-top:${attention.length?'32px':'0'};display:flex;align-items:center;justify-content:space-between">
+          <span>⚡ Schnellstart</span>
+          <a class="btn btn-ghost btn-sm" onclick="location.hash='#/lernen'">Alle Fächer →</a>
+        </div>
+        <div class="subjects-grid">${subjectCards}</div>` : `
+        <div class="empty-state" style="margin-top:24px">
+          <div class="empty-icon">📚</div>
+          ${subjects.length === 0
+            ? 'Noch keine Fächer vorhanden — füge Ordner unter <code>Fächer/</code> hinzu.'
+            : 'Mache deinen ersten Test, um Schnellstart-Karten hier zu sehen.'}
+          <div style="margin-top:12px"><a class="btn btn-primary btn-sm" onclick="location.hash='#/lernen'">Zur Fächer-Übersicht</a></div>
+        </div>`}
       ${renderChangelogSection()}
       ${recentHtml}
       <div id="bugReportSection"></div>
-    </div>`;
+    </div>
+    <!-- Bug-Report-FAB nur Mobile (CSS @media) — Mission 1 Open-Q-3 -->
+    <button class="bug-fab" onclick="window.LF.openBugReport()" title="Problem melden" aria-label="Problem melden">🐛</button>`;
   // Bug-Report-Sektion asynchron nachladen (Firestore-Reads).
   loadBugReportSection();
   if (isClaudeAccount()) loadClaudeBugList();
@@ -1719,11 +1852,11 @@ function renderSettings() {
         <div class="settings-section-title">🌗 Darstellung</div>
         <div class="settings-color-row">
           <div class="settings-subject-info">
-            <span class="settings-name">Dark / Light Mode</span>
+            <span class="settings-name">Hell oder Dunkel</span>
           </div>
           <div class="settings-color-right">
             <button class="btn btn-secondary" onclick="window.LF.toggleTheme()">
-              ${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+              ${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Hell' : '🌙 Dunkel'}
             </button>
           </div>
         </div>
@@ -1894,6 +2027,328 @@ function renderStatistics() {
         ${studyTimeChart}
       `}
     </div>`;
+}
+
+// ── Lernen-Hub (Mission 1, neu) ──────────
+// Daily Challenge + SRS + Lesezeichen + Suche + komplettes Fächer-Grid.
+// Ersetzt das Fächer-Grid auf Dashboard (das nur noch Top-3-Schnellstart hat).
+function renderLernen() {
+  const subjects = Object.values(structure || {});
+  const grades   = userData?.grades || {};
+  const bookmarks = userData?.bookmarks || [];
+  const srsDue   = getSRSDueCount();
+
+  const subjectCards = subjects.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden — füge Ordner unter <code>Fächer/</code> hinzu.</div>`
+    : subjects.map(s => {
+        const prog = getSubjectProgress(s.id);
+        const pct  = prog.total > 0 ? prog.tested / prog.total : 0;
+        const circ = 100.48;
+        const dash = pct * circ;
+        return `
+          <div class="subject-card" style="--subject-color:${getSubjectColor(s.id)}"
+               onclick="location.hash='#/fach/${s.id}'">
+            <div class="s-card-top">
+              <div>
+                <div class="s-icon">${getSubjectIcon(s.id)}</div>
+                <div class="s-name">${escapeHtml(s.name)}</div>
+                <div class="s-meta">${Object.keys(s.years||{}).length} Klassen · ${prog.total} Themen</div>
+              </div>
+              <svg class="progress-ring" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" stroke-width="3"/>
+                <circle cx="18" cy="18" r="16" fill="none" stroke="${getSubjectColor(s.id)}"
+                  stroke-width="3" stroke-linecap="round"
+                  stroke-dasharray="${dash.toFixed(1)} ${circ}"
+                  transform="rotate(-90 18 18)"/>
+                <text x="18" y="22" text-anchor="middle" font-size="9"
+                  fill="${getSubjectColor(s.id)}" font-weight="700">${prog.total>0?Math.round(pct*100)+'%':'–'}</text>
+              </svg>
+            </div>
+            ${prog.avgGrade ? `<div class="s-avg-grade" style="background:${avgGradeColor(prog.avgGrade)}">${prog.avgGrade.toFixed(1)}</div>` : ''}
+          </div>`;
+      }).join('');
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Lernen' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>📚 Lernen</h1>
+        <div class="sub">Deine Lern-Aktionen auf einen Blick.</div>
+      </div>
+
+      <div class="lernen-quick-grid">
+        <div class="lernen-quick-card lernen-quick-daily" onclick="location.hash='#/daily-challenge'">
+          <div class="lernen-quick-icon">⚡</div>
+          <div class="lernen-quick-info">
+            <div class="lernen-quick-title">Daily Challenge</div>
+            <div class="lernen-quick-sub">Heute starten</div>
+          </div>
+        </div>
+        <div class="lernen-quick-card lernen-quick-srs" onclick="location.hash='#/srs'">
+          <div class="lernen-quick-icon">🃏</div>
+          <div class="lernen-quick-info">
+            <div class="lernen-quick-title">Wiederholen</div>
+            <div class="lernen-quick-sub">${srsDue > 0 ? `${srsDue} fällig` : 'Keine Karten fällig'}</div>
+          </div>
+        </div>
+        <div class="lernen-quick-card lernen-quick-bm" onclick="location.hash='#/lesezeichen'">
+          <div class="lernen-quick-icon">⭐</div>
+          <div class="lernen-quick-info">
+            <div class="lernen-quick-title">Lesezeichen</div>
+            <div class="lernen-quick-sub">${bookmarks.length} gespeichert</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lernen-search-row">
+        <input class="form-input" id="lernenSearch" placeholder="🔍 Fach suchen…" oninput="window.LF.filterLernenGrid(this.value)">
+      </div>
+
+      <div class="section-title" style="margin-top:24px">📚 Alle Fächer</div>
+      <div class="subjects-grid" id="lernenSubjectsGrid">${subjectCards}</div>
+    </div>`;
+}
+
+// ── Onboarding-Wizard (Mission 1, neu) ────
+// 4 Schritte (Hallo / Klasse+Name / Avatar / Fertig). Trigger in onAuthStateChanged.
+// Bestände ohne Klasse sehen nur Schritt 2+4 (Adrians Open-Q-2-Antwort).
+let _onboardingState = null;
+function renderOnboarding(opts = {}) {
+  // existierende Overlay killen
+  document.getElementById('onboardingOverlay')?.remove();
+  const isExistingNoKlasse = !!userData?.onboardedAt === false && !!opts.existingMissingKlasse;
+  // Bestands-User ohne Klasse: nur Schritt 2 + 4. Sonst alle 4.
+  _onboardingState = {
+    step: opts.fromStep ?? (isExistingNoKlasse ? 2 : 1),
+    name: userData?.name || currentUser?.displayName || '',
+    klasse: userData?.klasse ? String(userData.klasse) : '',
+    photoURL: userData?.photoURL || currentUser?.photoURL || null,
+    skipSteps: isExistingNoKlasse ? [1, 3] : []
+  };
+  _renderOnboardingStep();
+}
+
+function _renderOnboardingStep() {
+  const s = _onboardingState;
+  if (!s) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'onboardingOverlay';
+  overlay.className = 'wizard-overlay';
+
+  const dots = (active) => {
+    const total = 4;
+    return `<div class="wizard-progress-dots">${
+      Array.from({length: total}, (_, i) => `<span class="wp-dot ${i+1 <= active ? 'wp-active' : ''}"></span>`).join('')
+    }</div>`;
+  };
+
+  let body = '';
+  if (s.step === 1) {
+    body = `
+      <div class="wizard-step">
+        <div class="wizard-icon-large">⚡</div>
+        <h2>Willkommen!</h2>
+        <p>Wir richten dein Konto in 4 Schritten ein — dauert keine Minute.</p>
+        ${dots(1)}
+        <div class="wizard-actions">
+          <button class="btn btn-primary btn-lg" onclick="window.LF.onboardingNext()">Los geht's</button>
+        </div>
+      </div>`;
+  } else if (s.step === 2) {
+    body = `
+      <div class="wizard-step">
+        <div class="wizard-step-num">Schritt 2 von 4</div>
+        <h2>Wer bist du?</h2>
+        <div class="form-group">
+          <label class="form-label">Wie heißt du?</label>
+          <input class="form-input" id="onbName" value="${escapeHtml(s.name).replace(/"/g,'&quot;')}" maxlength="40" placeholder="Dein Name">
+          <div class="form-hint">So sehen dich Mitschüler in der Rangliste.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">In welcher Klasse bist du?</label>
+          <div class="onb-klasse-grid">
+            ${[5,6,7,8,9,10,11,12,13].map(k =>
+              `<button class="onb-klasse-btn ${String(s.klasse)===String(k) ? 'active' : ''}" onclick="window.LF.onboardingPickKlasse('${k}')">${k}</button>`
+            ).join('')}
+          </div>
+          <div class="form-hint">Wir schicken dir Aufgaben passend zur Klassenstufe.</div>
+        </div>
+        <div id="onbStep2Err" class="error-msg" style="display:none;margin:8px 0"></div>
+        ${dots(2)}
+        <div class="wizard-actions">
+          ${s.skipSteps.includes(1) ? '' : '<button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zurück</button>'}
+          <button class="btn btn-primary" onclick="window.LF.onboardingNext()">Weiter</button>
+        </div>
+      </div>`;
+  } else if (s.step === 3) {
+    body = `
+      <div class="wizard-step">
+        <div class="wizard-step-num">Schritt 3 von 4</div>
+        <h2>Wähle deinen Avatar.</h2>
+        <div class="avatar-picker" style="margin:16px 0">
+          ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.onboardingPickEmoji('${e}')">${e}</button>`).join('')}
+        </div>
+        <div class="form-hint">…oder lade ein Bild hoch:</div>
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-block;margin-top:8px">
+          📁 Bild hochladen
+          <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="window.LF.onboardingHandleFile(this)">
+        </label>
+        <div style="margin-top:16px">Aktuell:
+          <div class="profile-avatar-large" style="margin:12px auto 0">${
+            s.photoURL ? `<img src="${s.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">` : escapeHtml((s.name||'U')[0].toUpperCase())
+          }</div>
+        </div>
+        ${dots(3)}
+        <div class="wizard-actions">
+          <button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zurück</button>
+          <button class="btn btn-ghost" onclick="window.LF.onboardingSkip()">Überspringen</button>
+          <button class="btn btn-primary" onclick="window.LF.onboardingNext()">Weiter</button>
+        </div>
+      </div>`;
+  } else {
+    body = `
+      <div class="wizard-step">
+        <div class="wizard-step-num">Schritt 4 von 4</div>
+        <div class="wizard-icon-large">🎉</div>
+        <h2>Alles klar, ${escapeHtml(s.name || 'Lernender')}!</h2>
+        <p>So funktioniert die App:</p>
+        <ul class="wizard-tips">
+          <li>📚 Wähle ein Fach im „Lernen"-Tab und mach einen Test.</li>
+          <li>🔥 Lerne täglich für deinen Streak.</li>
+          <li>🏆 Schau in die Rangliste — deine Klasse ist Default.</li>
+          <li>👤 Im Profil findest du Erfolge, Statistiken und Inventar.</li>
+        </ul>
+        ${dots(4)}
+        <div class="wizard-actions">
+          <button class="btn btn-ghost" onclick="window.LF.onboardingFinish('profil')">Profil ansehen</button>
+          <button class="btn btn-primary" onclick="window.LF.onboardingFinish('app')">Zur App</button>
+        </div>
+      </div>`;
+  }
+
+  overlay.innerHTML = `<div class="wizard-card">${body}</div>`;
+  document.body.appendChild(overlay);
+}
+
+// ── Admin-User-Editor (Mission 1, neu) ────
+let adminEditState = null;
+async function renderAdminUserEdit(uid) {
+  // Lade User-Doc frisch
+  const all = await getAllUsers();
+  const u = all.find(x => x.uid === uid);
+  if (!u) { showToast('User nicht gefunden.', 'error'); return; }
+  adminEditState = { uid, original: u, draft: { ...u } };
+  document.getElementById('adminEditOverlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'adminEditOverlay';
+  overlay.className = 'lf-modal-overlay';
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  const grades = u.grades || {};
+  const gradeRows = Object.entries(grades).map(([key, g]) => {
+    const [subjectId, yearId, topicId] = key.split('__');
+    const subject = structure?.[subjectId];
+    const year    = subject?.years?.[yearId];
+    const topic   = year?.topics?.[topicId];
+    const label = `${subject?.name || subjectId} · ${year?.name || yearId} · ${topic?.name || topicId} · Note ${g.grade}`;
+    return `<div class="adm-grade-row">
+      <span>${escapeHtml(label)}</span>
+      <button class="btn btn-ghost btn-sm" onclick="window.LF.adminEditUserDeleteGrade('${escapeHtml(key)}')">✕</button>
+    </div>`;
+  }).join('') || '<div class="empty-state" style="padding:8px">Keine Noten</div>';
+
+  overlay.innerHTML = `
+    <div class="lf-modal-card lf-modal-large">
+      <div class="lf-modal-header">
+        <h3>User bearbeiten — ${escapeHtml(u.name || 'Unbekannt')}</h3>
+        <button class="btn-icon" onclick="document.getElementById('adminEditOverlay').remove()">✕</button>
+      </div>
+      <div class="lf-modal-body">
+        <div class="adm-section-title">Identität</div>
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" id="admEditName" value="${escapeHtml(u.name || '').replace(/"/g,'&quot;')}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Klasse</label>
+          <select class="form-input" id="admEditKlasse">
+            <option value="">— nicht gesetzt —</option>
+            ${[5,6,7,8,9,10,11,12,13].map(k => `<option value="${k}" ${String(u.klasse)===String(k)?'selected':''}>Klasse ${k}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-Mail (read-only)</label>
+          <input class="form-input" value="${escapeHtml(u.email || '')}" readonly>
+        </div>
+
+        <div class="adm-section-title">Rolle &amp; Status</div>
+        <div class="form-group">
+          <label class="form-label">Rolle</label>
+          <select class="form-input" id="admEditRole">
+            <option value="" ${!u.role?'selected':''}>Schüler</option>
+            <option value="tester" ${u.role==='tester'?'selected':''}>Tester</option>
+            <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+            <option value="claude" ${u.role==='claude'?'selected':''}>Claude (Test)</option>
+          </select>
+        </div>
+        <label class="adm-check-row">
+          <input type="checkbox" id="admEditBanned" ${u.isBanned?'checked':''}>
+          Account gesperrt
+        </label>
+        <label class="adm-check-row">
+          <input type="checkbox" id="admEditClaude" ${u.isClaude?'checked':''}>
+          isClaude (Test-Account)
+        </label>
+
+        <div class="adm-section-title">Cosmetics</div>
+        <div class="form-group">
+          <label class="form-label">Aktive Outline</label>
+          <select class="form-input" id="admEditOutline">
+            <option value="">— Default (Level) —</option>
+            ${OUTLINE_TIERS.map(t => `<option value="${t.id}" ${u.activeOutline===t.id?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Aktives Theme</label>
+          <select class="form-input" id="admEditTheme">
+            ${THEMES.map(t => `<option value="${t.id}" ${u.activeTheme===t.id?'selected':''}>${escapeHtml(t.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.adminEditUserUnlockOutlines()">Alle Outlines freischalten</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.adminEditUserUnlockThemes()">Alle Themes freischalten</button>
+        </div>
+
+        <div class="adm-section-title">Stats</div>
+        <div class="form-group">
+          <label class="form-label">XP</label>
+          <input class="form-input" id="admEditXp" type="number" value="${u.xp || 0}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Streak (Tage)</label>
+          <input class="form-input" id="admEditStreak" type="number" value="${u.streakCount || 0}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tests heute</label>
+          <input class="form-input" id="admEditTestsToday" type="number" value="${u.testsToday || 0}">
+        </div>
+
+        <div class="adm-section-title">Noten (${Object.keys(grades).length})</div>
+        <div class="adm-grade-list">${gradeRows}</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="window.LF.adminEditUserDeleteAllGrades()">Alle Noten löschen</button>
+
+        <div class="adm-section-title">Gefährliche Aktionen</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="window.LF.adminEditUserResetDoc()">Account-Doc zurücksetzen</button>
+        </div>
+      </div>
+      <div class="lf-modal-actions">
+        <button class="btn btn-ghost" onclick="document.getElementById('adminEditOverlay').remove()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="window.LF.adminEditUserSave()">Änderungen speichern</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 // ── Lesezeichen-Seite (F-19) ─────────────
@@ -2120,13 +2575,108 @@ function _updatePomodoroDisplay() {
 }
 
 // ── Profil-Seite ─────────────────────────
+// Mission 1: Profil als Heimat — 4 Tabs (Übersicht, Statistiken, Erfolge, Inventar).
+// Hash-Param `?tab=` springt direkt rein. Achievement-Tile-Click öffnet Modal.
 function renderProfile() {
-  const grades    = userData?.grades || {};
-  const subjects  = Object.values(structure || {});
+  const tab = _hashParam('tab') || 'uebersicht';
   const initial   = (currentUser.displayName || 'U')[0].toUpperCase();
   const xpInfo    = calcLevel(userData?.xp || 0);
-  const achieved  = new Set(userData?.achievements || []);
+  const role      = userRole();
+  const streak    = (() => { try { return calcStreak(); } catch { return 0; } })();
 
+  const tabBar = `
+    <div class="profile-tabs" id="profileTabs">
+      <button class="profile-tab ${tab === 'uebersicht' ? 'active' : ''}" onclick="window.LF.switchProfileTab('uebersicht')">Übersicht</button>
+      <button class="profile-tab ${tab === 'stats' ? 'active' : ''}"      onclick="window.LF.switchProfileTab('stats')">Statistiken</button>
+      <button class="profile-tab ${tab === 'erfolge' ? 'active' : ''}"    onclick="window.LF.switchProfileTab('erfolge')">Erfolge</button>
+      <button class="profile-tab ${tab === 'inventar' ? 'active' : ''}"   onclick="window.LF.switchProfileTab('inventar')">Inventar</button>
+    </div>`;
+
+  const header = `
+    <div class="profile-header-card">
+      <div class="profile-avatar-large ${outlineFor({activeOutline:userData?.activeOutline,xp:userData?.xp})}">${
+        (userData?.photoURL || currentUser.photoURL)
+          ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+          : initial
+      }</div>
+      <div class="profile-header-info">
+        <div class="profile-name">${escapeHtml(userData?.name || currentUser.displayName || 'Nutzer')} ${roleBadge(role)}</div>
+        <div class="profile-meta">
+          ${userData?.klasse ? `Klasse ${userData.klasse}` : '<span style="color:#f59e0b">Klasse nicht gesetzt</span>'}
+          · Lv.${xpInfo.level} ${xpInfo.title}
+          ${streak > 1 ? ` · 🔥 ${streak} Tage` : ''}
+        </div>
+        <div class="profile-email">${escapeHtml(currentUser.email || '')}</div>
+        <div class="profile-actions">
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.profileEditOpen()">Bearbeiten</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.doLogout()">Abmelden</button>
+        </div>
+      </div>
+    </div>`;
+
+  let content = '';
+  if (tab === 'stats') {
+    content = _renderProfileStatsTab();
+  } else if (tab === 'erfolge') {
+    content = _renderProfileErfolgeTab();
+  } else if (tab === 'inventar') {
+    content = _renderProfileInventarTab();
+  } else {
+    content = _renderProfileUebersichtTab();
+  }
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Profil' }])}
+    <div class="page">
+      <div class="page-header"><h1>Mein Profil</h1></div>
+      ${header}
+      ${tabBar}
+      <div class="profile-tab-content">${content}</div>
+
+      <!-- Bearbeitungs-Sheet (initial versteckt; profileEditOpen() schiebt rein) -->
+      <div id="profileEditForm" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-top:16px">
+        <div class="profile-avatar-large" id="profileAvatarPreview" style="margin:0 auto 12px">${
+          (userData?.photoURL || currentUser.photoURL)
+            ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+            : initial
+        }</div>
+        <label class="btn btn-ghost btn-sm" style="margin:6px auto;cursor:pointer;display:block;width:fit-content">
+          📁 Bild hochladen
+          <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
+                 onchange="window.LF.handleProfileFile(this)">
+        </label>
+        <div class="avatar-picker">
+          ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.pickEmoji('${e}',event)" title="${e}">${e}</button>`).join('')}
+        </div>
+        <div class="profile-edit-row">
+          <input class="form-input" id="profileNameInput"
+                 value="${(userData?.name || currentUser.displayName || '').replace(/"/g,'&quot;')}"
+                 placeholder="Anzeigename" maxlength="40">
+        </div>
+        <div class="profile-edit-row" style="margin-top:8px">
+          <label class="form-label" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Klassenstufe</label>
+          <select class="form-input" id="profileKlasseInput">
+            ${[5,6,7,8,9,10,11,12,13].map(k =>
+              `<option value="${k}" ${userData?.klasse == k ? 'selected' : ''}>Klasse ${k}</option>`
+            ).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary btn-sm" id="profileSaveBtn" onclick="window.LF.saveProfile()">Speichern</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.profileEditClose()">Abbrechen</button>
+        </div>
+      </div>
+    </div>`;
+
+  // Theme-Previews im Inventar-Tab nachzeichnen
+  if (tab === 'inventar') _drawThemePreviews();
+}
+
+// ── Profil-Tab: Übersicht ─────────────────
+function _renderProfileUebersichtTab() {
+  const grades   = userData?.grades || {};
+  const subjects = Object.values(structure || {});
+  const xpInfo   = calcLevel(userData?.xp || 0);
   const gradeRows = subjects.map(s => {
     const sGrades = Object.entries(grades).filter(([k]) => k.startsWith(s.id));
     if (!sGrades.length) return '';
@@ -2134,105 +2684,23 @@ function renderProfile() {
     const gi  = calcGrade(Math.max(0, 7 - avg), 6);
     return `
       <div class="grade-row">
-        <span>${getSubjectIcon(s.id)} ${s.name}</span>
+        <span>${getSubjectIcon(s.id)} ${escapeHtml(s.name)}</span>
         <div class="grade-badge" style="background:${gi.color}">${avg.toFixed(1)}</div>
       </div>`;
   }).filter(Boolean).join('') || '<div class="empty-state" style="padding:16px">Noch keine Noten vorhanden.</div>';
 
-  // Achievement grid
-  const achTiles = ACHIEVEMENTS.map(a => {
-    const unlocked = achieved.has(a.id);
-    return `
-      <div class="ach-tile ${unlocked ? 'ach-unlocked' : 'ach-locked'}" title="${a.title}: ${a.desc}${unlocked ? '' : ' (noch nicht freigeschaltet)'}">
-        <div class="ach-code" style="${unlocked ? `background:${a.color}` : ''}">${a.code}</div>
-        <div class="ach-title">${a.title}</div>
-        ${unlocked ? `<div class="ach-xp">+${a.xp} XP</div>` : `<div class="ach-xp ach-xp-locked">${a.xp} XP</div>`}
-      </div>`;
-  }).join('');
-
-  const achCount = achieved.size;
-
-  document.getElementById('app').innerHTML = `
-    ${renderNav([{ label: 'Profil' }])}
-    <div class="page">
-      <div class="page-header"><h1>Mein Profil</h1></div>
-
-      <div class="profile-grid">
-        <div class="profile-info-card">
-
-          <!-- Ansicht -->
-          <div id="profileView">
-            <div class="profile-avatar-large ${outlineFor({role:userRole(),activeOutline:userData?.activeOutline,xp:userData?.xp})}">${
-              (userData?.photoURL || currentUser.photoURL)
-                ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
-                : initial
-            }</div>
-            <div class="profile-name">${userData?.name || currentUser.displayName || 'Nutzer'} ${roleBadge(userRole())}</div>
-            <div class="profile-email">${currentUser.email}</div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
-              <button class="btn btn-secondary btn-sm" onclick="window.LF.profileEditOpen()">Bearbeiten</button>
-              <button class="btn btn-secondary btn-sm" onclick="window.LF.doLogout()">Abmelden</button>
-              <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Statistiken zur&uuml;cksetzen</button>
-            </div>
-          </div>
-
-          <!-- Bearbeitungsformular (versteckt) -->
-          <div id="profileEditForm" style="display:none;width:100%">
-            <div class="profile-avatar-large" id="profileAvatarPreview">${
-              (userData?.photoURL || currentUser.photoURL)
-                ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
-                : initial
-            }</div>
-
-            <!-- Bild hochladen -->
-            <label class="btn btn-ghost btn-sm" style="margin:6px 0;cursor:pointer" title="PNG hochladen (max. 512&times;512 px)">
-              &#x1F4C1; Bild hochladen
-              <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
-                     onchange="window.LF.handleProfileFile(this)">
-            </label>
-
-            <!-- Emoji-Picker -->
-            <div class="avatar-picker">
-              ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.pickEmoji('${e}',event)" title="${e}">${e}</button>`).join('')}
-            </div>
-
-            <!-- Name -->
-            <div class="profile-edit-row">
-              <input class="form-input profile-name-input" id="profileNameInput"
-                     value="${(userData?.name || currentUser.displayName || '').replace(/"/g,'&quot;')}"
-                     placeholder="Anzeigename" maxlength="40">
-            </div>
-
-            <!-- Klasse -->
-            <div class="profile-edit-row" style="margin-top:8px">
-              <label class="form-label" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Klassenstufe</label>
-              <select class="form-input" id="profileKlasseInput">
-                ${[5,6,7,8,9,10,11,12,13].map(k =>
-                  `<option value="${k}" ${userData?.klasse == k ? 'selected' : ''}>Klasse ${k}</option>`
-                ).join('')}
-              </select>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <button class="btn btn-primary btn-sm" id="profileSaveBtn" onclick="window.LF.saveProfile()">Speichern</button>
-              <button class="btn btn-ghost btn-sm" onclick="window.LF.profileEditClose()">Abbrechen</button>
-            </div>
-          </div>
-
-        </div>
-        <div class="grades-overview">
-          <h3>Ø Noten nach Fach</h3>
-          ${gradeRows}
-        </div>
+  return `
+    <div class="profile-grid">
+      <div class="grades-overview">
+        <h3>Ø Noten nach Fach</h3>
+        ${gradeRows}
       </div>
-
-      <!-- XP / Level (F-25) -->
-      <div class="xp-card">
+      <div class="xp-card" style="margin:0">
         <div class="xp-card-left">
           <div class="xp-level-badge">Lv.${xpInfo.level}</div>
           <div class="xp-card-info">
             <div class="xp-title">${xpInfo.title}</div>
-            <div class="xp-sub">${xpInfo.xpCurrent} / ${xpInfo.xpNeeded} XP bis Level ${xpInfo.level + 1}</div>
+            <div class="xp-sub">${xpInfo.xpCurrent} / ${xpInfo.xpNeeded} XP bis Stufe ${xpInfo.level + 1}</div>
           </div>
         </div>
         <div class="xp-card-right">
@@ -2243,49 +2711,306 @@ function renderProfile() {
           <div class="xp-total">Gesamt: ${xpInfo.totalXP} XP</div>
         </div>
       </div>
+    </div>
 
-      <!-- Streak-Kalender (F-27) -->
-      <div class="section-title" style="margin-top:32px;margin-bottom:12px">Lern-Aktivität</div>
-      ${renderStreakCalendar()}
+    <div class="section-title" style="margin-top:32px;margin-bottom:12px">Lern-Aktivität</div>
+    ${renderStreakCalendar()}
 
-      <!-- Achievement-Grid (F-24) -->
-      <div class="section-title" style="margin-top:32px;margin-bottom:12px">
-        Achievements
-        <span class="ach-count-badge">${achCount} / ${ACHIEVEMENTS.length}</span>
+    <div class="section-title" style="margin-top:32px;margin-bottom:12px">Lernbericht für Eltern teilen</div>
+    <div class="share-link-card">
+      <div class="share-link-info">
+        <div class="share-link-title">Lernbericht für Eltern</div>
+        <div class="share-link-sub">Teile deinen Lernfortschritt ohne Login</div>
       </div>
-      <div class="achievement-grid">${achTiles}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input class="share-link-input" id="shareLinkInput" readonly placeholder="Link wird gleich erstellt…">
+        <button class="btn btn-primary btn-sm" onclick="window.LF.createShareLink()">Link erstellen</button>
+        <button class="btn btn-ghost btn-sm" id="copyShareBtn" style="display:none" onclick="window.LF.copyShareLink()">Kopieren</button>
+      </div>
+    </div>
 
-      <!-- F-46: Eltern-Share-Link -->
-      <div class="section-title" style="margin-top:32px;margin-bottom:12px">Lernbericht teilen</div>
-      <div class="share-link-card">
-        <div class="share-link-info">
-          <div class="share-link-title">Eltern-Zugang</div>
-          <div class="share-link-sub">Teile deinen Lernfortschritt ohne Login</div>
+    <div style="margin-top:32px;text-align:center">
+      <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Alle meine Noten löschen</button>
+    </div>`;
+}
+
+// ── Profil-Tab: Statistiken ───────────────
+function _renderProfileStatsTab() {
+  const grades   = userData?.grades || {};
+  const subjects = Object.values(structure || {});
+  const allGrades = Object.values(grades).filter(g => g.grade);
+  const totalTests = allGrades.length;
+  if (totalTests === 0) {
+    return `<div class="empty-state"><div class="empty-icon">📊</div>Noch keine Tests gemacht — fang einfach an!</div>`;
+  }
+  const avgGrade   = (allGrades.reduce((s,g)=>s+g.grade,0)/totalTests).toFixed(2);
+  const bestGrade  = Math.min(...allGrades.map(g=>g.grade));
+  const streak     = calcStreak();
+
+  const studyTimeMap = userData?.studyTime || {};
+  const today = new Date();
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today); d.setDate(d.getDate() - (6 - i));
+    const key = d.toISOString().slice(0, 10);
+    return { label: d.toLocaleDateString('de-DE', { weekday: 'short' }), key, mins: studyTimeMap[key] || 0 };
+  });
+  const maxMins = Math.max(...last7.map(d => d.mins), 1);
+
+  const subjectBars = subjects.map(s => {
+    const prog = getSubjectProgress(s.id);
+    if (prog.total === 0) return '';
+    const color = getSubjectColor(s.id);
+    const pct   = Math.round(prog.tested / prog.total * 100);
+    const avgInfo = prog.avgGrade ? ` · Ø Note ${prog.avgGrade.toFixed(1)}` : '';
+    return `
+      <div class="subj-bar-row">
+        <div class="subj-bar-label">
+          <span>${getSubjectIcon(s.id)} ${escapeHtml(s.name)}</span>
+          <span class="subj-bar-meta">${prog.tested}/${prog.total} Themen${avgInfo}</span>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <input class="share-link-input" id="shareLinkInput" readonly placeholder="Link erzeugen…">
-          <button class="btn btn-primary btn-sm" onclick="window.LF.createShareLink()">Link erstellen</button>
-          <button class="btn btn-ghost btn-sm" id="copyShareBtn" style="display:none" onclick="window.LF.copyShareLink()">Kopieren</button>
-        </div>
+        <div class="subj-bar-track"><div class="subj-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <div class="subj-bar-pct" style="color:${color}">${pct}%</div>
+      </div>`;
+  }).join('');
+
+  const allAttempts = Object.entries(grades).flatMap(([key, g]) => {
+    const [subjectId, yearId, topicId] = key.split('__');
+    const subject = structure?.[subjectId];
+    const topic   = subject?.years?.[yearId]?.topics?.[topicId];
+    if (!subject || !topic) return [];
+    if (g.history?.length) {
+      return g.history.map(h => ({ subjectId, yearId, topicId, subject, topic, h }));
+    }
+    if (g.date?.seconds) {
+      const gp = _gp(g);
+      return [{ subjectId, yearId, topicId, subject, topic,
+        h: { points: gp.pts, maxPoints: gp.max, grade: g.grade,
+             date: new Date(g.date.seconds * 1000).toISOString() } }];
+    }
+    return [];
+  }).sort((a, b) => new Date(b.h.date) - new Date(a.h.date)).slice(0, 15);
+
+  const testRows = allAttempts.map(({ subjectId, yearId, topicId, subject, topic, h }) => `
+    <tr onclick="location.hash='#/fach/${subjectId}/${yearId}/${topicId}'" style="cursor:pointer">
+      <td>${getSubjectIcon(subjectId)} ${escapeHtml(subject.name)}</td>
+      <td>${escapeHtml(topic.name)}</td>
+      <td><span class="grade-pill" style="background:${gradeColor(h.grade)}">${h.grade}</span></td>
+      <td>${h.points}/${h.maxPoints}</td>
+      <td>${new Date(h.date).toLocaleDateString('de-DE')}</td>
+    </tr>`).join('');
+
+  const gradeCounts = [1,2,3,4,5,6].map(n => ({ grade: n, count: allGrades.filter(g => g.grade === n).length }));
+  const maxCount = Math.max(...gradeCounts.map(g=>g.count), 1);
+  const gradeDistribution = gradeCounts.map(({grade, count}) => `
+    <div class="grade-dist-col">
+      <div class="grade-dist-bar-wrap">
+        <div class="grade-dist-count">${count || ''}</div>
+        <div class="grade-dist-bar" style="height:${Math.round(count/maxCount*80)+8}px;background:${gradeColor(grade)}"></div>
+      </div>
+      <div class="grade-dist-label">${grade}</div>
+    </div>`).join('');
+
+  return `
+    <div class="stats-overview-grid">
+      <div class="stat-overview-card"><div class="soc-val">${totalTests}</div><div class="soc-lbl">Tests insgesamt</div></div>
+      <div class="stat-overview-card"><div class="soc-val" style="color:${gradeColor(Math.round(parseFloat(avgGrade)))}">${avgGrade}</div><div class="soc-lbl">Ø Note gesamt</div></div>
+      <div class="stat-overview-card"><div class="soc-val" style="color:${gradeColor(bestGrade)}">${bestGrade}</div><div class="soc-lbl">Beste Note</div></div>
+      <div class="stat-overview-card"><div class="soc-val">${streak}</div><div class="soc-lbl">🔥 Tage Streak</div></div>
+    </div>
+
+    <div class="stats-section-grid">
+      <div class="stats-card">
+        <div class="stats-card-title">📈 Fortschritt nach Fach</div>
+        <div class="subj-bars">${subjectBars || '<div class="empty-state" style="padding:16px">Keine Daten</div>'}</div>
+      </div>
+      <div class="stats-card">
+        <div class="stats-card-title">📊 Notenverteilung</div>
+        <div class="grade-distribution">${gradeDistribution}</div>
+        <div class="grade-dist-legend">Note 1 (sehr gut) → Note 6 (ungenügend)</div>
+      </div>
+    </div>
+
+    <div class="stats-card" style="margin-top:16px">
+      <div class="stats-card-title">🕐 Letzte Versuche</div>
+      ${testRows ? `
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead><tr><th>Fach</th><th>Thema</th><th>Note</th><th>Punkte</th><th>Datum</th></tr></thead>
+            <tbody>${testRows}</tbody>
+          </table>
+        </div>` : '<div class="empty-state" style="padding:16px">Keine Tests</div>'}
+    </div>
+
+    <div class="stats-card" style="margin-top:16px">
+      <div class="stats-card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>⏱ Lernzeit (letzte 7 Tage)</span>
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.exportGradesCSV()">⬇ CSV exportieren</button>
+      </div>
+      <div class="study-time-chart">
+        ${last7.map(d => `
+          <div class="stc-col">
+            <div class="stc-mins">${d.mins > 0 ? d.mins + ' min' : ''}</div>
+            <div class="stc-bar-wrap"><div class="stc-bar" style="height:${Math.round(d.mins/maxMins*80)+4}px"></div></div>
+            <div class="stc-label">${d.label}</div>
+          </div>`).join('')}
       </div>
     </div>`;
 }
 
+// ── Profil-Tab: Erfolge ───────────────────
+function _renderProfileErfolgeTab() {
+  const achieved = new Set(userData?.achievements || []);
+  const filter   = window.LF._achFilter || 'all';
+
+  let list = ACHIEVEMENTS.slice();
+  if (filter === 'unlocked') list = list.filter(a => achieved.has(a.id));
+  else if (filter === 'locked') list = list.filter(a => !achieved.has(a.id));
+
+  const tiles = list.map(a => {
+    const unlocked = achieved.has(a.id);
+    return `
+      <div class="ach-tile ${unlocked ? 'ach-unlocked' : 'ach-locked'}"
+           onclick="window.LF.openAchievement('${a.id}')"
+           title="${escapeHtml(a.title)}">
+        <div class="ach-code" style="${unlocked ? `background:${a.color}` : ''}">${a.code}</div>
+        <div class="ach-title">${escapeHtml(a.title)}</div>
+        ${unlocked ? `<div class="ach-xp">+${a.xp} XP</div>` : `<div class="ach-xp ach-xp-locked">${a.xp} XP</div>`}
+      </div>`;
+  }).join('') || '<div class="empty-state" style="padding:32px">Keine Erfolge in dieser Kategorie.</div>';
+
+  const fBtn = (k, label) => `<button class="ach-filter-chip ${filter===k?'active':''}" onclick="window.LF.setAchFilter('${k}')">${label}</button>`;
+
+  return `
+    <div class="ach-header-row">
+      <span class="ach-count-badge">Geschafft: ${achieved.size} von ${ACHIEVEMENTS.length}</span>
+      <div class="ach-filter-chips">
+        ${fBtn('all', 'Alle')}
+        ${fBtn('unlocked', 'Geschafft')}
+        ${fBtn('locked', 'Offen')}
+      </div>
+    </div>
+    <div class="achievement-grid">${tiles}</div>`;
+}
+
+// ── Profil-Tab: Inventar ──────────────────
+// Behält die Logik aus renderInventory(); wird hier als Tab-Inhalt gerendert.
+function _renderProfileInventarTab() {
+  const xp           = userData?.xp || 0;
+  const lvl          = calcLevel(xp).level;
+  const ownedThemes  = userData?.themes || ['default'];
+  const activeTheme  = userData?.activeTheme || 'default';
+  const activeOL     = userData?.activeOutline || null;
+  const isAdminTester = isAdmin() || userData?.role === 'tester';
+  const initial   = (userData?.name || currentUser.displayName || 'U')[0].toUpperCase();
+  const activeOlTier = OUTLINE_TIERS.find(t => t.id === activeOL) || outlineForLevel(lvl);
+  const activeThemeName = (THEMES.find(t => t.id === activeTheme) || {}).name || activeTheme;
+
+  const outlineCards = OUTLINE_TIERS.map(tier => {
+    const unlocked = lvl >= tier.level || isAdminTester || (userData?.outlines || []).includes(tier.id);
+    const active   = activeOL === tier.id || (!activeOL && tier.id === outlineForLevel(lvl).id);
+    const previewClass = unlocked ? tier.css : '';
+    return `
+      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
+           ${unlocked ? `onclick="window.LF.selectOutline('${tier.id}')"` : ''}>
+        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
+        <div class="inv-preview ${previewClass}">${tier.id === 'none' ? '—' : '◉'}</div>
+        <div class="inv-name">${escapeHtml(tier.name)}</div>
+        <div class="inv-meta">${unlocked ? `Level ${tier.level}` : `Erfordert Lv. ${tier.level}`}</div>
+        ${tier.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${tier.rarity}">${tier.rarity}</span>` : ''}
+      </div>`;
+  }).join('');
+
+  const themeCards = THEMES.map(t => {
+    const unlocked = ownedThemes.includes(t.id) || isAdminTester;
+    const active   = activeTheme === t.id;
+    return `
+      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
+           ${unlocked ? `onclick="window.LF.selectTheme('${t.id}')"` : ''}>
+        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
+        <div class="inv-theme-preview" data-theme-preview="${t.id}"></div>
+        <div class="inv-name">${escapeHtml(t.name)}</div>
+        <div class="inv-meta">${unlocked ? '✓ Freigeschaltet' : 'Chance auf Drop: 25% bei Note 1, 5% bei Note 2'}</div>
+        ${t.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${t.rarity}">${t.rarity}</span>` : ''}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="inv-active-banner">
+      <div class="inv-active-avatar ${activeOlTier.css || ''}">${
+        (userData?.photoURL || currentUser.photoURL)
+          ? `<img src="${userData.photoURL || currentUser.photoURL}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`
+          : initial
+      }</div>
+      <div class="inv-active-info">
+        <div class="inv-active-title">Aktiv</div>
+        <div class="inv-active-meta">${escapeHtml(userData?.name || currentUser.displayName || 'Du')} · Theme: ${escapeHtml(activeThemeName)}</div>
+        <div class="inv-active-hint">Tippe unten auf eine andere Karte zum Wechseln.</div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:24px">Avatar-Umrandungen — schalte sie frei beim Hochleveln</div>
+    <div class="inv-grid">${outlineCards}</div>
+
+    <div class="section-title" style="margin-top:32px">Farbpaletten — schalte sie frei mit guten Noten</div>
+    <div class="inv-grid">${themeCards}</div>`;
+}
+
+// Theme-Previews als Hintergrund auf data-theme-preview-Karten zeichnen
+function _drawThemePreviews() {
+  setTimeout(() => {
+    document.querySelectorAll('[data-theme-preview]').forEach(el => {
+      const t = el.dataset.themePreview;
+      const map = {
+        'default':   'linear-gradient(135deg,#6366f1,#a855f7)',
+        'ocean':     'linear-gradient(135deg,#0891b2,#22d3ee)',
+        'forest':    'linear-gradient(135deg,#16a34a,#4ade80)',
+        'sunset':    'linear-gradient(135deg,#ea580c,#fbbf24)',
+        'lavender':  'linear-gradient(135deg,#a855f7,#c4b5fd)',
+        'crimson':   'linear-gradient(135deg,#dc2626,#f87171)',
+        'mint':      'linear-gradient(135deg,#14b8a6,#5eead4)',
+        'cherry':    'linear-gradient(135deg,#ec4899,#f9a8d4)',
+        'carbon':    'linear-gradient(135deg,#171717,#525252)',
+        'aurora':    'linear-gradient(135deg,#6366f1,#a855f7,#ec4899,#06b6d4)',
+        'cyberpunk': 'linear-gradient(135deg,#0a0014,#ec4899,#8b5cf6)',
+      };
+      el.style.background = map[t] || map.default;
+    });
+  }, 0);
+}
+
 // ── Rangliste ────────────────────────────
+// Mission 1: 3 Tabs — Meine Klasse / Global / Fach. Default = Klasse, fällt
+// zurück auf Global wenn keine Klasse gesetzt. Solo-Empty-State per Open-Q-8.
 async function renderLeaderboard() {
+  const lbTab = window.LF._lbTab || 'klasse';
+  const myKlasse = userData?.klasse ? String(userData.klasse) : null;
+
   document.getElementById('app').innerHTML = `
     ${renderNav([{ label: 'Rangliste' }])}
     <div class="page">
       <div class="page-header">
         <h1>🏆 Rangliste</h1>
-        <div class="sub">Gesamte Testpunkte aller Themen summiert</div>
+        <div class="sub">Wer ist vorn?</div>
+      </div>
+      <div class="lb-tabs" id="lbTabs">
+        <button class="lb-tab ${lbTab==='klasse'?'active':''}" onclick="window.LF.switchLbTab('klasse')">Meine Klasse${myKlasse ? ` (${myKlasse})` : ''}</button>
+        <button class="lb-tab ${lbTab==='global'?'active':''}" onclick="window.LF.switchLbTab('global')">Global</button>
+        <button class="lb-tab ${lbTab==='fach'?'active':''}"   onclick="window.LF.switchLbTab('fach')">Nach Fach</button>
       </div>
       <div id="lbContent"><div class="spinner" style="margin:40px auto"></div></div>
     </div>`;
 
   let data = [];
   let permError = false;
-  try { data = await getLeaderboard(); }
+  try {
+    // Wenn der User in seiner Klasse-Tab ist und Klasse gesetzt: Server-side Filter.
+    // Sonst alle Docs holen, client-seitig im Fach-Tab gruppieren.
+    if (lbTab === 'klasse' && myKlasse) {
+      data = await getLeaderboard(myKlasse);
+    } else {
+      data = await getLeaderboard();
+    }
+  }
   catch(e) { if (e.code === 'permission-denied') permError = true; }
 
   if (permError) {
@@ -2301,9 +3026,54 @@ async function renderLeaderboard() {
     return;
   }
 
-  if (!data.length) {
+  // Helper: gemeinsamer Row-Renderer
+  const renderRow = (rank, u, score, count, isMe, scoreLabel = 'Pkt') => {
+    const medal = rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${rank}</span>`;
+    const av = u.photoURL
+      ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      : escapeHtml((u.displayName || '?')[0].toUpperCase());
+    return `
+      <div class="lb-row${isMe?' lb-me':''}">
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-avatar ${outlineFor(u)}">${av}</div>
+        <div class="lb-name">${escapeHtml(u.displayName||'Unbekannt')} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+        <div class="lb-meta">${count} ${count===1?scoreLabel.slice(0,4):scoreLabel}</div>
+        <div class="lb-score" style="color:var(--accent)">${score}</div>
+      </div>`;
+  };
+
+  // Empty-State je nach Tab
+  if (lbTab === 'klasse') {
+    if (!myKlasse) {
+      document.getElementById('lbContent').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🏫</div>
+          Wähle deine Klasse im Profil, um eine klassenspezifische Rangliste zu sehen.
+          <div style="margin-top:16px">
+            <button class="btn btn-primary btn-sm" onclick="location.hash='#/profil'">Klasse setzen</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.LF.switchLbTab('global')">Zur Globalen Rangliste</button>
+          </div>
+        </div>`;
+      return;
+    }
+    if (!data.length || (data.length === 1 && data[0].uid === currentUser?.uid)) {
+      // solo-Klasse oder keine Einträge
+      const me = data.find(u => u.uid === currentUser?.uid);
+      const meRow = me ? `<div class="lb-main"><div class="lb-main-title">Du in Klasse ${escapeHtml(myKlasse)}</div>${renderRow(1, me, Object.values(me.scores||{}).reduce((a,b)=>a+b,0), Object.keys(me.scores||{}).length, true)}</div>` : '';
+      document.getElementById('lbContent').innerHTML = `
+        ${meRow}
+        <div class="empty-state" style="margin-top:16px">
+          <div class="empty-icon">👋</div>
+          Bisher bist du der Einzige in Klasse ${escapeHtml(myKlasse)} — frag deine Mitschüler!
+          <div style="margin-top:16px">
+            <button class="btn btn-ghost btn-sm" onclick="window.LF.switchLbTab('global')">Zur Globalen Rangliste</button>
+          </div>
+        </div>`;
+      return;
+    }
+  } else if (!data.length) {
     document.getElementById('lbContent').innerHTML =
-      `<div class="empty-state"><div class="empty-icon">🏆</div>Noch keine Einträge.<br>Mache Tests um in die Rangliste aufgenommen zu werden!</div>`;
+      `<div class="empty-state"><div class="empty-icon">🏆</div>Noch keine Einträge — mach einen Test, um in die Rangliste zu kommen!</div>`;
     return;
   }
 
@@ -2319,79 +3089,64 @@ async function renderLeaderboard() {
     return { ...u, subjectTotals, overall: all.reduce((a,b)=>a+b,0), testCount: all.length };
   }).filter(u => u.testCount > 0);
 
-  const renderRow = (rank, u, score, count, isMe) => {
-    const medal = rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${rank}</span>`;
-    const av = u.photoURL
-      ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-      : (u.displayName || '?')[0].toUpperCase();
-    return `
-      <div class="lb-row${isMe?' lb-me':''}">
-        <div class="lb-rank">${medal}</div>
-        <div class="lb-avatar ${outlineFor(u)}">${av}</div>
-        <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
-        <div class="lb-meta">${count} Test${count!==1?'s':''}</div>
-        <div class="lb-score" style="color:var(--accent)">${score}</div>
-      </div>`;
-  };
+  if (lbTab === 'fach') {
+    // Tab "Nach Fach": pro-Fach-Top-5 + zusätzlich XP-Liste am Ende
+    const subjectGridHtml = subjects.map(s => {
+      const ranked = users.filter(u=>u.subjectTotals[s.id]).sort((a,b)=>b.subjectTotals[s.id].total-a.subjectTotals[s.id].total).slice(0,5);
+      if (!ranked.length) return '';
+      const color = getSubjectColor(s.id);
+      return `
+        <div class="lb-card">
+          <div class="lb-card-head" style="border-top:3px solid ${color}">${getSubjectIcon(s.id)} ${escapeHtml(s.name)}</div>
+          ${ranked.map((u,i)=>renderRow(i+1,u,u.subjectTotals[s.id].total,u.subjectTotals[s.id].count,u.uid===currentUser?.uid,'Tests')).join('')}
+        </div>`;
+    }).filter(Boolean).join('');
 
+    document.getElementById('lbContent').innerHTML = subjectGridHtml
+      ? `<div class="lb-grid">${subjectGridHtml}</div>`
+      : `<div class="empty-state"><div class="empty-icon">📚</div>Noch keine Fach-Daten vorhanden.</div>`;
+    return;
+  }
+
+  // Tabs "klasse" + "global": gleiche Darstellung — Top 10 Punkte + Top 10 XP
   const top10 = [...users].sort((a,b)=>b.overall-a.overall).slice(0,10);
-  const top10Html = top10.map((u,i)=>renderRow(i+1,u,u.overall,u.testCount,u.uid===currentUser?.uid)).join('');
+  const top10Html = top10.map((u,i)=>renderRow(i+1,u,u.overall,u.testCount,u.uid===currentUser?.uid,'Tests')).join('');
 
-  const subjectGridHtml = subjects.map(s => {
-    const ranked = users.filter(u=>u.subjectTotals[s.id]).sort((a,b)=>b.subjectTotals[s.id].total-a.subjectTotals[s.id].total).slice(0,5);
-    if (!ranked.length) return '';
-    const color = getSubjectColor(s.id);
-    return `
-      <div class="lb-card">
-        <div class="lb-card-head" style="border-top:3px solid ${color}">${getSubjectIcon(s.id)} ${s.name}</div>
-        ${ranked.map((u,i)=>renderRow(i+1,u,u.subjectTotals[s.id].total,u.subjectTotals[s.id].count,u.uid===currentUser?.uid)).join('')}
-      </div>`;
-  }).filter(Boolean).join('');
-
-  // XP-Rangliste
-  const xpSorted = [...data].filter(u => u.xp > 0).sort((a,b) => (b.xp||0)-(a.xp||0)).slice(0,10);
+  const xpSorted = [...users].filter(u => u.xp > 0).sort((a,b) => (b.xp||0)-(a.xp||0)).slice(0,10);
   const xpHtml = xpSorted.length ? xpSorted.map((u,i) => {
     const xi = calcLevel(u.xp || 0);
     const medal = i < 3 ? ['🥇','🥈','🥉'][i] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`;
     const av = u.photoURL
       ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
-      : (u.displayName||'?')[0].toUpperCase();
+      : escapeHtml((u.displayName||'?')[0].toUpperCase());
     const isMe = u.uid === currentUser?.uid;
     return `
       <div class="lb-row${isMe?' lb-me':''}">
         <div class="lb-rank">${medal}</div>
         <div class="lb-avatar ${outlineFor(u)}">${av}</div>
-        <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
-        <div class="lb-meta">Lv.${xi.level} ${xi.title}</div>
+        <div class="lb-name">${escapeHtml(u.displayName||'Unbekannt')} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+        <div class="lb-meta">Lv.${xi.level} ${escapeHtml(xi.title)}</div>
         <div class="lb-score" style="color:#f59e0b">${u.xp} XP</div>
       </div>`;
   }).join('') : '<div class="empty-state" style="padding:24px">Noch keine XP-Daten vorhanden.</div>';
 
+  const scopeLabel = lbTab === 'klasse' ? `Klasse ${escapeHtml(myKlasse)}` : 'Global';
   document.getElementById('lbContent').innerHTML = `
-    <div class="lb-tabs" id="lbTabs">
-      <button class="lb-tab active" onclick="window.LF.switchLbTab('punkte',this)">Testpunkte</button>
-      <button class="lb-tab" onclick="window.LF.switchLbTab('xp',this)">XP / Level</button>
-    </div>
-    <div id="lbPunkte">
-      <div class="lb-main">
-        <div class="lb-main-title">Gesamt — Top 10</div>
-        <div class="lb-header-row">
-          <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
-          <span class="lb-name">Name</span><span class="lb-meta">Tests</span><span class="lb-score">Pkt</span>
-        </div>
-        ${top10Html}
+    <div class="lb-main">
+      <div class="lb-main-title">Testpunkte — ${scopeLabel} Top 10</div>
+      <div class="lb-header-row">
+        <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
+        <span class="lb-name">Name</span><span class="lb-meta">Tests</span><span class="lb-score">Pkt</span>
       </div>
-      ${subjectGridHtml ? `<div class="section-title" style="margin-top:32px;margin-bottom:16px">Nach Fach</div><div class="lb-grid">${subjectGridHtml}</div>` : ''}
+      ${top10Html}
     </div>
-    <div id="lbXP" style="display:none">
-      <div class="lb-main">
-        <div class="lb-main-title">XP-Rangliste — Top 10</div>
-        <div class="lb-header-row">
-          <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
-          <span class="lb-name">Name</span><span class="lb-meta">Level</span><span class="lb-score">XP</span>
-        </div>
-        ${xpHtml}
+    <div class="lb-main" style="margin-top:24px">
+      <div class="lb-main-title">XP-Rangliste — ${scopeLabel} Top 10</div>
+      <div class="lb-header-row">
+        <span class="lb-rank">Pl.</span><span class="lb-avatar"></span>
+        <span class="lb-name">Name</span><span class="lb-meta">Stufe</span><span class="lb-score">XP</span>
       </div>
+      ${xpHtml}
     </div>`;
 }
 
@@ -2745,6 +3500,7 @@ async function renderAdmin() {
             <div class="admin-user-meta">${u.email || '–'} · ${testCount} Tests · beigetreten ${joined}</div>
           </div>
           <div class="admin-user-actions">
+            <button class="btn btn-primary btn-sm" onclick="window.LF.adminEditUser('${u.uid}')">Bearbeiten</button>
             ${u.isBanned
               ? `<button class="btn btn-secondary btn-sm" onclick="window.LF.adminUnban('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Entsperren</button>`
               : `<button class="btn btn-danger btn-sm" onclick="window.LF.adminBan('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Sperren</button>`
@@ -3295,6 +4051,12 @@ function renderHelp() {
       <div class="page-header">
         <h1>Hilfe &amp; Dokumentation</h1>
         <div class="sub">Vollständige Übersicht aller Funktionen von LearningForge</div>
+      </div>
+
+      <div class="help-section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+        <h2 class="help-section-title" style="margin-bottom:8px">🚀 Erste Schritte (nochmal)</h2>
+        <p style="color:var(--text-muted);margin-bottom:12px">Willkommens-Wizard erneut starten — wenn du nochmal durch die Einrichtung willst.</p>
+        <button class="btn btn-secondary btn-sm" onclick="window.LF.openOnboarding(1)">Willkommens-Tour erneut zeigen</button>
       </div>
 
       <div class="help-toc">
@@ -4968,6 +5730,288 @@ window.LF = {
   }
 };
 
+// ── Mission 1 — Neue window.LF-Handler ────────────────────
+
+// Profil-Tab-Switch
+window.LF.switchProfileTab = (tab) => {
+  // Update Hash mit ?tab=xy. route() greift dann renderProfile() → liest tab.
+  const allowed = ['uebersicht','stats','erfolge','inventar'];
+  const safe = allowed.includes(tab) ? tab : 'uebersicht';
+  location.hash = `#/profil?tab=${safe}`;
+};
+
+// Achievement-Modal öffnen
+window.LF.openAchievement = (id) => {
+  const a = ACHIEVEMENTS.find(x => x.id === id);
+  if (!a) return;
+  const achieved = new Set(userData?.achievements || []);
+  const unlocked = achieved.has(a.id);
+
+  // Progress berechnen, falls progress() definiert
+  let progressHtml = '';
+  if (typeof a.progress === 'function') {
+    try {
+      const ctx = { streak: calcStreak() };
+      const p = a.progress(userData || {}, ctx);
+      if (p && p.total > 0) {
+        const pct = Math.min(100, Math.round((p.current / p.total) * 100));
+        progressHtml = `
+          <div class="ach-modal-progress">
+            <div class="ach-modal-progress-label">Fortschritt: ${p.current} / ${p.total}</div>
+            <div class="ach-modal-progress-bar">
+              <div class="ach-modal-progress-fill" style="width:${pct}%;background:${a.color}"></div>
+            </div>
+            <div class="ach-modal-progress-pct">${pct}%</div>
+          </div>`;
+      }
+    } catch(e) { /* silent */ }
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'lf-modal-overlay';
+  overlay.id = 'achievementModalOverlay';
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.innerHTML = `
+    <div class="lf-modal-card">
+      <div class="lf-modal-header">
+        <h3>${escapeHtml(a.title)}</h3>
+        <button class="btn-icon" onclick="window.LF.closeAchievement()">✕</button>
+      </div>
+      <div class="lf-modal-body" style="text-align:center">
+        <div class="ach-modal-code" style="${unlocked ? `background:${a.color}` : ''}">${a.code}</div>
+        <div class="ach-modal-xp" style="color:${unlocked ? a.color : 'var(--text-muted)'}">+${a.xp} XP</div>
+        <div class="ach-modal-desc">${escapeHtml(a.longDesc || a.desc)}</div>
+        ${progressHtml}
+        <div class="ach-modal-status">
+          Status: ${unlocked ? '🔓 Freigeschaltet' : '🔒 Noch nicht freigeschaltet'}
+        </div>
+      </div>
+      <div class="lf-modal-actions">
+        <button class="btn btn-primary" onclick="window.LF.closeAchievement()">Schließen</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+};
+window.LF.closeAchievement = () => {
+  document.getElementById('achievementModalOverlay')?.remove();
+};
+
+// Achievement-Filter (Erfolge-Tab)
+window.LF.setAchFilter = (f) => {
+  window.LF._achFilter = f;
+  // Tab neu rendern
+  if ((_hashParam('tab') || 'uebersicht') === 'erfolge') renderProfile();
+};
+
+// Leaderboard-Tab-Switch (Mission 1: klasse / global / fach)
+window.LF.switchLbTab = (tab) => {
+  window.LF._lbTab = tab;
+  renderLeaderboard();
+};
+
+// Lernen-Hub: Live-Filter-Suche
+window.LF.filterLernenGrid = (q) => {
+  const ql = String(q || '').toLowerCase().trim();
+  const grid = document.getElementById('lernenSubjectsGrid');
+  if (!grid) return;
+  grid.querySelectorAll('.subject-card').forEach(card => {
+    const name = card.querySelector('.s-name')?.textContent?.toLowerCase() || '';
+    card.style.display = (!ql || name.includes(ql)) ? '' : 'none';
+  });
+};
+
+// ── Onboarding-Wizard-Handler ─────────────
+window.LF.openOnboarding = (fromStep) => renderOnboarding({ fromStep });
+
+window.LF.onboardingNext = async () => {
+  const s = _onboardingState;
+  if (!s) return;
+  if (s.step === 2) {
+    const nameEl = document.getElementById('onbName');
+    const name = nameEl?.value?.trim() || '';
+    const errEl = document.getElementById('onbStep2Err');
+    if (name.length < 2) {
+      if (errEl) { errEl.textContent = 'Bitte gib einen Namen ein (mindestens 2 Buchstaben).'; errEl.style.display = 'block'; }
+      return;
+    }
+    if (!s.klasse) {
+      if (errEl) { errEl.textContent = 'Bitte wähle deine Klasse.'; errEl.style.display = 'block'; }
+      return;
+    }
+    s.name = name;
+  }
+  // Nächster Schritt — skip skippable
+  let next = s.step + 1;
+  while (s.skipSteps.includes(next) && next < 4) next++;
+  s.step = Math.min(next, 4);
+  _renderOnboardingStep();
+};
+window.LF.onboardingBack = () => {
+  const s = _onboardingState;
+  if (!s) return;
+  let prev = s.step - 1;
+  while (s.skipSteps.includes(prev) && prev > 1) prev--;
+  s.step = Math.max(prev, 1);
+  _renderOnboardingStep();
+};
+window.LF.onboardingPickKlasse = (k) => {
+  if (!_onboardingState) return;
+  _onboardingState.klasse = String(k);
+  _renderOnboardingStep();
+};
+window.LF.onboardingPickEmoji = (emoji) => {
+  if (!_onboardingState) return;
+  _onboardingState.photoURL = emojiToPhotoURL(emoji) || _onboardingState.photoURL;
+  _renderOnboardingStep();
+};
+window.LF.onboardingHandleFile = async (input) => {
+  if (!_onboardingState) return;
+  const file = input.files?.[0];
+  if (!file) return;
+  const dataUrl = await _resizeToDataUrl(file);
+  if (dataUrl) {
+    _onboardingState.photoURL = dataUrl;
+    _renderOnboardingStep();
+  } else {
+    showToast('Bild konnte nicht geladen werden.', 'error');
+  }
+};
+window.LF.onboardingSkip = () => {
+  // Skipt Schritt 3 (Avatar) — Default = Buchstabe in Akzentfarbe (kein photoURL)
+  if (_onboardingState) {
+    _onboardingState.photoURL = null;
+    _onboardingState.step = 4;
+  }
+  _renderOnboardingStep();
+};
+window.LF.onboardingFinish = async (target) => {
+  const s = _onboardingState;
+  if (!s) return;
+  // Speichern: name, klasse, photoURL, onboardedAt
+  try {
+    if (currentUser?.uid) {
+      await setUserKlasse(currentUser.uid, s.klasse);
+      const patch = {};
+      if (s.name && s.name !== userData?.name) patch.name = s.name;
+      if (s.photoURL && s.photoURL !== userData?.photoURL) patch.photoURL = s.photoURL;
+      if (Object.keys(patch).length) {
+        try { await updateUserProfile(currentUser.uid, s.name, s.photoURL); } catch(e) { console.warn('[onboarding-profile]', e); }
+      }
+      await markOnboarded(currentUser.uid);
+      // Locale State syncen
+      userData = { ...(userData || {}), name: s.name, klasse: s.klasse, photoURL: s.photoURL, onboardedAt: Date.now() };
+    }
+  } catch(e) {
+    console.error('[onboarding-save]', e);
+    showToast('Konnte nicht speichern, versuch\'s später nochmal.', 'error');
+  }
+  document.getElementById('onboardingOverlay')?.remove();
+  _onboardingState = null;
+  if (target === 'profil') location.hash = '#/profil';
+  else { location.hash = '#/'; route(); }
+};
+
+// ── Admin-User-Editor-Handler ─────────────
+window.LF.adminEditUser = (uid) => renderAdminUserEdit(uid);
+
+window.LF.adminEditUserSave = async () => {
+  const s = adminEditState;
+  if (!s) return;
+  const name    = document.getElementById('admEditName')?.value.trim() || '';
+  const klasse  = document.getElementById('admEditKlasse')?.value || '';
+  const role    = document.getElementById('admEditRole')?.value || '';
+  const banned  = document.getElementById('admEditBanned')?.checked || false;
+  const isClaude = document.getElementById('admEditClaude')?.checked || false;
+  const outline = document.getElementById('admEditOutline')?.value || '';
+  const theme   = document.getElementById('admEditTheme')?.value || '';
+  const xp      = parseInt(document.getElementById('admEditXp')?.value) || 0;
+  const streak  = parseInt(document.getElementById('admEditStreak')?.value) || 0;
+  const testsToday = parseInt(document.getElementById('admEditTestsToday')?.value) || 0;
+  const patch = {
+    name, isBanned: banned, isClaude,
+    activeOutline: outline || null, activeTheme: theme || 'default',
+    xp, streakCount: streak, testsToday
+  };
+  if (klasse) patch.klasse = String(klasse);
+  if (role) patch.role = role; else patch.role = null;
+  try {
+    await adminPatchUser(s.uid, patch);
+    showToast('Änderungen gespeichert.', 'success');
+    document.getElementById('adminEditOverlay')?.remove();
+    adminEditState = null;
+    // Liste neu laden
+    if (location.hash.startsWith('#/admin')) renderAdmin();
+  } catch(e) {
+    console.error('[adminEditSave]', e);
+    showToast('Konnte nicht speichern: ' + (e.message || 'Unbekannt'), 'error');
+  }
+};
+
+window.LF.adminEditUserUnlockOutlines = async () => {
+  const s = adminEditState;
+  if (!s) return;
+  const allOutlines = OUTLINE_TIERS.map(t => t.id);
+  await adminUnlockAllForUser(s.uid, allOutlines, s.original.themes || []);
+  showToast('Alle Outlines freigeschaltet.', 'success');
+};
+
+window.LF.adminEditUserUnlockThemes = async () => {
+  const s = adminEditState;
+  if (!s) return;
+  await adminUnlockAllForUser(s.uid, s.original.outlines || [], ALL_THEME_IDS);
+  showToast('Alle Themes freigeschaltet.', 'success');
+};
+
+window.LF.adminEditUserDeleteGrade = async (key) => {
+  const s = adminEditState;
+  if (!s) return;
+  if (!confirm('Diese Note wirklich löschen?')) return;
+  try {
+    // Hard Rule 4: kein update() für Partial-Writes auf evtl. fehlende Docs.
+    // set+merge mit FieldValue.delete() entfernt den Map-Key sauber.
+    await db().collection('users').doc(s.uid).set({
+      grades: { [key]: firebase.firestore.FieldValue.delete() }
+    }, { merge: true });
+    showToast('Note gelöscht.', 'success');
+    renderAdminUserEdit(s.uid);
+  } catch(e) {
+    showToast('Konnte nicht löschen: ' + e.message, 'error');
+  }
+};
+
+window.LF.adminEditUserDeleteAllGrades = async () => {
+  const s = adminEditState;
+  if (!s) return;
+  if (!confirm('WIRKLICH alle Noten dieses Users löschen?')) return;
+  try {
+    await adminPatchUser(s.uid, { grades: {} });
+    showToast('Alle Noten gelöscht.', 'success');
+    renderAdminUserEdit(s.uid);
+  } catch(e) {
+    showToast('Fehler: ' + e.message, 'error');
+  }
+};
+
+window.LF.adminEditUserResetDoc = async () => {
+  const s = adminEditState;
+  if (!s) return;
+  if (!confirm(`Wirklich ${s.original.name || 'diesen User'}'s Account-Doc zurücksetzen? Alle Noten, XP und Streak gehen verloren.`)) return;
+  if (!confirm('Sicher? Diese Aktion kann nicht rückgängig gemacht werden.')) return;
+  try {
+    await adminPatchUser(s.uid, {
+      grades: {}, xp: 0, streakCount: 0, achievements: [],
+      bookmarks: [], notes: {}, srs: {}, studyTime: {},
+      totalQuestionsAnswered: 0, srsReviewsTotal: 0, dailyChallengesCompleted: 0
+    });
+    showToast('Account zurückgesetzt.', 'success');
+    document.getElementById('adminEditOverlay')?.remove();
+    adminEditState = null;
+    if (location.hash.startsWith('#/admin')) renderAdmin();
+  } catch(e) {
+    showToast('Fehler: ' + e.message, 'error');
+  }
+};
+
 function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, subject, topic) {
   setupTabSwitchDetection();
   testState = {
@@ -5111,9 +6155,19 @@ window.LF.submitTest = async () => {
         name: currentUser.displayName || 'Nutzer',
         subject: subjectId, topic: topicId, grade: bestInfo.grade
       }).catch(() => {});
+      const extras = {
+        klasse:        userData?.klasse != null ? String(userData.klasse) : undefined,
+        activeOutline: userData?.activeOutline ?? undefined,
+        activeTheme:   userData?.activeTheme   ?? undefined,
+        xp:            userData?.xp,
+        role:          userData?.role,
+        streak:        userData?.streakCount,
+        studyMins:     Object.values(userData?.studyTime || {}).reduce((a, b) => a + b, 0)
+      };
       await updateLeaderboard(
         currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
-        subjectId, yearId, topicId, bestInfo.grade, bestRun.points
+        subjectId, yearId, topicId, bestInfo.grade, bestRun.points,
+        extras
       ).catch(console.error);
     }
 
@@ -6270,14 +7324,28 @@ let _pendingProfilePhotoURL = null;
 
 window.LF.profileEditOpen = () => {
   _pendingProfilePhotoURL = null;
-  document.getElementById('profileView').style.display     = 'none';
-  document.getElementById('profileEditForm').style.display = '';
+  // Mission 1: profileView wrapper wurde im neuen Profile-Layout entfernt;
+  // profileHeaderCard ist die View-Repräsentation. Optional-chain um Crash zu vermeiden.
+  const view = document.getElementById('profileView') || document.querySelector('.profile-header-card');
+  const tabs = document.querySelector('.profile-tabs');
+  const tabContent = document.querySelector('.profile-tab-content');
+  const form = document.getElementById('profileEditForm');
+  if (view) view.style.display = 'none';
+  if (tabs) tabs.style.display = 'none';
+  if (tabContent) tabContent.style.display = 'none';
+  if (form) form.style.display = '';
 };
 
 window.LF.profileEditClose = () => {
   _pendingProfilePhotoURL = null;
-  document.getElementById('profileView').style.display     = '';
-  document.getElementById('profileEditForm').style.display = 'none';
+  const view = document.getElementById('profileView') || document.querySelector('.profile-header-card');
+  const tabs = document.querySelector('.profile-tabs');
+  const tabContent = document.querySelector('.profile-tab-content');
+  const form = document.getElementById('profileEditForm');
+  if (view) view.style.display = '';
+  if (tabs) tabs.style.display = '';
+  if (tabContent) tabContent.style.display = '';
+  if (form) form.style.display = 'none';
 };
 
 window.LF.pickEmoji = (emoji, ev) => {
@@ -6318,8 +7386,11 @@ window.LF.saveProfile = async () => {
   try {
     await updateUserProfile(currentUser.uid, newName, photoURL);
     if (newKlasse) {
-      await db().collection('users').doc(currentUser.uid).set({ klasse: newKlasse }, { merge: true });
-      userData.klasse = newKlasse;
+      // Mission 1: setUserKlasse mirroret zusätzlich auf leaderboard-Doc, damit
+      // klassenspezifische Rangliste den User sofort einsortiert (statt erst nach
+      // nächstem Test). String-standardisiert (Marcus' Design).
+      await setUserKlasse(currentUser.uid, newKlasse);
+      userData.klasse = String(newKlasse);
     }
     userData.name     = newName;
     userData.photoURL = photoURL;
@@ -6337,80 +7408,17 @@ window.LF.saveProfile = async () => {
 // ════════════════════════════════════════════════════════════════
 //  Inventar — Outlines + Themes
 // ════════════════════════════════════════════════════════════════
+// Mission 1: standalone renderInventory() ist obsolet — Route redirected zu
+// #/profil?tab=inventar. Wird intern noch von selectOutline/selectTheme als
+// "Tab neu zeichnen" benutzt: location.hash = same value triggert kein
+// hashchange-Event, also direkt renderProfile() callen wenn wir schon dort sind.
 function renderInventory() {
-  const xp           = userData?.xp || 0;
-  const lvl          = calcLevel(xp).level;
-  const ownedThemes  = userData?.themes || ['default'];
-  const activeTheme  = userData?.activeTheme || 'default';
-  const activeOL     = userData?.activeOutline || null;
-  const isAdminTester = isAdmin() || userData?.role === 'tester';
-
-  // Outline-Karten
-  const outlineCards = OUTLINE_TIERS.map(tier => {
-    const unlocked = lvl >= tier.level || isAdminTester || (userData?.outlines || []).includes(tier.id);
-    const active   = activeOL === tier.id || (!activeOL && tier.id === outlineForLevel(lvl).id);
-    const previewClass = unlocked ? tier.css : '';
-    return `
-      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
-           ${unlocked ? `onclick="window.LF.selectOutline('${tier.id}')"` : ''}>
-        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
-        <div class="inv-preview ${previewClass}">${tier.id === 'none' ? '—' : '◉'}</div>
-        <div class="inv-name">${tier.name}</div>
-        <div class="inv-meta">${unlocked ? `Level ${tier.level}` : `Erfordert Lv. ${tier.level}`}</div>
-        ${tier.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${tier.rarity}">${tier.rarity}</span>` : ''}
-      </div>`;
-  }).join('');
-
-  // Theme-Karten
-  const themeCards = THEMES.map(t => {
-    const unlocked = ownedThemes.includes(t.id) || isAdminTester;
-    const active   = activeTheme === t.id;
-    return `
-      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
-           ${unlocked ? `onclick="window.LF.selectTheme('${t.id}')"` : ''}>
-        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
-        <div class="inv-theme-preview" data-theme-preview="${t.id}"></div>
-        <div class="inv-name">${t.name}</div>
-        <div class="inv-meta">${unlocked ? '&#10003; Freigeschaltet' : 'Erspielen mit Note 1 (25%) oder 2 (5%)'}</div>
-        ${t.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${t.rarity}">${t.rarity}</span>` : ''}
-      </div>`;
-  }).join('');
-
-  document.getElementById('app').innerHTML = `
-    ${renderNav([{ label: 'Inventar' }])}
-    <div class="page">
-      <div class="page-header">
-        <h1>&#127919; Inventar</h1>
-        <div class="sub">${isAdminTester ? `<span style="color:var(--accent)">${roleBadge(userRole())} Als ${userRole()} sind alle Outlines + Themes freigeschaltet.</span>` : `Du bist Level ${lvl}. Schalte mehr durch h&ouml;heres Level oder gute Noten frei.`}</div>
-      </div>
-
-      <div class="section-title">Avatar-Umrandungen (durch Level)</div>
-      <div class="inv-grid">${outlineCards}</div>
-
-      <div class="section-title" style="margin-top:32px">App-Themes (durch Note 1 oder 2)</div>
-      <div class="inv-grid">${themeCards}</div>
-    </div>`;
-
-  // Theme-Previews zeichnen (kleine Farb-Kacheln)
-  setTimeout(() => {
-    document.querySelectorAll('[data-theme-preview]').forEach(el => {
-      const t = el.dataset.themePreview;
-      const map = {
-        'default':   'linear-gradient(135deg,#6366f1,#a855f7)',
-        'ocean':     'linear-gradient(135deg,#0891b2,#22d3ee)',
-        'forest':    'linear-gradient(135deg,#16a34a,#4ade80)',
-        'sunset':    'linear-gradient(135deg,#ea580c,#fbbf24)',
-        'lavender':  'linear-gradient(135deg,#a855f7,#c4b5fd)',
-        'crimson':   'linear-gradient(135deg,#dc2626,#f87171)',
-        'mint':      'linear-gradient(135deg,#14b8a6,#5eead4)',
-        'cherry':    'linear-gradient(135deg,#ec4899,#f9a8d4)',
-        'carbon':    'linear-gradient(135deg,#171717,#525252)',
-        'aurora':    'linear-gradient(135deg,#6366f1,#a855f7,#ec4899,#06b6d4)',
-        'cyberpunk': 'linear-gradient(135deg,#0a0014,#ec4899,#8b5cf6)',
-      };
-      el.style.background = map[t] || map.default;
-    });
-  }, 0);
+  if (location.hash.startsWith('#/profil')) {
+    // Schon auf Profil → Tab neu rendern (Hash bleibt gleich, sonst kein Re-Render).
+    renderProfile();
+  } else {
+    location.hash = '#/profil?tab=inventar';
+  }
 }
 
 window.LF.selectOutline = async (tierId) => {

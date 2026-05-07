@@ -303,6 +303,7 @@
 /* Aurora — animierter Hintergrund (legendary) */
 [data-app-theme="aurora"] {
   --accent: #06b6d4; --accent-hover: #0891b2; --accent-subtle: #ecfeff;
+  /* highlight-me default-Gelb beibehalten — gibt scharfen Kontrast zum cyan-Body */
 }
 [data-app-theme="aurora"] body {
   background:
@@ -318,6 +319,9 @@
 [data-app-theme="aurora"][data-theme="dark"] {
   --bg: #0c0a1f; --bg-card: #1a1735; --bg-input: #251f50;
   --border: #3b3372;
+  --accent: #67e8f9; --accent-subtle: #164e63;
+  /* warmes Amber-Highlight gegen lila/cyan Body */
+  --highlight-me: rgba(245,158,11,0.18); --highlight-me-border: #f59e0b;
 }
 [data-app-theme="aurora"][data-theme="dark"] body {
   background:
@@ -342,6 +346,8 @@
   --text: #f0f0f0; --text-muted: #b794f6;
   --border: #6b21a8;
   --accent: #f0abfc; --accent-hover: #e879f9; --accent-subtle: #2d0a4e;
+  /* Cyberpunk: warmes Pink-Highlight passt zum Neon-Branding */
+  --highlight-me: rgba(236,72,153,0.20); --highlight-me-border: #ec4899;
 }
 [data-app-theme="cyberpunk"] body {
   background:
