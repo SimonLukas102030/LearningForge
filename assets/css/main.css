@@ -1031,6 +1031,80 @@ input, textarea, select { font-family: var(--font); }
   border-top: 1px solid var(--border);
 }
 
+/* ── Rollen-Badges + Spectacle Overlay ─────────────────── */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  font-size: 13px;
+  margin-left: 4px;
+  vertical-align: middle;
+  cursor: help;
+  position: relative;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.2);
+}
+.role-badge.role-admin {
+  background: linear-gradient(135deg, #fcd34d, #f59e0b);
+  box-shadow: 0 0 0 1px rgba(245,158,11,0.3), 0 0 8px rgba(245,158,11,0.4);
+}
+.role-badge.role-tester {
+  background: linear-gradient(135deg, #c4b5fd, #8b5cf6);
+  box-shadow: 0 0 0 1px rgba(139,92,246,0.3), 0 0 8px rgba(139,92,246,0.4);
+}
+
+/* Spectacle Overlay: Glanz-Ring um Avatare */
+.role-glow-none { /* no-op */ }
+.role-glow-admin {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 4px #f59e0b,
+    0 0 14px 2px rgba(245,158,11,0.5);
+  animation: roleAdminPulse 3s ease-in-out infinite;
+}
+.role-glow-tester {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 4px #8b5cf6,
+    0 0 14px 2px rgba(139,92,246,0.5);
+  animation: roleTesterPulse 3s ease-in-out infinite;
+}
+@keyframes roleAdminPulse {
+  0%,100% { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px #f59e0b, 0 0 14px 2px rgba(245,158,11,0.5); }
+  50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px #fbbf24, 0 0 22px 4px rgba(245,158,11,0.7); }
+}
+@keyframes roleTesterPulse {
+  0%,100% { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px #8b5cf6, 0 0 14px 2px rgba(139,92,246,0.5); }
+  50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px #a78bfa, 0 0 22px 4px rgba(139,92,246,0.7); }
+}
+
+/* Eigener Header-Banner für Admin/Tester */
+.role-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.role-banner.role-banner-admin {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  color: #78350f;
+  box-shadow: 0 0 12px rgba(245,158,11,0.4);
+}
+.role-banner.role-banner-tester {
+  background: linear-gradient(90deg, #c4b5fd, #8b5cf6);
+  color: #4c1d95;
+  box-shadow: 0 0 12px rgba(139,92,246,0.4);
+}
+
 /* Sim-Tipp-Bubble */
 .sim-tip {
   margin: 10px 0;

@@ -3,3 +3,6 @@ keystore.jks
 
 # Claude Code workspace bookkeeping (lokal)
 .claude/
+
+# Lokale Tools (Node-Portable, firebase-tools)
+.tools/

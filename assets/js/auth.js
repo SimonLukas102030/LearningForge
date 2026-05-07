@@ -84,6 +84,33 @@ export async function getUserData(uid) {
   return doc.exists ? doc.data() : null;
 }
 
+// ── Rollen (admin / tester) ─────────────
+// Auto-Set anhand E-Mail-Whitelist beim Login. Jeder User schreibt sein eigenes Doc — Rules erlauben das via isOwner.
+const ADMIN_EMAILS  = ['simonkoper27@gmail.com'];
+const TESTER_EMAILS = ['bohmrobin797@gmail.com'];
+
+export async function syncUserRole(uid, email) {
+  if (!uid || !email) return;
+  const target = ADMIN_EMAILS.includes(email)  ? 'admin'
+              :  TESTER_EMAILS.includes(email) ? 'tester'
+              : null;
+  if (!target) return;
+  const doc = await _db.collection('users').doc(uid).get();
+  if (doc.exists && doc.data().role === target) return; // schon gesetzt
+  await _db.collection('users').doc(uid).set({ role: target }, { merge: true });
+}
+
+export async function setUserRole(uid, role) {
+  // role: 'admin' | 'tester' | null (=remove)
+  if (role === null) {
+    await _db.collection('users').doc(uid).update({
+      role: firebase.firestore.FieldValue.delete()
+    });
+  } else {
+    await _db.collection('users').doc(uid).set({ role }, { merge: true });
+  }
+}
+
 // ── Note speichern ──────────────────────
 export async function saveGrade(uid, subjectId, yearId, topicId, gradeData) {
   const key = `grades.${subjectId}__${yearId}__${topicId}`;
@@ -327,26 +354,30 @@ export async function saveFreezeDays(uid, freezeDays) {
 }
 
 // ── Kommentare (F-34) ─────────────────────
-export async function addComment(topicKey, uid, name, photo, text) {
-  await _db.collection('comments').doc(topicKey).collection('entries').add({
+// Topic-Key kann "/" enthalten — als Pfad-Trenner ungeeignet. Sanitize zu sicherer Doc-ID.
+function _safeKey(s) { return String(s || '').replace(/[^a-zA-Z0-9_-]/g, '_'); }
+
+export async function addComment(topicKey, uid, name, photo, text, role) {
+  await _db.collection('comments').doc(_safeKey(topicKey)).collection('entries').add({
     uid, name, photo: photo || null, text,
+    role: role || null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     likes: {}
   });
 }
 
 export async function getComments(topicKey) {
-  const snap = await _db.collection('comments').doc(topicKey)
+  const snap = await _db.collection('comments').doc(_safeKey(topicKey))
     .collection('entries').orderBy('createdAt', 'asc').limit(100).get();
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function deleteComment(topicKey, commentId) {
-  await _db.collection('comments').doc(topicKey).collection('entries').doc(commentId).delete();
+  await _db.collection('comments').doc(_safeKey(topicKey)).collection('entries').doc(commentId).delete();
 }
 
 export async function toggleCommentLike(topicKey, commentId, uid) {
-  const ref = _db.collection('comments').doc(topicKey).collection('entries').doc(commentId);
+  const ref = _db.collection('comments').doc(_safeKey(topicKey)).collection('entries').doc(commentId);
   const doc = await ref.get();
   const liked = !!(doc.data()?.likes?.[uid]);
   if (liked) {
@@ -365,7 +396,7 @@ export async function searchUsers(query, currentUid) {
   return snap.docs
     .filter(d => d.id !== currentUid && (d.data().name || '').toLowerCase().includes(q))
     .slice(0, 10)
-    .map(d => ({ uid: d.id, name: d.data().name, photo: d.data().photoURL || null }));
+    .map(d => ({ uid: d.id, name: d.data().name, photo: d.data().photoURL || null, role: d.data().role || null }));
 }
 
 export async function sendFriendRequest(fromUid, fromName, fromPhoto, toUid) {
@@ -410,7 +441,8 @@ export async function getFriendsData(friendIds) {
   ));
   return docs.filter(d => d.exists).map(d => ({
     uid: d.id, name: d.data().name,
-    photo: d.data().photoURL || null, xp: d.data().xp || 0
+    photo: d.data().photoURL || null, xp: d.data().xp || 0,
+    role: d.data().role || null
   }));
 }
 

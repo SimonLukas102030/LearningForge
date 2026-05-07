@@ -3,14 +3,7 @@ rules_version = '2';
 // ════════════════════════════════════════════════════════════════════════════
 //  LearningForge — Firestore Security Rules
 //
-//  DEPLOY:
-//    Option A (einfach):
-//      → Firebase Console → Firestore → Rules
-//      → Inhalt unten reinkopieren → "Veröffentlichen"
-//
-//    Option B (CLI, falls firebase-tools installiert):
-//      cd <repo>
-//      firebase deploy --only firestore:rules
+//  Deploy: firebase deploy --only firestore:rules
 // ════════════════════════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -19,73 +12,54 @@ service cloud.firestore {
     // ── helper functions ──────────────────────────────────────────────────
     function isAuth()        { return request.auth != null; }
     function isOwner(uid)    { return isAuth() && request.auth.uid == uid; }
-    function changed(field)  { return request.resource.data.diff(resource.data).affectedKeys().hasAny([field]); }
+    function isAdmin()       { return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+                                && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }
     function onlyChanged(fs) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fs); }
 
     // ── users ─────────────────────────────────────────────────────────────
-    // Read/List: jeder authentifizierte User darf User-Profile lesen (Leaderboard, Friend-Search, Group-Members).
-    // Create:    nur eigenes Doc bei Registrierung.
+    // Read/List: jeder authentifizierte User darf User-Profile lesen.
+    // Create:    nur eigenes Doc.
     // Update:
-    //   (a) eigenes Doc: alles erlaubt
-    //   (b) fremdes Doc: NUR die eigene friendRequests-Eintrag setzen oder entfernen
-    //                    (also Friend-Request senden bzw. zurückziehen)
-    // Delete:    nur eigenes Doc.
+    //   - eigenes Doc: alles erlaubt
+    //   - Admin: alles erlaubt (für Role-Management)
+    //   - fremdes Doc: nur friendRequests + friendIds darf modifiziert werden
+    //                  (für Friend-Request senden bzw. accept)
+    // Delete:    nur eigenes Doc oder Admin.
     match /users/{uid} {
       allow read, list: if isAuth();
       allow create:     if isOwner(uid);
       allow update:     if isOwner(uid)
-                         || (isAuth()
-                             && onlyChanged(['friendRequests'])
-                             && request.resource.data.friendRequests.diff(resource.data.friendRequests)
-                                .affectedKeys().hasOnly([request.auth.uid]));
-      allow delete:     if isOwner(uid);
+                         || isAdmin()
+                         || (isAuth() && onlyChanged(['friendRequests', 'friendIds']));
+      allow delete:     if isOwner(uid) || isAdmin();
     }
 
     // ── groups ────────────────────────────────────────────────────────────
-    // List/Read: jeder authentifizierte User darf Gruppen lesen (Code-Lookup beim Beitritt).
-    //            Code ist 6-stellig random → nicht raten-bar.
-    // Create:    Auth user darf Gruppen erstellen, wenn er sich als creator + admin-member einträgt.
-    // Update:
-    //   (a) creator: alles erlaubt
-    //   (b) member: NUR sich selbst zur members-Map hinzufügen (Beitritt) oder entfernen (Austritt)
-    // Delete:    nur creator.
     match /groups/{groupId} {
       allow read, list: if isAuth();
-      allow create:     if isAuth()
-                         && request.resource.data.creatorUid == request.auth.uid;
+      allow create:     if isAuth() && request.resource.data.creatorUid == request.auth.uid;
       allow update:     if isAuth()
                          && (resource.data.creatorUid == request.auth.uid
-                             || (onlyChanged(['members'])
-                                 && request.resource.data.members.diff(resource.data.members)
-                                    .affectedKeys().hasOnly([request.auth.uid])));
-      allow delete:     if isAuth() && resource.data.creatorUid == request.auth.uid;
+                             || isAdmin()
+                             || onlyChanged(['members']));
+      allow delete:     if isAuth() && (resource.data.creatorUid == request.auth.uid || isAdmin());
     }
 
     // ── leaderboard ───────────────────────────────────────────────────────
-    // Read/List: alle authentifizierten User
-    // Write:     nur eigenes Doc (uid als doc-id)
     match /leaderboard/{uid} {
       allow read, list: if isAuth();
-      allow write:      if isOwner(uid);
+      allow write:      if isOwner(uid) || isAdmin();
     }
 
     // ── customTopics ──────────────────────────────────────────────────────
-    // Read:   own + group-shared (wenn user in groupIds drin ist)
-    // Create: own
-    // Update: only owner
-    // Delete: only owner
     match /customTopics/{topicId} {
-      allow read:   if isAuth()
-                     && (resource.data.ownerUid == request.auth.uid
-                         || resource.data.groupId == null
-                         || resource.data.groupId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupIds);
-      allow list:   if isAuth();
-      allow create: if isAuth() && request.resource.data.ownerUid == request.auth.uid;
-      allow update: if isAuth() && resource.data.ownerUid == request.auth.uid;
-      allow delete: if isAuth() && resource.data.ownerUid == request.auth.uid;
+      allow read, list: if isAuth();
+      allow create:     if isAuth() && request.resource.data.ownerUid == request.auth.uid;
+      allow update:     if isAuth() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+      allow delete:     if isAuth() && (resource.data.ownerUid == request.auth.uid || isAdmin());
     }
 
-    // ── pendingTopics (für Topic-Review-Queue) ────────────────────────────
+    // ── pendingTopics ─────────────────────────────────────────────────────
     match /pendingTopics/{topicId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.submittedBy == request.auth.uid;
@@ -93,37 +67,45 @@ service cloud.firestore {
       allow delete:     if isAuth();
     }
 
-    // ── dailyScores (pro Tag pro User) ────────────────────────────────────
-    match /dailyScores/{date}/users/{uid} {
-      allow read, list: if isAuth();
-      allow write:      if isOwner(uid);
-    }
+    // ── dailyScores ───────────────────────────────────────────────────────
     match /dailyScores/{date} {
       allow read, list: if isAuth();
     }
+    match /dailyScores/{date}/users/{uid} {
+      allow read, list: if isAuth();
+      allow write:      if isOwner(uid) || isAdmin();
+    }
 
-    // ── feed (Activity-Feed für Friends) ──────────────────────────────────
+    // ── feed ──────────────────────────────────────────────────────────────
     match /feed/{entryId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
       allow update:     if isAuth();
-      allow delete:     if isAuth() && resource.data.uid == request.auth.uid;
+      allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
-    // ── comments (auf Topic/Custom-Topic) ─────────────────────────────────
-    match /comments/{commentId} {
+    // ── comments ──────────────────────────────────────────────────────────
+    // Topic-Doc selbst (kann auch leer sein, dient nur als Container für die Subcollection)
+    match /comments/{topicKey} {
+      allow read, list: if isAuth();
+      // Auto-create implizit erlaubt (für Kommentar-Subcollection-Anlage)
+      allow create:     if isAuth();
+    }
+    // Kommentar-Einträge — DAS ist die richtige Stelle (Subcollection!)
+    match /comments/{topicKey}/entries/{commentId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
       allow update:     if isAuth() && (resource.data.uid == request.auth.uid
+                                         || isAdmin()
                                          || onlyChanged(['likes']));
-      allow delete:     if isAuth() && resource.data.uid == request.auth.uid;
+      allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
-    // ── shareTokens (für getShareData) ────────────────────────────────────
+    // ── shareTokens ───────────────────────────────────────────────────────
     match /shareTokens/{tokenId} {
-      allow read, list: if true;     // public — wird über Token-URL aufgerufen
+      allow read, list: if true;
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
-      allow delete:     if isAuth() && resource.data.uid == request.auth.uid;
+      allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
   }
 }

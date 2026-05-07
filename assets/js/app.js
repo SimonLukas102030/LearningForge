@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole } from './auth.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
 import {
@@ -17,6 +17,20 @@ import {
 
 // ── Globaler State ───────────────────────
 const ADMIN_EMAIL = 'simonkoper27@gmail.com';
+
+// ── Rollen-Helper ─────────────────────────
+function isAdmin() { return userData?.role === 'admin' || isAdmin(); }
+function userRole(u) {
+  // u kann ein User-Doc oder undefined sein. Bei undefined → eigener User.
+  if (u !== undefined) return u?.role || null;
+  if (isAdmin()) return 'admin';
+  return userData?.role || null;
+}
+function roleBadge(role) {
+  if (role === 'admin')  return '<span class="role-badge role-admin" title="Administrator">&#128081;</span>';
+  if (role === 'tester') return '<span class="role-badge role-tester" title="Beta-Tester">&#129514;</span>';
+  return '';
+}
 
 let currentUser        = null;
 let userData           = null;
@@ -131,6 +145,14 @@ export function startApp() {
         route();
         return;
       }
+      // Auto-Sync Rolle anhand Email-Whitelist (admin/tester)
+      try {
+        await syncUserRole(user.uid, user.email);
+        if (userData) userData.role = userData.role
+          || (user.email === 'simonkoper27@gmail.com'  ? 'admin'
+            : user.email === 'bohmrobin797@gmail.com' ? 'tester'
+            : undefined);
+      } catch(e) { console.warn('[role-sync]', e); }
       structure = await getStructure();
       getChangelog().then(entries => {
         changelog = entries;
@@ -201,7 +223,7 @@ function route() {
   } else if (parts[0] === 'rangliste') {
     renderLeaderboard();
   } else if (parts[0] === 'admin') {
-    if (currentUser?.email === ADMIN_EMAIL) renderAdmin();
+    if (isAdmin()) renderAdmin();
     else location.hash = '#/';
   } else if (parts[0] === 'builder') {
     renderBuilder();
@@ -261,7 +283,7 @@ function renderNav(breadcrumbs = []) {
           <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
           <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
           <a class="nav-link ${act('Hilfe')}" onclick="location.hash='#/hilfe'">Hilfe</a>
-          ${currentUser?.email === ADMIN_EMAIL ? `<a class="nav-link nav-link-admin ${act('Admin')}" onclick="location.hash='#/admin'">Admin</a>` : ''}
+          ${isAdmin() ? `<a class="nav-link nav-link-admin ${act('Admin')}" onclick="location.hash='#/admin'">Admin</a>` : ''}
         </div>
       </div>
       <div class="nav-right">
@@ -293,7 +315,7 @@ function renderNav(breadcrumbs = []) {
             <a onclick="location.hash='#/feed'">Feed</a>
             <a onclick="location.hash='#/builder'">Builder</a>
             <a onclick="location.hash='#/einstellungen'">Einstellungen</a>
-            ${currentUser?.email === ADMIN_EMAIL ? `<a onclick="location.hash='#/admin'" style="color:var(--accent);font-weight:600">Admin-Panel</a>` : ''}
+            ${isAdmin() ? `<a onclick="location.hash='#/admin'" style="color:var(--accent);font-weight:600">Admin-Panel</a>` : ''}
             <div class="divider"></div>
             <button class="danger" onclick="window.LF.doLogout()">Abmelden</button>
           </div>
@@ -312,7 +334,7 @@ function renderNav(breadcrumbs = []) {
       <a class="mobile-nav-link ${act('Profil')}"       onclick="location.hash='#/profil';window.LF.closeMobileMenu()">Profil</a>
       <a class="mobile-nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">Einstellungen</a>
       <a class="mobile-nav-link ${act('Hilfe')}" onclick="location.hash='#/hilfe';window.LF.closeMobileMenu()">Hilfe</a>
-      ${currentUser?.email === ADMIN_EMAIL ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">Admin-Panel</a>` : ''}
+      ${isAdmin() ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">Admin-Panel</a>` : ''}
       <div class="mobile-nav-sep"></div>
       <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">Abmelden</a>
     </div>`;
@@ -1903,12 +1925,12 @@ function renderProfile() {
 
           <!-- Ansicht -->
           <div id="profileView">
-            <div class="profile-avatar-large">${
+            <div class="profile-avatar-large role-glow-${userRole() || 'none'}">${
               (userData?.photoURL || currentUser.photoURL)
                 ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
                 : initial
             }</div>
-            <div class="profile-name">${userData?.name || currentUser.displayName || 'Nutzer'}</div>
+            <div class="profile-name">${userData?.name || currentUser.displayName || 'Nutzer'} ${roleBadge(userRole())}</div>
             <div class="profile-email">${currentUser.email}</div>
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
               <button class="btn btn-secondary btn-sm" onclick="window.LF.profileEditOpen()">Bearbeiten</button>
@@ -2326,7 +2348,7 @@ async function renderGroupDetail(groupId) {
     <div class="group-member-row">
       <div class="group-member-avatar">${(m.displayName||'?')[0].toUpperCase()}</div>
       <div class="group-member-info">
-        <div class="group-member-name">${m.displayName || 'Unbekannt'} ${m.role === 'admin' ? '<span class="group-admin-badge">Admin</span>' : ''}</div>
+        <div class="group-member-name">${m.displayName || 'Unbekannt'} ${m.role === 'admin' ? '<span class="group-admin-badge">Gruppen-Admin</span>' : ''} ${roleBadge(m.userRole)}</div>
       </div>
       ${isCreator && uid !== currentUser.uid
         ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.groupKick('${groupId}','${uid}','${(m.displayName||'').replace(/'/g,"\\'")}')">Entfernen</button>`
@@ -5418,9 +5440,9 @@ async function renderFriends() {
       <div class="section-title" style="margin-bottom:16px">Anfragen (${myRequests.length})</div>
       ${myRequests.map(([fromUid, req]) => `
         <div class="friend-request-card">
-          <div class="friend-avatar">${_avatar(req.photo, req.name)}</div>
+          <div class="friend-avatar role-glow-${req.role || 'none'}">${_avatar(req.photo, req.name)}</div>
           <div class="friend-info">
-            <div class="friend-name">${req.name}</div>
+            <div class="friend-name">${req.name} ${roleBadge(req.role)}</div>
             <div class="friend-sub">Möchte dein Freund sein</div>
           </div>
           <div class="friend-btns">
@@ -5437,9 +5459,9 @@ async function renderFriends() {
         const lv = calcLevel(f.xp || 0);
         return `
           <div class="friend-card">
-            <div class="friend-avatar">${_avatar(f.photo, f.name)}</div>
+            <div class="friend-avatar role-glow-${f.role || 'none'}">${_avatar(f.photo, f.name)}</div>
             <div class="friend-info">
-              <div class="friend-name">${f.name}</div>
+              <div class="friend-name">${f.name} ${roleBadge(f.role)}</div>
               <div class="friend-sub">Lv. ${lv.level} — ${lv.title}</div>
             </div>
             <button class="btn btn-ghost btn-sm"
@@ -5644,14 +5666,14 @@ window.LF.loadComments = async () => {
     const time      = c.createdAt?.toDate ? _relTime(c.createdAt.toDate()) : 'gerade eben';
     const likeCount = Object.keys(c.likes || {}).length;
     const liked     = !!(c.likes?.[currentUser?.uid]);
-    const canDel    = c.uid === currentUser?.uid || currentUser?.email === ADMIN_EMAIL;
+    const canDel    = c.uid === currentUser?.uid || isAdmin();
     const safeText  = c.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return `
       <div class="comment-card" id="cmt_${c.id}">
-        <div class="comment-avatar">${_avatar(c.photo, c.name)}</div>
+        <div class="comment-avatar role-glow-${c.role || 'none'}">${_avatar(c.photo, c.name)}</div>
         <div class="comment-body">
           <div class="comment-header">
-            <span class="comment-author">${c.name}</span>
+            <span class="comment-author">${c.name} ${roleBadge(c.role)}</span>
             <span class="comment-time">${time}</span>
           </div>
           <div class="comment-text">${safeText}</div>
@@ -5671,7 +5693,7 @@ window.LF.submitComment = async () => {
   if (!text || !_commentTopicKey) return;
   input.disabled = true;
   try {
-    await addComment(_commentTopicKey, currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, text);
+    await addComment(_commentTopicKey, currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, text, userRole());
     input.value = '';
     await window.LF.loadComments();
   } catch (e) {
@@ -5713,8 +5735,8 @@ window.LF.searchFriends = async (query) => {
     const isPending = myReqSentTo.includes(u.uid);
     return `
       <div class="friend-search-item">
-        <div class="friend-avatar">${_avatar(u.photo, u.name)}</div>
-        <div class="friend-name" style="flex:1">${u.name}</div>
+        <div class="friend-avatar role-glow-${u.role || 'none'}">${_avatar(u.photo, u.name)}</div>
+        <div class="friend-name" style="flex:1">${u.name} ${roleBadge(u.role)}</div>
         ${isFriend
           ? `<span class="badge badge-success">Freund</span>`
           : isPending
