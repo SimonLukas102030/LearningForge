@@ -1,2 +1,5 @@
 keystore.jks
 *.jks
+
+# Claude Code workspace bookkeeping (lokal)
+.claude/
