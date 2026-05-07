@@ -3,6 +3,15 @@
   "entries": [
     {
       "date": "2026-05-07",
+      "type": "fixed",
+      "subject": "",
+      "year": "",
+      "topic": "",
+      "title": "Kommentare, Freunde + Gruppen funktionieren wieder",
+      "description": "Firestore-Rules angepasst: Comments-Subcollection war nicht abgedeckt. Friend-Requests + Gruppen-Beitritt benötigten List-Permissions. Plus: Admin/Tester-Rang mit Spectacle-Overlay (👑/🧪)."
+    },
+    {
+      "date": "2026-05-07",
       "type": "added",
       "subject": "Physik",
       "year": "Klasse-9",
