@@ -147,6 +147,59 @@ export async function loginAsClaude() {
   return cred;
 }
 
+// ── Hacker-Test-Account (Red-Team) ──────────
+// Spiegel-Mechanismus zum Claude-Account, fuer Live-Exploit-Tests von Ramsey.
+// Markiert das eigene User-Doc als Hacker-Test-Account: bekommt Admin-Rolle,
+// damit Admin-Write-Surface getestet werden kann; wird in Suche/Rangliste/Feed
+// ausgeblendet (Filter !isHacker in searchUsers + getLeaderboard).
+// Credentials: localStorage-Key 'lf_hacker_creds' = { email, password } —
+// existiert nur lokal auf Simons PC, wird NIEMALS ins Repo committet und
+// NIEMALS geloggt.
+export async function markAsHacker(uid) {
+  if (!uid) return;
+  await _db.collection('users').doc(uid).set({
+    isHacker: true,
+    role: 'admin',
+    name: 'Hacker (Test)'
+  }, { merge: true });
+  // Spiegel auf leaderboard, damit der !e.isHacker-Filter in getLeaderboard()
+  // wirklich greift (gleiches Pattern wie isClaude).
+  await _db.collection('leaderboard').doc(uid)
+    .set({ isHacker: true }, { merge: true })
+    .catch(() => {});
+}
+
+// Credentials-Konvention: localStorage.lf_hacker_creds = JSON { email, password }
+// Liegt nur auf Simons Maschine, NIE im Repo, NIE in Logs/Telemetry.
+export async function loginAsHacker() {
+  const raw = localStorage.getItem('lf_hacker_creds');
+  if (!raw) throw new Error('Keine Hacker-Credentials im localStorage gespeichert.');
+  let creds;
+  try { creds = JSON.parse(raw); } catch { throw new Error('Hacker-Credentials defekt.'); }
+  if (!creds.email || !creds.password) throw new Error('Email oder Passwort fehlt.');
+  const hashed = await hashPassword(creds.password);
+  let cred;
+  try {
+    cred = await _auth.signInWithEmailAndPassword(creds.email, hashed);
+  } catch (e) {
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+      // Account existiert noch nicht — anlegen.
+      cred = await _auth.createUserWithEmailAndPassword(creds.email, hashed);
+      await cred.user.updateProfile({ displayName: 'Hacker (Test)' });
+      await _db.collection('users').doc(cred.user.uid).set({
+        name: 'Hacker (Test)',
+        email: creds.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        grades: {}
+      });
+    } else {
+      throw e;
+    }
+  }
+  await markAsHacker(cred.user.uid);
+  return cred;
+}
+
 export async function setUserRole(uid, role) {
   // role: 'admin' | 'tester' | null (=remove)
   if (role === null) {
@@ -313,7 +366,8 @@ export async function getLeaderboard(klasseFilter = null) {
   return snap.docs
     .map(d => ({ uid: d.id, ...d.data() }))
     .filter(e => Object.keys(e.scores || {}).length > 0)
-    .filter(e => !e.isClaude); // Claude-Test-Account ausblenden (greift jetzt dank markAsClaude-Mirror)
+    .filter(e => !e.isClaude)   // Claude-Test-Account ausblenden (greift jetzt dank markAsClaude-Mirror)
+    .filter(e => !e.isHacker);  // Hacker-Test-Account (Red-Team) ausblenden — Mirror via markAsHacker
 }
 
 export async function getAllUsers() {
@@ -561,6 +615,7 @@ export async function searchUsers(query, currentUid) {
   return snap.docs
     .filter(d => d.id !== currentUid
               && !d.data().isClaude // Claude-Test-Account aus Friend-Suche raushalten
+              && !d.data().isHacker // Hacker-Test-Account (Red-Team) aus Friend-Suche raushalten
               && (d.data().name || '').toLowerCase().includes(q))
     .slice(0, 10)
     .map(d => ({ uid: d.id, name: d.data().name, photo: d.data().photoURL || null, role: d.data().role || null }));
@@ -632,25 +687,11 @@ export async function getFeedForFriends(friendIds) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-// ── Peer-Review (F-35) ───────────────────
-export async function submitTopicForReview(topicId) {
-  await _db.collection('customTopics').doc(topicId).update({ status: 'pending', votes: {} });
-}
-
-export async function voteCustomTopic(topicId, uid, vote) {
-  const ref = _db.collection('customTopics').doc(topicId);
-  await ref.set({ votes: { [uid]: vote } }, { merge: true });
-  const doc    = await ref.get({ source: 'server' });
-  const votes  = Object.values(doc.data()?.votes || {});
-  if (votes.filter(v => v === 1).length >= 3) await ref.update({ status: 'public' });
-  if (votes.filter(v => v === -1).length >= 3) await ref.update({ status: 'private' });
-}
-
-export async function getPendingTopics() {
-  const snap = await _db.collection('customTopics')
-    .where('status', '==', 'pending').get({ source: 'server' });
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
+// ── Peer-Review (F-35) — REMOVED Mission 2 Phase 2 ────────────
+// submitTopicForReview / voteCustomTopic / getPendingTopics deleted —
+// imported in app.js but never called (Ghost-Code-Cycle-1 finding).
+// Ethan removes the corresponding imports + the pendingTopics rule
+// block was deleted from firestore.rules in the same commit.
 
 // ── Eltern-Share-Link (F-46) ──────────────
 export async function createShareToken(uid) {

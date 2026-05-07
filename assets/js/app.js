@@ -5,8 +5,8 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus } from './auth.js';
-import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, unlockedOutlines, themeById, rollThemeDrop, resolveOutlineClass, applyTheme, getStoredTheme } from './cosmetics.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, loginAsHacker, markAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus } from './auth.js';
+import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
 import {
@@ -15,6 +15,7 @@ import {
   generateQuestionsWithGemini,
   selectVocabQuestions, evaluateVocabAnswer
 } from './test-engine.js';
+import * as cf from './cf.js';
 
 // ── Globaler State ───────────────────────
 const ADMIN_EMAIL = 'simonkoper27@gmail.com';
@@ -22,6 +23,7 @@ const ADMIN_EMAIL = 'simonkoper27@gmail.com';
 // ── Rollen-Helper ─────────────────────────
 function isAdmin() { return userData?.role === 'admin' || currentUser?.email === ADMIN_EMAIL; }
 function isClaudeAccount() { return !!userData?.isClaude; }
+function isHackerAccount() { return !!userData?.isHacker; }
 // Claude-Test-Account darf lesen + privat testen, aber NICHT in fuer andere
 // User sichtbare State schreiben (Comments, Friend-Requests, Group-Joins,
 // Group-Topic-Uploads). Returnt true wenn der Aufruf abgebrochen werden soll.
@@ -79,8 +81,39 @@ let currentUser        = null;
 let userData           = null;
 let structure          = null;
 let testState          = null;
-let tabSwitchPenalty   = false;
-let visibilityHandler  = null;
+// Red-Team #7 (defense in depth): Tab-Switch-State + remove() in einer
+// Closure verstecken. Vorher modul-scoped lets — Hacker konnten das Modul
+// importieren und via `m.removeTabSwitchDetection()` deaktivieren oder
+// `m.tabSwitchPenalty = false` setzen. Jetzt unerreichbar von ausserhalb.
+// Real-Defense ist server-side Test-Validation (Mission 3).
+const _tabSwitch = (() => {
+  let penalty = false;
+  let handler = null;
+  function setup() {
+    penalty = false;
+    teardown();
+    handler = () => {
+      if (!document.hidden || !testState) return;
+      teardown();
+      penalty = true;
+      showToast('Tab-Wechsel erkannt — Test wird als Note 6 gewertet.', 'error');
+      setTimeout(() => window.LF.submitTest(), 1500);
+    };
+    document.addEventListener('visibilitychange', handler);
+  }
+  function teardown() {
+    if (handler) {
+      document.removeEventListener('visibilitychange', handler);
+      handler = null;
+    }
+  }
+  function consumePenalty() {
+    const p = penalty;
+    penalty = false;
+    return p;
+  }
+  return { setup, teardown, consumePenalty };
+})();
 let calcExpr           = '';
 let currentSubtopics   = null;
 let changelog          = [];
@@ -101,6 +134,18 @@ let _commentTopicKey   = null;
 let _tutorContext      = '';
 let _tutorChat         = [];
 let _summaryCache      = {};
+
+// Red-Team #9: client-side Debounce-Marker fuer Spam-anfaellige Aktionen
+// (Freundschaftsanfrage, Kommentar, Bug-Report). Real-Defense liegt rules-side
+// in Marcus' Mission 3 / Cloud Function — das hier ist der billige UX-Schutz
+// gegen Doppelklick-Spam und Konsolen-Loops.
+const _debounceLast = {}; // key -> timestamp ms
+function _debounceCheck(key, windowMs = 1000) {
+  const now = Date.now();
+  if (_debounceLast[key] && (now - _debounceLast[key]) < windowMs) return false;
+  _debounceLast[key] = now;
+  return true;
+}
 
 // ── Online/Offline-Banner (F-11) ─────────
 function updateOnlineStatus(isOnline) {
@@ -217,17 +262,39 @@ export function startApp() {
         return;
       }
       // Claude-Test-Account: localStorage-Email matched → idempotent markieren.
-      // Faengt auch den Fall ab dass der erste Login lief bevor markAsClaude durch war.
+      // Mission 3: primaerer Pfad ueber CF (Email-Whitelist serverseitig); bei
+      // CF-Fehler (offline / Region-Issue) Fallback auf direkten markAsClaude-Write.
       try {
         const raw = localStorage.getItem('lf_claude_creds');
         if (raw) {
           const cc = JSON.parse(raw);
           if (cc?.email === user.email && !userData?.isClaude) {
-            await markAsClaude(user.uid);
+            try {
+              await cf.markTestAccount('claude');
+            } catch (e) {
+              console.warn('[claude-mark-cf-fallback]', e);
+              await markAsClaude(user.uid);
+            }
             userData = { ...(userData || {}), isClaude: true, role: 'admin', name: userData?.name || 'Claude (Test)' };
           }
         }
       } catch(e) { console.warn('[claude-mark]', e); }
+      // Hacker-Test-Account: gleiches Pattern wie Claude.
+      try {
+        const raw = localStorage.getItem('lf_hacker_creds');
+        if (raw) {
+          const cc = JSON.parse(raw);
+          if (cc?.email === user.email && !userData?.isHacker) {
+            try {
+              await cf.markTestAccount('hacker');
+            } catch (e) {
+              console.warn('[hacker-mark-cf-fallback]', e);
+              await markAsHacker(user.uid);
+            }
+            userData = { ...(userData || {}), isHacker: true, role: 'admin', name: userData?.name || 'Hacker (Test)' };
+          }
+        }
+      } catch(e) { console.warn('[hacker-mark]', e); }
       // Auto-Sync Rolle anhand Email-Whitelist (admin/tester)
       try {
         await syncUserRole(user.uid, user.email);
@@ -252,6 +319,9 @@ export function startApp() {
       try {
         _bannedUnsub = watchBannedStatus(user.uid, async () => {
           showToast('Dein Account wurde gesperrt', 'error');
+          // Mission 4 Edge-Case: Tour-Engine lauscht auf 'lf:banned' und
+          // raeumt Overlay auf, sonst bleibt es ueber dem Login sichtbar.
+          try { window.dispatchEvent(new CustomEvent('lf:banned')); } catch(e){}
           try { _bannedUnsub?.(); } catch(e){}
           _bannedUnsub = null;
           await logout();
@@ -286,7 +356,7 @@ export function startApp() {
       // Onboarding-Wizard triggern wenn noch nicht gemacht (oder Klasse fehlt
       // bei Bestands-User, dann nur Schritt 2+4). Claude-Test-Account skippt.
       // Skipt auch in Share-Report-Views (`#/bericht/...`) — dort ist kein User.
-      if (!isClaudeAccount() && !userData?.onboardedAt && !location.hash.startsWith('#/bericht')) {
+      if (!isClaudeAccount() && !isHackerAccount() && !userData?.onboardedAt && !location.hash.startsWith('#/bericht')) {
         // Bestands-User = hat bereits irgendwelche Daten (XP/Noten/Tests/createdAt),
         // braucht aber noch Klasse → Wizard zeigt nur Schritt 2 + 4. Brand-new Login
         // (alle Felder leer) sieht alle 4 Schritte.
@@ -296,6 +366,28 @@ export function startApp() {
                                   || (userData?.totalQuestionsAnswered || 0) > 0);
         const existingMissingKlasse = !userData?.klasse && hasPriorActivity;
         setTimeout(() => renderOnboarding({ existingMissingKlasse }), 250);
+      }
+
+      // Mission 4: Tour-Auto-Trigger fuer Bestands-User (onboardedAt gesetzt,
+      // aber Tour noch nicht gesehen). Erst beim 2. Login als Toast offerieren —
+      // beim 1. Mal nur tourPromptedAt schreiben, damit nicht doppelt genervt
+      // wird (Wizard + Tour zusammen waere zu viel).
+      else if (userData?.onboardedAt
+               && !userData?.tourCompletedAt
+               && !userData?.tourSkippedAt
+               && !isClaudeAccount() && !isHackerAccount()
+               && !location.hash.startsWith('#/bericht')) {
+        if (!userData?.tourPromptedAt) {
+          // Erste Begegnung post-deploy → markieren, beim naechsten Login Toast.
+          try {
+            await db().collection('users').doc(user.uid)
+              .set({ tourPromptedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            userData.tourPromptedAt = Date.now();
+          } catch(e) { console.warn('[tour-prompt-mark]', e); }
+        } else {
+          // 2. (oder spaeterer) Login → Toast-Angebot.
+          setTimeout(() => _showTourToast(), 1500);
+        }
       }
     }
     route();
@@ -446,14 +538,14 @@ function renderNav(breadcrumbs = []) {
         <span class="nav-sep-bar">|</span>
         <div class="nav-links">
           <a class="nav-link ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">Start</a>
-          <a class="nav-link ${act('Lernen')}"     onclick="location.hash='#/lernen'">Lernen</a>
-          <a class="nav-link ${act('Rangliste')}"  onclick="location.hash='#/rangliste'">Rangliste</a>
-          <a class="nav-link ${act('Hilfe')}"      onclick="location.hash='#/hilfe'">Hilfe</a>
+          <a class="nav-link ${act('Lernen')}"     data-tour="nav-lernen"    onclick="location.hash='#/lernen'">Lernen</a>
+          <a class="nav-link ${act('Rangliste')}"  data-tour="nav-rangliste" onclick="location.hash='#/rangliste'">Rangliste</a>
+          <a class="nav-link ${act('Hilfe')}"      data-tour="nav-hilfe"     onclick="location.hash='#/hilfe'">Hilfe</a>
         </div>
       </div>
       <div class="nav-right">
         ${streak > 1 ? `
-        <button class="nav-streak-chip" title="${streak} Tage Streak" onclick="location.hash='#/profil'">
+        <button class="nav-streak-chip" data-tour="streak-chip" title="${streak} Tage Streak" onclick="location.hash='#/profil'">
           🔥 <span class="nav-streak-num">${streak}</span>
         </button>` : ''}
         ${xi ? `
@@ -465,7 +557,7 @@ function renderNav(breadcrumbs = []) {
         <button class="btn-icon" id="themeBtn" onclick="window.LF.toggleTheme()" title="Theme wechseln">
           ${theme === 'dark' ? '☀️' : '🌙'}
         </button>
-        <div class="user-chip" id="userChip" onclick="window.LF.toggleUserMenu(event)">
+        <div class="user-chip" id="userChip" data-tour="user-chip" onclick="window.LF.toggleUserMenu(event)">
           <div class="avatar">${(userData?.photoURL || currentUser.photoURL)
             ? `<img src="${userData?.photoURL || currentUser.photoURL}" alt="">`
             : (userData?.name || currentUser.displayName || 'U')[0].toUpperCase()
@@ -499,19 +591,19 @@ function renderNav(breadcrumbs = []) {
       </div>
     </nav>
     <div class="bottom-tab-bar">
-      <a class="bottom-tab ${!breadcrumbs.length ? 'active' : ''}" onclick="location.hash='#/'">
+      <a class="bottom-tab ${!breadcrumbs.length ? 'active' : ''}" data-tour="mobile-nav-start" onclick="location.hash='#/'">
         <span class="bt-icon">🏠</span><span class="bt-label">Start</span>
       </a>
-      <a class="bottom-tab ${act('Lernen')}" onclick="location.hash='#/lernen'">
+      <a class="bottom-tab ${act('Lernen')}" data-tour="mobile-nav-lernen" onclick="location.hash='#/lernen'">
         <span class="bt-icon">📚</span><span class="bt-label">Lernen</span>
       </a>
-      <a class="bottom-tab ${act('Rangliste')}" onclick="location.hash='#/rangliste'">
+      <a class="bottom-tab ${act('Rangliste')}" data-tour="mobile-nav-rangliste" onclick="location.hash='#/rangliste'">
         <span class="bt-icon">🏆</span><span class="bt-label">Rang</span>
       </a>
-      <a class="bottom-tab ${act('Profil')}" onclick="location.hash='#/profil'">
+      <a class="bottom-tab ${act('Profil')}" data-tour="mobile-nav-profil" onclick="location.hash='#/profil'">
         <span class="bt-icon">👤</span><span class="bt-label">Profil</span>
       </a>
-      <a class="bottom-tab" onclick="window.LF.toggleMobileMenu(event)">
+      <a class="bottom-tab" data-tour="bottom-mehr" onclick="window.LF.toggleMobileMenu(event)">
         <span class="bt-icon">☰</span><span class="bt-label">Mehr</span>
       </a>
     </div>
@@ -534,6 +626,7 @@ function renderNav(breadcrumbs = []) {
 // ── Login-Seite ──────────────────────────
 function renderLogin() {
   const hasClaudeCreds = !!localStorage.getItem('lf_claude_creds');
+  const hasHackerCreds = !!localStorage.getItem('lf_hacker_creds');
   document.getElementById('app').innerHTML = `
     <div class="login-wrap">
       <div class="login-card">
@@ -574,6 +667,10 @@ function renderLogin() {
             <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="window.LF.claudeLogin()">
               &#129302; Als Claude einloggen (Test-Account)
             </button>` : ''}
+          ${hasHackerCreds ? `
+            <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="window.LF.loginAsHacker()">
+              &#128520; Als Hacker einloggen (Test-Account)
+            </button>` : ''}
           <div class="toggle-auth">
             <span id="toggleText">Noch kein Konto?</span>
             <button onclick="window.LF.toggleAuthMode()">Registrieren</button>
@@ -581,6 +678,11 @@ function renderLogin() {
           <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text-muted)">
             <a onclick="window.LF.openClaudeSetup()" style="cursor:pointer;text-decoration:underline">
               ${hasClaudeCreds ? 'Claude-Test-Account verwalten' : 'Claude-Test-Account einrichten'}
+            </a>
+          </div>
+          <div style="text-align:center;margin-top:6px;font-size:11px;color:var(--text-muted)">
+            <a onclick="window.LF.openHackerSetup()" style="cursor:pointer;text-decoration:underline">
+              ${hasHackerCreds ? 'Hacker-Test-Account verwalten' : 'Hacker-Test-Account einrichten'}
             </a>
           </div>
         </div>
@@ -623,6 +725,45 @@ function renderClaudeSetupModal() {
         ${creds.email ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.clearClaudeCreds()">Logindaten loeschen</button>` : ''}
         <button class="btn btn-secondary btn-sm" onclick="this.closest('.kb-overlay').remove()">Schliessen</button>
         <button class="btn btn-primary btn-sm" onclick="window.LF.saveClaudeCreds()">Speichern</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+// ── Hacker-Setup-Modal ───────────────────
+// Spiegelung von renderClaudeSetupModal fuer den Hacker-Test-Account (Red-Team).
+// Speichert Email+Passwort ausschliesslich in localStorage des aktuellen Browsers.
+// Nichts geht ueber GitHub/Firestore, nichts wird geloggt.
+function renderHackerSetupModal() {
+  let creds = {};
+  try { creds = JSON.parse(localStorage.getItem('lf_hacker_creds') || '{}'); } catch {}
+  const overlay = document.createElement('div');
+  overlay.className = 'kb-overlay';
+  overlay.id = 'hackerSetupOverlay';
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) overlay.remove(); });
+  overlay.innerHTML = `
+    <div class="kb-dialog" style="max-width:440px">
+      <h3>&#128520; Hacker-Test-Account</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        Logindaten werden <strong>nur in diesem Browser</strong> (localStorage) gespeichert &mdash;
+        nichts davon liegt im Repo oder in Firestore. Der Account bekommt Admin-Rechte
+        und wird in Rangliste + Freundessuche ausgeblendet.
+      </p>
+      <div class="form-group">
+        <label class="form-label">E-Mail (frei waehlbar)</label>
+        <input class="form-input" id="hackerSetupEmail" type="email"
+               value="${escapeHtml(creds.email || 'hacker@learning-forge.local')}" placeholder="hacker@...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Passwort (mind. 6 Zeichen)</label>
+        <input class="form-input" id="hackerSetupPass" type="text"
+               value="${escapeHtml(creds.password || '')}" placeholder="Passwort">
+      </div>
+      <div id="hackerSetupErr" style="color:#ef4444;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+        ${creds.email ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.clearHackerCreds()">Logindaten loeschen</button>` : ''}
+        <button class="btn btn-secondary btn-sm" onclick="this.closest('.kb-overlay').remove()">Schliessen</button>
+        <button class="btn btn-primary btn-sm" onclick="window.LF.saveHackerCreds()">Speichern</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -832,11 +973,11 @@ function renderDashboard() {
         <div class="stat-chip srs-chip" onclick="location.hash='#/srs'" style="cursor:pointer">
           <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">Wiederholen</span>
         </div>` : ''}
-        <div class="stat-chip stat-chip-bug" onclick="window.LF.openBugReport()" style="cursor:pointer">
+        <div class="stat-chip stat-chip-bug" data-tour="bug-chip" onclick="window.LF.openBugReport()" style="cursor:pointer">
           <span class="stat-val">🐛</span><span class="stat-lbl">Problem melden</span>
         </div>
       </div>
-      ${!userData?.klasse && !isClaudeAccount() ? `
+      ${!userData?.klasse && !isClaudeAccount() && !isHackerAccount() ? `
         <div class="klasse-prompt" onclick="location.hash='#/profil'">
           <span class="klasse-prompt-icon">&#9888;&#65039;</span>
           <div class="klasse-prompt-text">
@@ -892,10 +1033,13 @@ function renderDashboard() {
       <div id="bugReportSection"></div>
     </div>
     <!-- Bug-Report-FAB nur Mobile (CSS @media) — Mission 1 Open-Q-3 -->
-    <button class="bug-fab" onclick="window.LF.openBugReport()" title="Problem melden" aria-label="Problem melden">🐛</button>`;
+    <button class="bug-fab" data-tour="bug-fab" onclick="window.LF.openBugReport()" title="Problem melden" aria-label="Problem melden">🐛</button>`;
   // Bug-Report-Sektion asynchron nachladen (Firestore-Reads).
   loadBugReportSection();
   if (isClaudeAccount()) loadClaudeBugList();
+  // Mission 4: Tour-Engine signalisiert auf das Dashboard-Ready-Event.
+  window.LF.dashboardReady = Promise.resolve();
+  try { window.dispatchEvent(new CustomEvent('lf:dashboard-ready')); } catch(e) {}
 }
 
 // ── Bug-Reports auf dem Dashboard ─────────
@@ -1191,9 +1335,9 @@ async function renderTopic(subjectId, yearId, topicId) {
         ? `<p>Beste Note: <strong>${gradeInfo.grade} – ${gradeInfo.label}</strong> (${prevGp.pts}/${prevGp.max} Pkt${prevAttempts > 1 ? `, ${prevAttempts} Versuche` : ''})</p>`
         : '<p>Noch kein Test gemacht. Wie lange möchtest du testen?</p>'}
       <div class="time-selector">
-        ${TIME_OPTIONS.map(t => `<button class="time-btn ${t===15?'active':''}" onclick="window.LF.selectTime(${t})" id="timeBtn${t}">${t} min</button>`).join('')}
+        ${TIME_OPTIONS.map(t => `<button class="time-btn ${t===selectedTime?'active':''}" onclick="window.LF.selectTime(${t})" id="timeBtn${t}">${t} min</button>`).join('')}
       </div>
-      <div class="time-hint" id="timeHint">Zwei bis drei Sätze mit kurzer Begründung.</div>
+      <div class="time-hint" id="timeHint">${escapeHtml(getTimeConfig(selectedTime)?.textExpectation || '')}</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
         <button class="btn btn-primary btn-lg" onclick="window.LF.startTest('${subjectId}','${yearId}','${topicId}')">
           Test beginnen
@@ -1864,171 +2008,6 @@ function renderSettings() {
     </div>`;
 }
 
-// ── Statistik-Seite ──────────────────────
-function renderStatistics() {
-  const grades   = userData?.grades || {};
-  const subjects = Object.values(structure || {});
-  const allGrades = Object.values(grades).filter(g => g.grade);
-  const totalTests = allGrades.length;
-  const avgGrade   = totalTests ? (allGrades.reduce((s,g)=>s+g.grade,0)/totalTests).toFixed(2) : null;
-  const bestGrade  = totalTests ? Math.min(...allGrades.map(g=>g.grade)) : null;
-  const worstGrade = totalTests ? Math.max(...allGrades.map(g=>g.grade)) : null;
-  const streak     = calcStreak();
-
-  // F-42: Lernzeit-Chart (letzte 7 Tage)
-  const studyTimeMap = userData?.studyTime || {};
-  const today = new Date();
-  const last7 = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today); d.setDate(d.getDate() - (6 - i));
-    const key = d.toISOString().slice(0, 10);
-    return { label: d.toLocaleDateString('de-DE', { weekday: 'short' }), key, mins: studyTimeMap[key] || 0 };
-  });
-  const maxMins = Math.max(...last7.map(d => d.mins), 1);
-  const studyTimeChart = `
-    <div class="stats-card" style="margin-top:16px">
-      <div class="stats-card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>⏱ Lernzeit (letzte 7 Tage)</span>
-        <button class="btn btn-ghost btn-sm" onclick="window.LF.exportGradesCSV()">&#x2B07; CSV exportieren</button>
-      </div>
-      <div class="study-time-chart">
-        ${last7.map(d => `
-          <div class="stc-col">
-            <div class="stc-mins">${d.mins > 0 ? d.mins + ' min' : ''}</div>
-            <div class="stc-bar-wrap">
-              <div class="stc-bar" style="height:${Math.round(d.mins/maxMins*80)+4}px"></div>
-            </div>
-            <div class="stc-label">${d.label}</div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-
-  // Übersicht-Karten
-  const overviewCards = `
-    <div class="stats-overview-grid">
-      <div class="stat-overview-card">
-        <div class="soc-val">${totalTests}</div>
-        <div class="soc-lbl">Tests insgesamt</div>
-      </div>
-      <div class="stat-overview-card">
-        <div class="soc-val" style="color:${avgGrade ? gradeColor(Math.round(parseFloat(avgGrade))) : 'inherit'}">${avgGrade || '–'}</div>
-        <div class="soc-lbl">Ø Note gesamt</div>
-      </div>
-      <div class="stat-overview-card">
-        <div class="soc-val" style="color:${bestGrade ? gradeColor(bestGrade) : 'inherit'}">${bestGrade || '–'}</div>
-        <div class="soc-lbl">Beste Note</div>
-      </div>
-      <div class="stat-overview-card">
-        <div class="soc-val">${streak}</div>
-        <div class="soc-lbl">🔥 Tage Streak</div>
-      </div>
-    </div>`;
-
-  // Fächer-Balken
-  const subjectBars = subjects.map(s => {
-    const prog = getSubjectProgress(s.id);
-    if (prog.total === 0) return '';
-    const color = getSubjectColor(s.id);
-    const pct   = prog.total > 0 ? Math.round(prog.tested / prog.total * 100) : 0;
-    const avgInfo = prog.avgGrade ? ` · Ø Note ${prog.avgGrade.toFixed(1)}` : '';
-    return `
-      <div class="subj-bar-row">
-        <div class="subj-bar-label">
-          <span>${getSubjectIcon(s.id)} ${s.name}</span>
-          <span class="subj-bar-meta">${prog.tested}/${prog.total} Themen${avgInfo}</span>
-        </div>
-        <div class="subj-bar-track">
-          <div class="subj-bar-fill" style="width:${pct}%;background:${color}"></div>
-        </div>
-        <div class="subj-bar-pct" style="color:${color}">${pct}%</div>
-      </div>`;
-  }).join('');
-
-  // Alle Versuche aus history flach machen, nach Datum sortieren
-  const allAttempts = Object.entries(grades).flatMap(([key, g]) => {
-    const [subjectId, yearId, topicId] = key.split('__');
-    const subject = structure?.[subjectId];
-    const topic   = subject?.years?.[yearId]?.topics?.[topicId];
-    if (!subject || !topic) return [];
-    if (g.history?.length) {
-      return g.history.map(h => ({ subjectId, yearId, topicId, subject, topic, h }));
-    }
-    if (g.date?.seconds) {
-      const gp = _gp(g);
-      return [{ subjectId, yearId, topicId, subject, topic,
-        h: { points: gp.pts, maxPoints: gp.max, grade: g.grade,
-             date: new Date(g.date.seconds * 1000).toISOString() }
-      }];
-    }
-    return [];
-  }).sort((a, b) => new Date(b.h.date) - new Date(a.h.date)).slice(0, 15);
-
-  const testRows = allAttempts.map(({ subjectId, yearId, topicId, subject, topic, h }) => {
-    const date = new Date(h.date).toLocaleDateString('de-DE');
-    return `
-      <tr onclick="location.hash='#/fach/${subjectId}/${yearId}/${topicId}'" style="cursor:pointer">
-        <td>${getSubjectIcon(subjectId)} ${subject.name}</td>
-        <td>${topic.name}</td>
-        <td><span class="grade-pill" style="background:${gradeColor(h.grade)}">${h.grade}</span></td>
-        <td>${h.points}/${h.maxPoints}</td>
-        <td>${date}</td>
-      </tr>`;
-  }).join('');
-
-  // Notenverteilung (1-6)
-  const gradeCounts = [1,2,3,4,5,6].map(n => ({
-    grade: n,
-    count: allGrades.filter(g => g.grade === n).length
-  }));
-  const maxCount = Math.max(...gradeCounts.map(g=>g.count), 1);
-  const gradeDistribution = gradeCounts.map(({grade, count}) => `
-    <div class="grade-dist-col">
-      <div class="grade-dist-bar-wrap">
-        <div class="grade-dist-count">${count || ''}</div>
-        <div class="grade-dist-bar" style="height:${Math.round(count/maxCount*80)+8}px;background:${gradeColor(grade)}"></div>
-      </div>
-      <div class="grade-dist-label">${grade}</div>
-    </div>`).join('');
-
-  document.getElementById('app').innerHTML = `
-    ${renderNav([{ label: 'Statistiken' }])}
-    <div class="page">
-      <div class="page-header">
-        <h1>📊 Statistiken</h1>
-        <div class="sub">Dein Lernfortschritt auf einen Blick.</div>
-      </div>
-
-      ${totalTests === 0 ? `
-        <div class="empty-state"><div class="empty-icon">📊</div>Noch keine Tests gemacht.<br>Starte einen Test um Statistiken zu sehen!</div>
-      ` : `
-        ${overviewCards}
-
-        <div class="stats-section-grid">
-          <div class="stats-card">
-            <div class="stats-card-title">📈 Fortschritt nach Fach</div>
-            <div class="subj-bars">${subjectBars || '<div class="empty-state" style="padding:16px">Keine Daten</div>'}</div>
-          </div>
-          <div class="stats-card">
-            <div class="stats-card-title">📊 Notenverteilung</div>
-            <div class="grade-distribution">${gradeDistribution}</div>
-            <div class="grade-dist-legend">Note 1 (sehr gut) → Note 6 (ungenügend)</div>
-          </div>
-        </div>
-
-        <div class="stats-card" style="margin-top:16px">
-          <div class="stats-card-title">🕐 Letzte Versuche</div>
-          ${testRows ? `
-            <div class="table-wrap">
-              <table class="stats-table">
-                <thead><tr><th>Fach</th><th>Thema</th><th>Note</th><th>Punkte</th><th>Datum</th></tr></thead>
-                <tbody>${testRows}</tbody>
-              </table>
-            </div>` : '<div class="empty-state" style="padding:16px">Keine Tests</div>'}
-        </div>
-        ${studyTimeChart}
-      `}
-    </div>`;
-}
-
 // ── Lernen-Hub (Mission 1, neu) ──────────
 // Daily Challenge + SRS + Lesezeichen + Suche + komplettes Fächer-Grid.
 // Ersetzt das Fächer-Grid auf Dashboard (das nur noch Top-3-Schnellstart hat).
@@ -2116,7 +2095,8 @@ let _onboardingState = null;
 function renderOnboarding(opts = {}) {
   // existierende Overlay killen
   document.getElementById('onboardingOverlay')?.remove();
-  const isExistingNoKlasse = !!userData?.onboardedAt === false && !!opts.existingMissingKlasse;
+  // Bestands-User-Modus: hat onboardedAt aber keine Klasse (Bug E / Casey #3).
+  const isExistingNoKlasse = !!opts.existingMissingKlasse;
   // Bestands-User ohne Klasse: nur Schritt 2 + 4. Sonst alle 4.
   _onboardingState = {
     step: opts.fromStep ?? (isExistingNoKlasse ? 2 : 1),
@@ -2151,6 +2131,7 @@ function _renderOnboardingStep() {
         <p>Wir richten dein Konto in 4 Schritten ein — dauert keine Minute.</p>
         ${dots(1)}
         <div class="wizard-actions">
+          <button class="btn btn-ghost" onclick="window.LF.onboardingSkipAll()">Überspringen</button>
           <button class="btn btn-primary btn-lg" onclick="window.LF.onboardingNext()">Los geht's</button>
         </div>
       </div>`;
@@ -2177,6 +2158,7 @@ function _renderOnboardingStep() {
         ${dots(2)}
         <div class="wizard-actions">
           ${s.skipSteps.includes(1) ? '' : '<button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zurück</button>'}
+          <button class="btn btn-ghost" onclick="window.LF.onboardingSkipAll()">Überspringen</button>
           <button class="btn btn-primary" onclick="window.LF.onboardingNext()">Weiter</button>
         </div>
       </div>`;
@@ -2186,7 +2168,7 @@ function _renderOnboardingStep() {
         <div class="wizard-step-num">Schritt 3 von 4</div>
         <h2>Wähle deinen Avatar.</h2>
         <div class="avatar-picker" style="margin:16px 0">
-          ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.onboardingPickEmoji('${e}')">${e}</button>`).join('')}
+          ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn ${s.pickedEmoji === e ? 'active' : ''}" onclick="window.LF.onboardingPickEmoji('${e}')">${e}</button>`).join('')}
         </div>
         <div class="form-hint">…oder lade ein Bild hoch:</div>
         <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-block;margin-top:8px">
@@ -2206,29 +2188,422 @@ function _renderOnboardingStep() {
         </div>
       </div>`;
   } else {
+    // Mission 4: Step 4 wird zum Tour-Einstieg (Maya Architecture A).
     body = `
       <div class="wizard-step">
         <div class="wizard-step-num">Schritt 4 von 4</div>
         <div class="wizard-icon-large">🎉</div>
         <h2>Alles klar, ${escapeHtml(s.name || 'Lernender')}!</h2>
-        <p>So funktioniert die App:</p>
-        <ul class="wizard-tips">
-          <li>📚 Wähle ein Fach im „Lernen"-Tab und mach einen Test.</li>
-          <li>🔥 Lerne täglich für deinen Streak.</li>
-          <li>🏆 Schau in die Rangliste — deine Klasse ist Default.</li>
-          <li>👤 Im Profil findest du Erfolge, Statistiken und Inventar.</li>
-        </ul>
+        <p>Soll ich dir die wichtigsten Funktionen in 8 kurzen Schritten zeigen?</p>
         ${dots(4)}
         <div class="wizard-actions">
-          <button class="btn btn-ghost" onclick="window.LF.onboardingFinish('profil')">Profil ansehen</button>
-          <button class="btn btn-primary" onclick="window.LF.onboardingFinish('app')">Zur App</button>
+          <button class="btn btn-ghost" onclick="window.LF.onboardingFinish('app')">Später, zur App</button>
+          <button class="btn btn-primary" onclick="window.LF.onboardingFinish('tour')">Tour starten</button>
         </div>
       </div>`;
   }
 
-  overlay.innerHTML = `<div class="wizard-card">${body}</div>`;
+  // Wizard-Bug B: X-Close-Button am Overlay-Rand (auf jedem Step sichtbar).
+  overlay.innerHTML = `<div class="wizard-card">
+    <button class="wizard-close" aria-label="Schließen" onclick="window.LF.onboardingSkipAll()">&times;</button>
+    ${body}
+  </div>`;
   document.body.appendChild(overlay);
 }
+
+// ════════════════════════════════════════════════════════════════
+//  Mission 4 — App-Tour (Spotlight + Tooltip + Pfeil)
+// ════════════════════════════════════════════════════════════════
+// Targets werden ueber data-tour="<id>"-Attribute aufgespuert (Refactor-robust).
+// Step 0 = Welcome (center, kein Target), Step 8 = Final (center).
+// Mobile (window.innerWidth < 768) skipt Step 5 (User-Chip im Dropdown nicht sichtbar).
+const TOUR_STEPS = [
+  {
+    id: 'welcome', target: null, position: 'center',
+    title: 'Willkommen!',
+    body: 'Lass mich dir die App in 8 kurzen Schritten zeigen. Du kannst jederzeit überspringen.'
+  },
+  {
+    id: 'lernen', target: 'nav-lernen', mobileTarget: 'mobile-nav-lernen',
+    position: 'below',
+    title: 'Lernen',
+    body: 'Hier wählst du Fächer und machst Tests. Alles, was du für die Schule brauchst.'
+  },
+  {
+    id: 'streak', target: 'streak-chip', mobileTarget: null,
+    position: 'below',
+    title: 'Streak',
+    body: 'Lerne täglich für deinen Streak — er gibt Bonus-XP. Schon eine Daily Challenge zählt.'
+  },
+  {
+    id: 'daily', target: 'daily-card', mobileTarget: 'daily-card',
+    position: 'above',
+    title: 'Daily Challenge',
+    body: 'Jeden Tag eine neue Mini-Challenge — 5 bis 10 Fragen, in 5 Minuten durch.'
+  },
+  {
+    id: 'rangliste', target: 'nav-rangliste', mobileTarget: 'mobile-nav-rangliste',
+    position: 'below',
+    title: 'Rangliste',
+    body: 'Vergleich dich mit deiner Klasse. Die Klassen-Rangliste ist Default — Global ist optional.'
+  },
+  {
+    id: 'profil', target: 'user-chip', mobileTarget: null,
+    position: 'below-left',
+    title: 'Dein Profil',
+    body: 'Hier findest du Profil, Erfolge, Inventar und Einstellungen.'
+  },
+  {
+    id: 'bug', target: 'bug-chip', mobileTarget: 'bug-fab',
+    position: 'above',
+    title: 'Was kaputt? Sag\'s.',
+    body: 'Wenn ein Fach fehlt, eine Frage falsch ist oder was anderes nicht stimmt — hier melden.'
+  },
+  {
+    id: 'hilfe', target: 'nav-hilfe', mobileTarget: 'bottom-mehr',
+    position: 'below',
+    title: 'Hilfe',
+    body: 'Alle Funktionen erklärt — und du kannst diese Tour hier jederzeit erneut starten.'
+  },
+  {
+    id: 'final', target: null, position: 'center',
+    title: 'Das war\'s!',
+    body: 'Viel Spaß beim Lernen. Wenn du was vermisst, sag\'s über das 🐛-Icon.'
+  }
+];
+
+let _tourState = null;
+
+function _tourIsMobile() { return window.innerWidth < 768; }
+
+function _tourFindTarget(step) {
+  if (!step || !step.target) return null;
+  const isMobile = _tourIsMobile();
+  const targetId = isMobile ? (step.mobileTarget ?? step.target) : step.target;
+  if (targetId == null) return null;  // explizit auf Mobile uebersprungen
+  const el = document.querySelector(`[data-tour="${CSS.escape(targetId)}"]`);
+  return el || null;
+}
+
+function _renderTourStep(index) {
+  if (!_tourState) return;
+  // Bound check
+  if (index < 0) index = 0;
+  if (index >= TOUR_STEPS.length) { _endTour('completed'); return; }
+
+  const step = TOUR_STEPS[index];
+
+  // Skip-Logic: Mobile + mobileTarget=null → skippen.
+  if (step.target && _tourIsMobile() && step.mobileTarget === null) {
+    return _renderTourStep(index + (index >= _tourState.index ? 1 : -1));
+  }
+
+  // Target nicht im DOM (z.B. streak-chip wenn streak <= 1) ODER unsichtbar
+  // (z.B. bug-fab auf Desktop, bug-chip auf Mobile) → skip.
+  if (step.target) {
+    const el = _tourFindTarget(step);
+    const visible = el && el.getClientRects().length > 0
+                       && el.offsetWidth > 0 && el.offsetHeight > 0;
+    if (!el || !visible) {
+      const dir = (index >= _tourState.index) ? 1 : -1;
+      return _renderTourStep(index + dir);
+    }
+  }
+
+  _tourState.index = index;
+
+  // Overlay aufbauen / re-use.
+  let overlay = document.getElementById('lfTourOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'lfTourOverlay';
+    overlay.className = 'lf-tour-overlay';
+    overlay.innerHTML = `
+      <div class="lf-tour-backdrop"></div>
+      <div class="lf-tour-spotlight" id="lfTourSpotlight"></div>
+      <div class="lf-tour-arrow" id="lfTourArrow"></div>
+      <div class="lf-tour-tooltip" id="lfTourTooltip"></div>
+    `;
+    document.body.appendChild(overlay);
+    // Backdrop-Tap auf Mobile schliesst Tour (analog Modal-Behavior).
+    overlay.querySelector('.lf-tour-backdrop')?.addEventListener('click', () => _endTour('skipped'));
+  }
+
+  const spotlight = overlay.querySelector('#lfTourSpotlight');
+  const tooltip   = overlay.querySelector('#lfTourTooltip');
+  const arrow     = overlay.querySelector('#lfTourArrow');
+
+  const isFirst = index === 0;
+  const isLast  = index === TOUR_STEPS.length - 1;
+  const counter = (isFirst || isLast) ? '' : `<div class="lf-tour-tooltip-head">Schritt ${index} von ${TOUR_STEPS.length - 1}</div>`;
+
+  let backBtn = '';
+  if (!isFirst) backBtn = `<button class="btn btn-ghost btn-sm" onclick="window.LF.tourBack()">Zurück</button>`;
+  let skipBtn = `<button class="btn btn-ghost btn-sm" onclick="window.LF.tourSkip()">Überspringen</button>`;
+  let nextBtnLabel = isLast ? 'Los geht\'s!' : (isFirst ? 'Tour starten' : 'Weiter');
+  let nextBtn = `<button class="btn btn-primary btn-sm" onclick="window.LF.tourNext()">${nextBtnLabel}</button>`;
+  if (isLast) skipBtn = '';  // letzter Schritt: keine Skip-Variante mehr
+
+  tooltip.innerHTML = `
+    <button class="lf-tour-close" aria-label="Tour beenden" onclick="window.LF.tourSkip()">&times;</button>
+    ${counter}
+    <h3 class="lf-tour-tooltip-title">${escapeHtml(step.title)}</h3>
+    <p class="lf-tour-tooltip-body">${escapeHtml(step.body)}</p>
+    <div class="lf-tour-tooltip-actions">
+      <div>${backBtn}</div>
+      <div style="display:flex;gap:8px">${skipBtn}${nextBtn}</div>
+    </div>
+  `;
+
+  // Auto-Scroll-to-Target falls noetig, dann positionieren.
+  const target = _tourFindTarget(step);
+  if (target) {
+    try {
+      const r = target.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => _positionTour(step, target, spotlight, tooltip, arrow), 320);
+        return;
+      }
+    } catch(e) {}
+    _positionTour(step, target, spotlight, tooltip, arrow);
+  } else {
+    // Kein Target → Spotlight + Arrow ausblenden, Tooltip zentrieren.
+    spotlight.style.display = 'none';
+    arrow.style.display = 'none';
+    tooltip.style.position = 'fixed';
+    tooltip.style.left = '50%';
+    tooltip.style.top  = '50%';
+    tooltip.style.transform = 'translate(-50%, -50%)';
+  }
+}
+
+function _positionTour(step, target, spotlight, tooltip, arrow) {
+  const r = target.getBoundingClientRect();
+  const pad = 6;
+  spotlight.style.display = 'block';
+  spotlight.style.top    = (r.top - pad) + 'px';
+  spotlight.style.left   = (r.left - pad) + 'px';
+  spotlight.style.width  = (r.width + pad * 2) + 'px';
+  spotlight.style.height = (r.height + pad * 2) + 'px';
+
+  // Tooltip-Groesse messen
+  tooltip.style.position = 'fixed';
+  tooltip.style.transform = '';
+  tooltip.style.left = '0px';
+  tooltip.style.top  = '0px';
+  // Erst sichtbar machen, dann messen
+  tooltip.style.visibility = 'hidden';
+  tooltip.style.display = 'block';
+  const tt = tooltip.getBoundingClientRect();
+
+  const margin = 16;
+  const edge   = 12;
+  const mobileBottomBarH = _tourIsMobile() ? 56 : 0;
+  let pos = step.position || 'below';
+  if (_tourIsMobile() && (pos === 'left' || pos === 'right' || pos === 'below-left' || pos === 'below-right')) {
+    pos = (r.top > window.innerHeight / 2) ? 'above' : 'below';
+  }
+
+  let ttLeft, ttTop, arrowDir;
+  switch (pos) {
+    case 'above':
+      ttTop  = r.top - tt.height - margin;
+      ttLeft = r.left + r.width / 2 - tt.width / 2;
+      arrowDir = 'down';
+      if (ttTop < edge) { // fallback below
+        ttTop = r.bottom + margin; arrowDir = 'up';
+      }
+      break;
+    case 'left':
+      ttLeft = r.left - tt.width - margin;
+      ttTop  = r.top + r.height / 2 - tt.height / 2;
+      arrowDir = 'right';
+      if (ttLeft < edge) { ttLeft = r.right + margin; arrowDir = 'left'; }
+      break;
+    case 'right':
+      ttLeft = r.right + margin;
+      ttTop  = r.top + r.height / 2 - tt.height / 2;
+      arrowDir = 'left';
+      if (ttLeft + tt.width > window.innerWidth - edge) { ttLeft = r.left - tt.width - margin; arrowDir = 'right'; }
+      break;
+    case 'below-left':
+      ttTop  = r.bottom + margin;
+      ttLeft = r.right - tt.width;
+      arrowDir = 'up';
+      break;
+    case 'below':
+    default:
+      ttTop  = r.bottom + margin;
+      ttLeft = r.left + r.width / 2 - tt.width / 2;
+      arrowDir = 'up';
+      if (ttTop + tt.height > window.innerHeight - edge - mobileBottomBarH) {
+        ttTop = r.top - tt.height - margin; arrowDir = 'down';
+      }
+      break;
+  }
+  // Clamp to viewport
+  ttLeft = Math.max(edge, Math.min(ttLeft, window.innerWidth - tt.width - edge));
+  ttTop  = Math.max(edge, Math.min(ttTop,  window.innerHeight - tt.height - edge - mobileBottomBarH));
+  tooltip.style.left = ttLeft + 'px';
+  tooltip.style.top  = ttTop + 'px';
+  tooltip.style.visibility = '';
+
+  // Pfeil positionieren — auf Target-Mitte zwischen Tooltip und Target.
+  arrow.style.display = 'block';
+  arrow.className = 'lf-tour-arrow lf-tour-arrow-' + arrowDir;
+  const tx = r.left + r.width / 2;
+  if (arrowDir === 'up') {
+    arrow.style.left = (tx - 7) + 'px';
+    arrow.style.top  = (r.bottom + 4) + 'px';
+  } else if (arrowDir === 'down') {
+    arrow.style.left = (tx - 7) + 'px';
+    arrow.style.top  = (r.top - 14) + 'px';
+  } else if (arrowDir === 'left') {
+    arrow.style.left = (r.right + 4) + 'px';
+    arrow.style.top  = (r.top + r.height / 2 - 7) + 'px';
+  } else if (arrowDir === 'right') {
+    arrow.style.left = (r.left - 14) + 'px';
+    arrow.style.top  = (r.top + r.height / 2 - 7) + 'px';
+  }
+}
+
+function _repositionTour() {
+  if (!_tourState) return;
+  const step = TOUR_STEPS[_tourState.index];
+  if (!step || !step.target) return;
+  const target = _tourFindTarget(step);
+  const overlay = document.getElementById('lfTourOverlay');
+  if (!target || !overlay) return;
+  _positionTour(step, target,
+    overlay.querySelector('#lfTourSpotlight'),
+    overlay.querySelector('#lfTourTooltip'),
+    overlay.querySelector('#lfTourArrow'));
+}
+
+async function _endTour(reason) {
+  if (!_tourState) return;
+  // Cleanup
+  window.removeEventListener('scroll', _repositionTour, { passive: true });
+  window.removeEventListener('resize', _repositionTour);
+  document.removeEventListener('keydown', _tourKeydown);
+  window.removeEventListener('lf:banned', _tourBanCleanup);
+  if (_tourState.driftInterval) clearInterval(_tourState.driftInterval);
+  if (_tourState.hashHandler) window.removeEventListener('hashchange', _tourState.hashHandler);
+  _tourState = null;
+  const overlay = document.getElementById('lfTourOverlay');
+  if (overlay) {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 200);
+  }
+
+  // Persist tour-state on user-doc. Felder sind allow-listed in Mission-2-Rules
+  // (tourCompletedAt / tourSkippedAt / tourPromptedAt). Permission-denied →
+  // schreiben einfach nicht — Tour funktioniert in-Session weiter.
+  if (currentUser?.uid && (reason === 'completed' || reason === 'skipped')) {
+    try {
+      const field = reason === 'completed' ? 'tourCompletedAt' : 'tourSkippedAt';
+      await db().collection('users').doc(currentUser.uid).set({
+        [field]: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      if (userData) userData[field] = Date.now();
+    } catch(e) {
+      console.warn('[tour-persist]', e, '- field may not be in ownerSafeFields, ask Marcus to add tourCompletedAt/tourSkippedAt/tourPromptedAt to firestore.rules');
+    }
+  }
+}
+
+function _tourKeydown(e) {
+  if (e.key === 'Escape') { _endTour('skipped'); }
+  else if (e.key === 'ArrowRight') { window.LF.tourNext(); }
+  else if (e.key === 'ArrowLeft') { window.LF.tourBack(); }
+}
+
+function _tourBanCleanup() { _endTour('banned'); }
+
+// Toast fuer Bestands-User: bietet Tour an, ohne sie zu erzwingen.
+function _showTourToast() {
+  if (!currentUser || _tourState) return;
+  if (document.getElementById('lfTourToast')) return;
+  const t = document.createElement('div');
+  t.id = 'lfTourToast';
+  t.className = 'lf-tour-toast';
+  t.innerHTML = `
+    <div class="lf-tour-toast-body">
+      Neue App-Tour verfügbar — willst du sehen, was sich geändert hat?
+    </div>
+    <div class="lf-tour-toast-actions">
+      <button class="btn btn-ghost btn-sm" onclick="window.LF.tourToastDismiss()">Nicht jetzt</button>
+      <button class="btn btn-primary btn-sm" onclick="window.LF.tourToastAccept()">Tour starten</button>
+    </div>
+  `;
+  document.body.appendChild(t);
+  // Auto-dismiss nach 8s
+  setTimeout(() => {
+    if (document.getElementById('lfTourToast')) window.LF.tourToastDismiss();
+  }, 8000);
+}
+
+window.LF.tourToastDismiss = async () => {
+  document.getElementById('lfTourToast')?.remove();
+  // Nicht permanent skippen — User soll's vielleicht spaeter machen.
+  // tourPromptedAt steht bereits → Toast kommt beim naechsten Login wieder.
+};
+
+window.LF.tourToastAccept = () => {
+  document.getElementById('lfTourToast')?.remove();
+  window.LF.startTour();
+};
+
+// ── Tour Public API ───────────────────────
+window.LF.startTour = async () => {
+  if (_tourState) return;  // bereits aktiv
+  // Defense: Wizard muss zu sein.
+  if (document.getElementById('onboardingOverlay')) {
+    console.warn('[startTour] wizard still open');
+    return;
+  }
+  // Auf Dashboard navigieren falls woanders (Targets leben dort).
+  if (location.hash !== '#/' && location.hash !== '#' && location.hash !== '') {
+    location.hash = '#/';
+    // route() wird via hashchange ausgeloest
+    await new Promise(r => setTimeout(r, 250));
+  }
+  // Auf dashboard-ready warten (mit Timeout 3s).
+  try {
+    const ready = window.LF.dashboardReady || Promise.resolve();
+    await Promise.race([ready, new Promise(r => setTimeout(r, 3000))]);
+  } catch(e) {}
+
+  _tourState = {
+    index: 0,
+    driftInterval: null,
+    hashHandler: null
+  };
+  // Hash-Change → Tour pausieren mit Toast.
+  _tourState.hashHandler = () => {
+    if (!_tourState) return;
+    showToast('Tour pausiert — du kannst sie in Hilfe neu starten.', 'info');
+    _endTour('navigated');
+  };
+  window.addEventListener('hashchange', _tourState.hashHandler);
+  window.addEventListener('scroll', _repositionTour, { passive: true });
+  window.addEventListener('resize', _repositionTour);
+  document.addEventListener('keydown', _tourKeydown);
+  window.addEventListener('lf:banned', _tourBanCleanup);
+
+  requestAnimationFrame(() => _renderTourStep(0));
+};
+
+window.LF.tourNext = () => {
+  if (!_tourState) return;
+  _renderTourStep(_tourState.index + 1);
+};
+window.LF.tourBack = () => {
+  if (!_tourState) return;
+  _renderTourStep(_tourState.index - 1);
+};
+window.LF.tourSkip = () => _endTour('skipped');
 
 // ── Admin-User-Editor (Mission 1, neu) ────
 let adminEditState = null;
@@ -4002,25 +4377,10 @@ function renderUebenQuestion() {
 }
 
 // ── Tab-Wechsel-Erkennung ─────────────────
-function setupTabSwitchDetection() {
-  tabSwitchPenalty = false;
-  removeTabSwitchDetection();
-  visibilityHandler = () => {
-    if (!document.hidden || !testState) return;
-    removeTabSwitchDetection();
-    tabSwitchPenalty = true;
-    showToast('Tab-Wechsel erkannt — Test wird als Note 6 gewertet.', 'error');
-    setTimeout(() => window.LF.submitTest(), 1500);
-  };
-  document.addEventListener('visibilitychange', visibilityHandler);
-}
-
-function removeTabSwitchDetection() {
-  if (visibilityHandler) {
-    document.removeEventListener('visibilitychange', visibilityHandler);
-    visibilityHandler = null;
-  }
-}
+// State + Listener leben jetzt in _tabSwitch (Closure am Datei-Anfang).
+// Diese Helpers bleiben fuer call-site-Lesbarkeit — koennen direkt _tabSwitch
+// nutzen, aber kein State leakt mehr nach aussen.
+function setupTabSwitchDetection() { _tabSwitch.setup(); }
 
 // ── Test-Ablauf ───────────────────────────
 let selectedTime = 15;
@@ -4055,8 +4415,11 @@ function renderHelp() {
 
       <div class="help-section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
         <h2 class="help-section-title" style="margin-bottom:8px">🚀 Erste Schritte (nochmal)</h2>
-        <p style="color:var(--text-muted);margin-bottom:12px">Willkommens-Wizard erneut starten — wenn du nochmal durch die Einrichtung willst.</p>
-        <button class="btn btn-secondary btn-sm" onclick="window.LF.openOnboarding(1)">Willkommens-Tour erneut zeigen</button>
+        <p style="color:var(--text-muted);margin-bottom:12px">Setup oder Feature-Tour erneut durchgehen.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.openOnboarding(1)">Setup-Wizard nochmal</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.startTour()">App-Tour nochmal</button>
+        </div>
       </div>
 
       <div class="help-toc">
@@ -4316,8 +4679,8 @@ async function grantXPAndAchievements(ctx = {}) {
   if (xpGained > 0) {
     p.push(saveXP(uid, xpGained).catch(console.error));
     // Mirror XP + Rolle zum leaderboard-Doc, damit Banner in Ranglisten auftaucht.
-    // Claude-Test-Account NICHT mirroren — sonst taucht er im XP-Tab der Rangliste auf.
-    if (!isClaudeAccount()) {
+    // Claude- und Hacker-Test-Accounts NICHT mirroren — sonst tauchen sie im XP-Tab auf.
+    if (!isClaudeAccount() && !isHackerAccount()) {
       p.push(db().collection('leaderboard').doc(uid).set({
         xp: userData.xp,
         displayName: currentUser.displayName || 'Nutzer',
@@ -4527,14 +4890,14 @@ function renderDailyChallengeCard() {
   if (done) {
     const gi = calcGrade(done.points, done.maxPoints);
     return `
-      <div class="daily-card daily-card-done" onclick="location.hash='#/daily-challenge'">
+      <div class="daily-card daily-card-done" data-tour="daily-card" onclick="location.hash='#/daily-challenge'">
         <div class="daily-card-label">Daily Challenge</div>
         <div class="daily-card-status">Heute erledigt</div>
         <div class="daily-card-grade" style="background:${gi.color}">${done.grade}</div>
       </div>`;
   }
   return `
-    <div class="daily-card" onclick="location.hash='#/daily-challenge'">
+    <div class="daily-card" data-tour="daily-card" onclick="location.hash='#/daily-challenge'">
       <div class="daily-card-label">Daily Challenge</div>
       <div class="daily-card-status">5 Min · 6 Fragen · Bonus-XP</div>
       <div class="daily-card-cta">Jetzt starten</div>
@@ -4775,6 +5138,41 @@ window.LF = {
       else showToast(msg, 'error');
     }
   },
+  // ── Hacker-Test-Account Handlers (Mirror der Claude-Handler) ──
+  // Credentials liegen ausschliesslich in localStorage.lf_hacker_creds, NIE
+  // in Firestore/Repo, NIE in Logs. log-Statements erwaehnen nur das Vorhandensein.
+  openHackerSetup: () => {
+    if (document.getElementById('hackerSetupOverlay')) return;
+    renderHackerSetupModal();
+  },
+  saveHackerCreds: () => {
+    const email = document.getElementById('hackerSetupEmail')?.value.trim();
+    const pass  = document.getElementById('hackerSetupPass')?.value;
+    const err   = document.getElementById('hackerSetupErr');
+    if (!email || !pass) { err.textContent = 'Email und Passwort noetig.'; return; }
+    if (pass.length < 6) { err.textContent = 'Passwort braucht mind. 6 Zeichen.'; return; }
+    localStorage.setItem('lf_hacker_creds', JSON.stringify({ email, password: pass }));
+    document.getElementById('hackerSetupOverlay')?.remove();
+    showToast('Hacker-Login lokal gespeichert.', 'success');
+    renderLogin();
+  },
+  clearHackerCreds: () => {
+    if (!confirm('Hacker-Login aus diesem Browser loeschen?')) return;
+    localStorage.removeItem('lf_hacker_creds');
+    document.getElementById('hackerSetupOverlay')?.remove();
+    showToast('Hacker-Login geloescht.', 'info');
+    renderLogin();
+  },
+  loginAsHacker: async () => {
+    const errEl = document.getElementById('authError');
+    if (errEl) errEl.innerHTML = '';
+    try { await loginAsHacker(); }
+    catch(e) {
+      const msg = e.code ? translateFirebaseError(e.code) : e.message;
+      if (errEl) errEl.innerHTML = `<div class="error-msg">${msg}</div>`;
+      else showToast(msg, 'error');
+    }
+  },
   saveColors: async () => {
     const subjects = Object.values(structure || {});
     const colors = {};
@@ -4786,9 +5184,10 @@ window.LF = {
     userData.settings = userData.settings || {};
     userData.settings.subjectColors = colors;
     // In Firestore speichern
-    await db().collection('users').doc(currentUser.uid).update({
-      'settings.subjectColors': colors
-    }).catch(console.error);
+    // Hard Rule 4: set+merge statt update() fuer Partial-Writes
+    await db().collection('users').doc(currentUser.uid).set({
+      settings: { subjectColors: colors }
+    }, { merge: true }).catch(console.error);
     showToast('Farben gespeichert! ✓', 'success');
   },
   resetColor: (subjectId, defaultColor) => {
@@ -4802,9 +5201,9 @@ window.LF = {
     subjects.forEach(s => window.LF.resetColor(s.id, s.color));
     if (userData?.settings?.subjectColors) {
       userData.settings.subjectColors = {};
-      await db().collection('users').doc(currentUser.uid).update({
-        'settings.subjectColors': {}
-      }).catch(console.error);
+      await db().collection('users').doc(currentUser.uid).set({
+        settings: { subjectColors: {} }
+      }, { merge: true }).catch(console.error);
     }
     showToast('Alle Farben zurückgesetzt.', 'info');
   },
@@ -4824,10 +5223,9 @@ window.LF = {
     userData.settings.customIconUrls = mergedUrls;
     _pendingIconUrls = {};
 
-    await db().collection('users').doc(currentUser.uid).update({
-      'settings.customIcons':    icons,
-      'settings.customIconUrls': mergedUrls
-    }).catch(console.error);
+    await db().collection('users').doc(currentUser.uid).set({
+      settings: { customIcons: icons, customIconUrls: mergedUrls }
+    }, { merge: true }).catch(console.error);
     showToast('Icons gespeichert! ✓', 'success');
   },
 
@@ -5018,7 +5416,7 @@ window.LF = {
     userData.dailyChallenges[dateKey] = { grade: gi.grade, points: pts, maxPoints: max };
     userData.dailyChallengesCompleted = (userData.dailyChallengesCompleted || 0) + 1;
     await incrementCounter(currentUser.uid, 'dailyChallengesCompleted').catch(console.error);
-    if (!isClaudeAccount()) {
+    if (!isClaudeAccount() && !isHackerAccount()) {
       await saveDailyScore(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, dateKey, gi.grade, pts, max, userRole()).catch(console.error);
     }
     await db().collection('users').doc(currentUser.uid).set({ dailyChallenges: { [dateKey]: userData.dailyChallenges[dateKey] } }, { merge: true }).catch(console.error);
@@ -5821,7 +6219,23 @@ window.LF.filterLernenGrid = (q) => {
 };
 
 // ── Onboarding-Wizard-Handler ─────────────
-window.LF.openOnboarding = (fromStep) => renderOnboarding({ fromStep });
+// Bug E (Casey #3): existingMissingKlasse korrekt durchreichen.
+// Wenn Bestands-User mit onboardedAt aber ohne Klasse den Wizard via Hilfe
+// re-triggert, soll die Bestands-Logik (skipSteps:[1,3]) greifen.
+window.LF.openOnboarding = (fromStep) => renderOnboarding({
+  fromStep,
+  existingMissingKlasse: !!userData?.onboardedAt && !userData?.klasse
+});
+
+// Hilfsfunktion: Name aus DOM einsammeln, bevor ein Re-Render den Input
+// clobbed. Bug C (Casey #1) — name verschwindet beim Klassen-Klick.
+function _collectOnboardingState() {
+  if (!_onboardingState) return;
+  const nameEl = document.getElementById('onbName');
+  if (nameEl && typeof nameEl.value === 'string' && nameEl.value.trim()) {
+    _onboardingState.name = nameEl.value.trim();
+  }
+}
 
 window.LF.onboardingNext = async () => {
   const s = _onboardingState;
@@ -5849,40 +6263,82 @@ window.LF.onboardingNext = async () => {
 window.LF.onboardingBack = () => {
   const s = _onboardingState;
   if (!s) return;
+  _collectOnboardingState();
   let prev = s.step - 1;
   while (s.skipSteps.includes(prev) && prev > 1) prev--;
   s.step = Math.max(prev, 1);
   _renderOnboardingStep();
 };
+// Red-Team #10: Defense-in-depth Klassen-Validator. Onboarding-Wizard rendert
+// nur 5..13 als Buttons, aber window.LF.onboardingPickKlasse ist ein globaler
+// Handler — Hacker koennten window.LF.onboardingPickKlasse('GOAT') von der
+// Konsole aufrufen. Realer Fix in firestore.rules (Marcus).
+const _ALLOWED_KLASSEN = ['5','6','7','8','9','10','11','12','13'];
 window.LF.onboardingPickKlasse = (k) => {
   if (!_onboardingState) return;
-  _onboardingState.klasse = String(k);
+  const v = String(k);
+  if (!_ALLOWED_KLASSEN.includes(v)) {
+    showToast('Ungueltige Klasse — erlaubt sind 5 bis 13.', 'error');
+    return;
+  }
+  // Bug C: Name aus DOM einsammeln BEVOR der Re-Render den Input clobbed.
+  _collectOnboardingState();
+  _onboardingState.klasse = v;
   _renderOnboardingStep();
 };
 window.LF.onboardingPickEmoji = (emoji) => {
   if (!_onboardingState) return;
+  _collectOnboardingState();
   _onboardingState.photoURL = emojiToPhotoURL(emoji) || _onboardingState.photoURL;
+  _onboardingState.pickedEmoji = emoji;  // Casey #3.4: track for selected-highlight
   _renderOnboardingStep();
 };
 window.LF.onboardingHandleFile = async (input) => {
   if (!_onboardingState) return;
   const file = input.files?.[0];
   if (!file) return;
+  _collectOnboardingState();
   const dataUrl = await _resizeToDataUrl(file);
   if (dataUrl) {
     _onboardingState.photoURL = dataUrl;
+    _onboardingState.pickedEmoji = null;  // upload clears emoji-selection
     _renderOnboardingStep();
   } else {
     showToast('Bild konnte nicht geladen werden.', 'error');
   }
 };
+// Skip-step-3 (Avatar) — alter Behavior: nur den Avatar-Schritt überspringen,
+// Wizard läuft auf Step 4 weiter. Wird vom „Überspringen"-Button auf Step 3 verwendet.
 window.LF.onboardingSkip = () => {
-  // Skipt Schritt 3 (Avatar) — Default = Buchstabe in Akzentfarbe (kein photoURL)
   if (_onboardingState) {
     _onboardingState.photoURL = null;
     _onboardingState.step = 4;
   }
   _renderOnboardingStep();
+};
+// Bug D: SkipAll — kompletter Wizard-Abbruch. Persistiert tourSkippedAt
+// (blockt Tour-Auto-Trigger dauerhaft) + markOnboarded. Wird vom X-Button und
+// Step-1/2-Skip verwendet.
+window.LF.onboardingSkipAll = async () => {
+  try {
+    if (currentUser?.uid) {
+      try {
+        await db().collection('users').doc(currentUser.uid).set({
+          tourSkippedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        if (userData) userData.tourSkippedAt = Date.now();
+      } catch(e) { console.warn('[wizard-skip-tourField]', e); }
+      await markOnboarded(currentUser.uid).catch(e => console.warn('[wizard-skip-onboard]', e));
+      if (userData) userData.onboardedAt = Date.now();
+    }
+  } catch(e) { console.warn('[wizard-skipAll]', e); }
+  document.getElementById('onboardingOverlay')?.remove();
+  _onboardingState = null;
+  if (location.hash !== '#/' && location.hash !== '#') {
+    location.hash = '#/';
+  } else {
+    route();
+  }
 };
 window.LF.onboardingFinish = async (target) => {
   const s = _onboardingState;
@@ -5907,8 +6363,15 @@ window.LF.onboardingFinish = async (target) => {
   }
   document.getElementById('onboardingOverlay')?.remove();
   _onboardingState = null;
-  if (target === 'profil') location.hash = '#/profil';
-  else { location.hash = '#/'; route(); }
+  if (target === 'tour') {
+    // Mission 4: Wizard-Schritt 4 → Tour-Einstieg.
+    location.hash = '#/'; route();
+    setTimeout(() => { try { window.LF.startTour(); } catch(e) { console.warn('[onb-tour-start]', e); } }, 500);
+  } else if (target === 'profil') {
+    location.hash = '#/profil';
+  } else {
+    location.hash = '#/'; route();
+  }
 };
 
 // ── Admin-User-Editor-Handler ─────────────
@@ -6087,10 +6550,13 @@ window.LF.setAnswer = (idx, val) => {
 };
 
 window.LF.submitTest = async () => {
+  // Casey #2: Re-Entry-Guard gegen Doppel-Submission auf Mobile-Doppeltap.
+  if (!testState || testState._submitting) return;
+  testState._submitting = true;
+  try {
   clearInterval(timerInterval);
-  removeTabSwitchDetection();
-  const penalty = tabSwitchPenalty;
-  tabSwitchPenalty = false;
+  _tabSwitch.teardown();
+  const penalty = _tabSwitch.consumePenalty();
 
   const { questions, answers, timeMinutes, subjectId, yearId, topicId, subjectName, topicName, startTime } = testState;
   const timeUsed        = Math.round((Date.now() - startTime) / 1000);
@@ -6110,83 +6576,195 @@ window.LF.submitTest = async () => {
     ? { grade: 6, label: 'Ungenügend (Tab-Wechsel)', color: '#7f1d1d' }
     : calcGrade(total, max);
 
+  // Custom-Topic-Check: kein CF-Call, lokal-only XP + Achievements (Cheat-#8 frontend half).
+  const isCustomTopic = subjectId === '_custom'
+                        || subjectId === 'meine-inhalte'
+                        || (typeof topicId === 'string' && topicId.startsWith('_custom_'));
+  // Claude/Hacker-Test-Accounts: kein CF-Call (Server-Whitelist haette uns sowieso geblockt).
+  const isTestAccount = isClaudeAccount() || isHackerAccount();
+
   if (currentUser) {
     userData = userData || {};
     userData.grades = userData.grades || {};
     const key      = `${subjectId}__${yearId}__${topicId}`;
     const existing = userData.grades[key] || {};
 
-    const attempt = {
-      points: total, maxPoints: max,
-      grade: penalty ? 6 : grade.grade,
-      date: new Date().toISOString()
-    };
-    const history = [...(existing.history || []), attempt];
-
-    // Best = attempt with highest percentage
-    const bestRun  = history.reduce((best, h) =>
-      (h.points / h.maxPoints) > (best.points / best.maxPoints) ? h : best,
-      history[0]
-    );
-    const bestInfo = calcGrade(bestRun.points, bestRun.maxPoints);
-
-    const gradeEntry = {
-      grade:         bestInfo.grade,
-      bestPoints:    bestRun.points,
-      bestMaxPoints: bestRun.maxPoints,
-      history
-    };
-    userData.grades[key] = gradeEntry;
-    await saveGrade(currentUser.uid, subjectId, yearId, topicId, gradeEntry).catch(console.error);
-    // Theme-Drop bei Note 1 oder 2 (cosmetics)
-    try {
-      const owned = userData.themes || ['default'];
-      const drop = rollThemeDrop(bestInfo.grade, owned);
-      if (drop) {
-        userData.themes = [...owned, drop];
-        await unlockTheme(currentUser.uid, drop).catch(console.error);
-        showThemeDropToast(drop);
-      }
-    } catch(e) { console.warn('[theme-drop]', e); }
-    // Claude-Test-Account: nichts in Rangliste/Feed schreiben.
-    // (Doppelt abgesichert: hier Bypass + isClaude-Filter beim Read.)
-    if (!isClaudeAccount()) {
-      writeFeedEntry(currentUser.uid, 'test', {
-        name: currentUser.displayName || 'Nutzer',
-        subject: subjectId, topic: topicId, grade: bestInfo.grade
-      }).catch(() => {});
-      const extras = {
-        klasse:        userData?.klasse != null ? String(userData.klasse) : undefined,
-        activeOutline: userData?.activeOutline ?? undefined,
-        activeTheme:   userData?.activeTheme   ?? undefined,
-        xp:            userData?.xp,
-        role:          userData?.role,
-        streak:        userData?.streakCount,
-        studyMins:     Object.values(userData?.studyTime || {}).reduce((a, b) => a + b, 0)
+    if (isTestAccount || isCustomTopic) {
+      // Lokal-Pfad: Test-Accounts und Custom-Topics gehen NIE in die Cloud-Function.
+      // Verhalten wie vor Mission 3 — saveGrade/XP/Achievements lokal.
+      const attempt = {
+        points: total, maxPoints: max,
+        grade: penalty ? 6 : grade.grade,
+        date: new Date().toISOString()
       };
-      await updateLeaderboard(
-        currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
-        subjectId, yearId, topicId, bestInfo.grade, bestRun.points,
-        extras
-      ).catch(console.error);
-    }
+      const history = [...(existing.history || []), attempt];
+      const bestRun = history.reduce((best, h) =>
+        (h.points / h.maxPoints) > (best.points / best.maxPoints) ? h : best,
+        history[0]
+      );
+      const bestInfo = calcGrade(bestRun.points, bestRun.maxPoints);
+      const gradeEntry = {
+        grade:         bestInfo.grade,
+        bestPoints:    bestRun.points,
+        bestMaxPoints: bestRun.maxPoints,
+        history
+      };
+      userData.grades[key] = gradeEntry;
+      await saveGrade(currentUser.uid, subjectId, yearId, topicId, gradeEntry).catch(console.error);
+      // Theme-Drop bei Note 1 oder 2 — auch fuer Test-Accounts und Custom-Topics OK.
+      try {
+        const owned = userData.themes || ['default'];
+        const drop = rollThemeDrop(bestInfo.grade, owned);
+        if (drop) {
+          userData.themes = [...owned, drop];
+          // Mission 3: Drop in users.themeDrops eintragen, dann CF-unlock fuer Theme.
+          // Bei Test-Accounts/Custom-Topics fallback auf direkten unlockTheme-Write.
+          try {
+            await db().collection('users').doc(currentUser.uid).set({
+              themeDrops: firebase.firestore.FieldValue.arrayUnion(drop)
+            }, { merge: true });
+            await cf.unlockCosmetic('theme', drop);
+          } catch (e) {
+            console.warn('[theme-drop-cf-fallback]', e);
+            await unlockTheme(currentUser.uid, drop).catch(console.error);
+          }
+          showThemeDropToast(drop);
+        }
+      } catch(e) { console.warn('[theme-drop]', e); }
+      // F-25: XP + F-24: Achievements lokal
+      const qCount = questions.length;
+      userData.totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + qCount;
+      await incrementCounter(currentUser.uid, 'totalQuestionsAnswered', qCount).catch(console.error);
+      const ctx = {
+        xp:            penalty ? 5 : calcXPForTest(bestInfo.grade),
+        streak:        calcStreak(),
+        hour:          new Date().getHours(),
+        perfect:       !penalty && total === max && max > 0,
+        testsToday:    countTestsToday(),
+        subjectComplete: checkSubjectComplete(subjectId),
+      };
+      grantXPAndAchievements(ctx).catch(console.error);
+    } else {
+      // Mission 3 Hauptpfad: Cloud-Function macht alle Server-Writes
+      // (saveGrade + Leaderboard + XP + Achievements + Feed + DailyScore).
+      // De-shuffle MC-Antworten: server erwartet selectedOriginalIndex
+      // (Index in q.options, nicht in q.shuffledOptions).
+      const cfAnswers = questions.map((q, i) => {
+        const a = effectiveAns[i];
+        if (q.type === 'multiple_choice') {
+          let selectedOriginalIndex = null;
+          if (a != null && a !== '' && q.shuffledOptions) {
+            const sIdx = parseInt(a, 10);
+            const chosenLabel = q.shuffledOptions[sIdx];
+            if (chosenLabel != null && Array.isArray(q.options)) {
+              const origIdx = q.options.indexOf(chosenLabel);
+              if (origIdx >= 0) selectedOriginalIndex = origIdx;
+            }
+          }
+          return { questionIndex: i, type: 'multiple_choice', selectedOriginalIndex };
+        }
+        if (q.type === 'vocabulary') {
+          return { questionIndex: i, type: 'vocabulary', freeText: typeof a === 'string' ? a : '' };
+        }
+        // free_text — auch unbekannte Typen werden als free_text behandelt
+        // (server-side maxPoint clamp). reportedPoints ist die clientseitige
+        // AI-Bewertung fuer Cross-Check (server clamps gegen den Q-eigenen max).
+        const r = results[i] || {};
+        return {
+          questionIndex: i,
+          type: 'free_text',
+          freeText: typeof a === 'string' ? a : '',
+          reportedPoints:    typeof r.points    === 'number' ? r.points    : null,
+          reportedMaxPoints: typeof r.maxPoints === 'number' ? r.maxPoints : null
+        };
+      });
 
-    // F-25: XP + F-24: Achievements
-    const qCount = questions.length;
-    userData.totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + qCount;
-    await incrementCounter(currentUser.uid, 'totalQuestionsAnswered', qCount).catch(console.error);
-    const ctx = {
-      xp:            penalty ? 5 : calcXPForTest(bestInfo.grade),
-      streak:        calcStreak(),
-      hour:          new Date().getHours(),
-      perfect:       !penalty && total === max && max > 0,
-      testsToday:    countTestsToday(),
-      subjectComplete: checkSubjectComplete(subjectId),
-    };
-    grantXPAndAchievements(ctx).catch(console.error);
+      try {
+        const cfResp = await cf.submitTestResult({
+          subjectId, yearId, topicId,
+          timeMinutes, timeSpentSec: timeUsed,
+          isPenalty: !!penalty,
+          answers: cfAnswers
+        });
+        // Server-Response ist Source-of-Truth: lokales userData von Firestore neu laden.
+        try {
+          const fresh = await getUserData(currentUser.uid);
+          if (fresh) userData = fresh;
+        } catch(e) { console.warn('[cf-userdata-refresh]', e); }
+        // Theme-Drop bei Note 1 oder 2 (clientseitig — CF macht den Drop nicht).
+        try {
+          const owned = userData?.themes || ['default'];
+          const drop = rollThemeDrop(grade.grade, owned);
+          if (drop) {
+            userData.themes = [...owned, drop];
+            try {
+              await db().collection('users').doc(currentUser.uid).set({
+                themeDrops: firebase.firestore.FieldValue.arrayUnion(drop)
+              }, { merge: true });
+              await cf.unlockCosmetic('theme', drop);
+            } catch (e) {
+              console.warn('[theme-drop-cf-fallback]', e);
+              await unlockTheme(currentUser.uid, drop).catch(console.error);
+            }
+            showThemeDropToast(drop);
+          }
+        } catch(e) { console.warn('[theme-drop]', e); }
+        // CF-resp may include xpAwarded / achievementsGranted — Toasts triggern.
+        if (cfResp && Array.isArray(cfResp.achievementsGranted) && cfResp.achievementsGranted.length) {
+          try {
+            const granted = cfResp.achievementsGranted
+              .map(id => ACHIEVEMENTS.find(a => a.id === id))
+              .filter(Boolean);
+            for (const ach of granted) {
+              showToast(`Erfolg freigeschaltet: ${ach.title || ach.id}`, 'success');
+            }
+          } catch(e) { console.warn('[ach-toast]', e); }
+        }
+      } catch (e) {
+        // CF unreachable / permission-denied → fallback auf alten Lokal-Pfad,
+        // damit der User nicht im Limbo steht. Akzeptiert: User-side AI-Bewertung
+        // fuer das eine Mal; CF-Server vergibt es beim naechsten Online-Submit.
+        console.error('[submitTest-cf]', e);
+        showToast('Server konnte Test nicht direkt verarbeiten — lokal gespeichert.', 'warn');
+        const attempt = {
+          points: total, maxPoints: max,
+          grade: penalty ? 6 : grade.grade,
+          date: new Date().toISOString()
+        };
+        const history = [...(existing.history || []), attempt];
+        const bestRun = history.reduce((best, h) =>
+          (h.points / h.maxPoints) > (best.points / best.maxPoints) ? h : best,
+          history[0]
+        );
+        const bestInfo = calcGrade(bestRun.points, bestRun.maxPoints);
+        const gradeEntry = {
+          grade:         bestInfo.grade,
+          bestPoints:    bestRun.points,
+          bestMaxPoints: bestRun.maxPoints,
+          history
+        };
+        userData.grades[key] = gradeEntry;
+        await saveGrade(currentUser.uid, subjectId, yearId, topicId, gradeEntry).catch(console.error);
+        const qCount = questions.length;
+        userData.totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + qCount;
+        await incrementCounter(currentUser.uid, 'totalQuestionsAnswered', qCount).catch(console.error);
+        const ctx = {
+          xp:            penalty ? 5 : calcXPForTest(bestInfo.grade),
+          streak:        calcStreak(),
+          hour:          new Date().getHours(),
+          perfect:       !penalty && total === max && max > 0,
+          testsToday:    countTestsToday(),
+          subjectComplete: checkSubjectComplete(subjectId),
+        };
+        grantXPAndAchievements(ctx).catch(console.error);
+      }
+    }
   }
 
   renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty });
+  } finally {
+    if (testState) testState._submitting = false;
+  }
 };
 
 function renderResults(questions, answers, results, grade, total, max, timeUsed, meta) {
@@ -6987,8 +7565,14 @@ async function renderShareReport(token) {
       <div id="shareReportContent"><div class="spinner" style="margin:40px auto"></div></div>
     </div>`;
 
+  // Mission 3: Eltern-Share laeuft jetzt ueber Cloud-Function. Server liefert
+  // die kuratierte Subset (kein PII-Leak — Cheat #17 final geschlossen).
+  // Shape: { name, klasse, totalGrades, avgGradePerSubject, xp, level,
+  //          achievementsCount, streak, createdAt }
   let shareData;
-  try { shareData = await getShareData(token); } catch {}
+  try { shareData = await cf.getParentShareReport(token); } catch (e) {
+    console.warn('[share-report-cf]', e);
+  }
 
   if (!shareData) {
     document.getElementById('shareReportContent').innerHTML =
@@ -6996,35 +7580,54 @@ async function renderShareReport(token) {
     return;
   }
 
-  const grades    = shareData.grades || {};
-  const gradeVals = Object.values(grades).map(g => g.grade).filter(Boolean);
-  const avgGrade  = gradeVals.length
-    ? (gradeVals.reduce((a,b)=>a+b,0)/gradeVals.length).toFixed(1) : '&#8211;';
-  const streak = shareData.streak || 0;
-  const xpInfo = calcLevel(shareData.xp || 0);
+  const safeName    = escapeHtml(shareData.name || 'Schüler');
+  const safeKlasse  = shareData.klasse != null && _ALLOWED_KLASSEN.includes(String(shareData.klasse))
+                      ? `Klasse ${escapeHtml(String(shareData.klasse))}` : '';
+  const totalGrades = typeof shareData.totalGrades === 'number' ? shareData.totalGrades : 0;
+  const avgPerSubject = shareData.avgGradePerSubject || {};
+  // Gesamt-Ø aus den Per-Subject-Werten (gewichtet ueber count, falls geliefert)
+  // — wenn nur {sid: avg} kommt, einfacher Mittelwert.
+  let avgGrade = '&#8211;';
+  const subjectKeys = Object.keys(avgPerSubject);
+  if (subjectKeys.length) {
+    let sum = 0, cnt = 0;
+    for (const k of subjectKeys) {
+      const v = avgPerSubject[k];
+      if (typeof v === 'number') { sum += v; cnt += 1; }
+      else if (v && typeof v.avg === 'number') { sum += v.avg * (v.count || 1); cnt += (v.count || 1); }
+    }
+    if (cnt > 0) avgGrade = (sum / cnt).toFixed(1);
+  }
+  const streak    = typeof shareData.streak === 'number' ? shareData.streak : 0;
+  const xp        = typeof shareData.xp === 'number' ? shareData.xp : 0;
+  const level     = typeof shareData.level === 'number' ? shareData.level : calcLevel(xp).level;
+  const achCount  = typeof shareData.achievementsCount === 'number' ? shareData.achievementsCount : 0;
 
-  const gradeRows = Object.entries(grades).slice(0, 20).map(([key, g]) => {
-    const [subjectId,,topicId] = key.split('__');
-    const label = topicId ? topicId.replace(/-/g,' ') : key;
-    return `<tr>
-      <td>${subjectId}</td>
-      <td>${label}</td>
-      <td><span class="grade-pill" style="background:${gradeColor(g.grade)}">${g.grade}</span></td>
+  const subjectRows = subjectKeys.map(sid => {
+    const v = avgPerSubject[sid];
+    const avg = typeof v === 'number' ? v : (v?.avg ?? 0);
+    const count = typeof v === 'number' ? '–' : (v?.count ?? '–');
+    const safeSid = (sid || '_').replace(/[^a-zA-Z0-9_-]/g, '');
+    return `
+    <tr>
+      <td>${escapeHtml(safeSid)}</td>
+      <td>${escapeHtml(String(count))}</td>
+      <td><span class="grade-pill" style="background:${gradeColor(Math.round(avg))}">${avg.toFixed(1)}</span></td>
     </tr>`;
   }).join('');
 
   document.getElementById('shareReportContent').innerHTML = `
     <div class="share-report-box">
       <div class="share-report-header">
-        <div class="profile-avatar-large" style="width:56px;height:56px;font-size:22px">${(shareData.name||'?')[0].toUpperCase()}</div>
+        <div class="profile-avatar-large" style="width:56px;height:56px;font-size:22px">${(safeName||'?')[0]}</div>
         <div>
-          <div style="font-weight:700;font-size:18px">${shareData.name || 'Sch&uuml;ler'}</div>
-          <div style="color:var(--text-muted);font-size:13px">Level ${xpInfo.level} &middot; ${xpInfo.totalXP} XP</div>
+          <div style="font-weight:700;font-size:18px">${safeName}</div>
+          <div style="color:var(--text-muted);font-size:13px">${safeKlasse ? safeKlasse + ' &middot; ' : ''}Level ${level} &middot; ${xp} XP</div>
         </div>
       </div>
       <div class="stats-overview-grid" style="margin:16px 0">
         <div class="stat-overview-card">
-          <div class="soc-val">${gradeVals.length}</div>
+          <div class="soc-val">${totalGrades}</div>
           <div class="soc-lbl">Tests</div>
         </div>
         <div class="stat-overview-card">
@@ -7035,12 +7638,16 @@ async function renderShareReport(token) {
           <div class="soc-val">${streak}</div>
           <div class="soc-lbl">&#x1F525; Streak</div>
         </div>
+        <div class="stat-overview-card">
+          <div class="soc-val">${achCount}</div>
+          <div class="soc-lbl">Erfolge</div>
+        </div>
       </div>
-      ${gradeRows ? `
+      ${subjectRows ? `
         <div class="table-wrap">
           <table class="stats-table">
-            <thead><tr><th>Fach</th><th>Thema</th><th>Note</th></tr></thead>
-            <tbody>${gradeRows}</tbody>
+            <thead><tr><th>Fach</th><th>Tests</th><th>&#216; Note</th></tr></thead>
+            <tbody>${subjectRows}</tbody>
           </table>
         </div>` : ''}
       <p style="margin-top:24px;font-size:12px;color:var(--text-muted)">
@@ -7092,7 +7699,14 @@ window.LF.submitComment = async () => {
   const text  = input?.value?.trim();
   if (!text || !_commentTopicKey) return;
   if (_blockClaudeWrite('Kommentieren')) return;
+  // Red-Team #9: Debounce gegen Doppelklick + Konsolen-Spam.
+  if (!_debounceCheck(`comment:${_commentTopicKey}`, 1500)) {
+    showToast('Bitte einen Moment warten…', 'info');
+    return;
+  }
+  const submitBtn = document.querySelector('[onclick*="submitComment"]');
   input.disabled = true;
+  if (submitBtn) submitBtn.disabled = true;
   try {
     await addComment(_commentTopicKey, currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, text, userRole());
     input.value = '';
@@ -7101,6 +7715,7 @@ window.LF.submitComment = async () => {
     showToast('Fehler beim Senden.', 'error');
   }
   input.disabled = false;
+  if (submitBtn) setTimeout(() => { submitBtn.disabled = false; }, 1000);
 };
 
 window.LF.likeComment = async (commentId) => {
@@ -7151,6 +7766,14 @@ window.LF.searchFriends = async (query) => {
 
 window.LF.sendFriendReq = async (toUid, toName, toPhoto) => {
   if (_blockClaudeWrite('Freundesanfragen senden')) return;
+  // Red-Team #9: 1000ms-Debounce verhindert Konsolen-Spam-Loops. Knopf wird
+  // zusaetzlich fuer 1s deaktiviert (visuelles Feedback).
+  if (!_debounceCheck(`friendReq:${toUid}`, 1500)) {
+    showToast('Bitte einen Moment warten…', 'info');
+    return;
+  }
+  const btn = document.querySelector(`button[onclick*="sendFriendReq('${toUid}'"]`);
+  if (btn) { btn.disabled = true; setTimeout(() => { btn.disabled = false; }, 1000); }
   try {
     await sendFriendRequest(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, toUid, userRole());
     userData.friendRequestsSent = [...(userData.friendRequestsSent || []), toUid];
@@ -7378,6 +8001,12 @@ window.LF.saveProfile = async () => {
   const newName   = nameInput?.value?.trim();
   const newKlasse = klInput ? parseInt(klInput.value, 10) : (userData?.klasse || null);
   if (!newName) { showToast('Name darf nicht leer sein.', 'error'); return; }
+  // Red-Team #10: Klassen-Validator. Server-side rule check liegt bei Marcus,
+  // hier defense-in-depth — verhindert Klasse '0' / 'GOAT' / Trailing-Space.
+  if (newKlasse && !_ALLOWED_KLASSEN.includes(String(newKlasse))) {
+    showToast('Ungueltige Klasse — erlaubt sind 5 bis 13.', 'error');
+    return;
+  }
 
   btn.disabled    = true;
   btn.textContent = 'Speichern…';
@@ -7421,8 +8050,40 @@ function renderInventory() {
   }
 }
 
+// Red-Team #5 (defense in depth): jede Outline-/Theme-Auswahl muss vom User
+// auch wirklich besessen sein (oder durch Level freigeschaltet). Verhindert
+// dass ein Hacker uber die Konsole window.LF.selectOutline('cosmic') ruft
+// ohne 'cosmic' jemals freigeschaltet zu haben. Server-Defense liegt bei Marcus.
 window.LF.selectOutline = async (tierId) => {
   if (!currentUser) return;
+  const tier = OUTLINE_TIERS.find(t => t.id === tierId);
+  if (!tier) { showToast('Unbekannte Umrandung.', 'error'); return; }
+  const owned = userData?.outlines || [];
+  const lvl   = calcLevel(userData?.xp || 0).level;
+  const isLevelUnlocked = lvl >= tier.level;
+  const isOwned         = owned.includes(tierId);
+  // Admin/Tester duerfen alles testen (siehe Inventar-Render Bypass).
+  const bypass = isAdmin() || userData?.role === 'tester';
+  if (!bypass && !isOwned && !isLevelUnlocked) {
+    showToast('Diese Umrandung hast du noch nicht freigeschaltet.', 'error');
+    return;
+  }
+  // Mission 3: erst Server-seitig unlocken (CF prueft Level), dann aktivieren.
+  // Bypass-User (Admin/Tester) dürfen direkt aktivieren — Server würde es eh durchlassen.
+  if (!isOwned && !bypass) {
+    try {
+      const r = await cf.unlockCosmetic('outline', tierId);
+      if (!r?.unlocked) {
+        showToast('Server: ' + (r?.reason || 'Unlock fehlgeschlagen.'), 'error');
+        return;
+      }
+      userData.outlines = [...owned, tierId];
+    } catch (e) {
+      console.warn('[unlock-outline-cf]', e);
+      showToast('Konnte Umrandung nicht freischalten.', 'error');
+      return;
+    }
+  }
   userData.activeOutline = tierId;
   await setActiveOutline(currentUser.uid, tierId).catch(console.error);
   showToast('Umrandung ge&auml;ndert', 'success');
@@ -7431,10 +8092,41 @@ window.LF.selectOutline = async (tierId) => {
 
 window.LF.selectTheme = async (themeId) => {
   if (!currentUser) return;
+  const theme = THEMES.find(t => t.id === themeId);
+  if (!theme) { showToast('Unbekanntes Theme.', 'error'); return; }
+  const owned = userData?.themes || ['default'];
+  const isOwned = owned.includes(themeId) || theme.default === true;
+  const bypass  = isAdmin() || userData?.role === 'tester';
+  if (!bypass && !isOwned) {
+    showToast('Dieses Theme hast du noch nicht freigeschaltet.', 'error');
+    return;
+  }
+  // Mission 3: Server-Unlock falls noch nicht owned (Drop-Gating laeuft via
+  // users.themeDrops — siehe submitTest fuer den drop-write).
+  if (!isOwned && !theme.default && !bypass) {
+    try {
+      const r = await cf.unlockCosmetic('theme', themeId);
+      if (!r?.unlocked) {
+        showToast('Server: ' + (r?.reason || 'Theme nicht freischaltbar.'), 'error');
+        return;
+      }
+      userData.themes = [...owned, themeId];
+    } catch (e) {
+      console.warn('[unlock-theme-cf]', e);
+      showToast('Konnte Theme nicht freischalten.', 'error');
+      return;
+    }
+  }
+  // Casey 3.2: Optimistic-UI — Theme sofort anwenden, Server-Save async.
+  // Bei Fehler nicht zuruecksetzen, nur Toast (Sync beim naechsten Online-Start).
   userData.activeTheme = themeId;
   applyTheme(themeId);
-  await setActiveTheme(currentUser.uid, themeId).catch(console.error);
-  showToast('Theme aktiviert', 'success');
+  setActiveTheme(currentUser.uid, themeId)
+    .then(() => showToast('Theme aktiviert', 'success'))
+    .catch(e => {
+      console.warn('[setActiveTheme]', e);
+      showToast('Theme gespeichert (Sync erfolgt automatisch).', 'warn');
+    });
   renderInventory();
 };
 
@@ -7638,6 +8330,13 @@ window.LF.sendBugReport = async () => {
   const text = document.getElementById('bugReportText')?.value;
   const err  = document.getElementById('bugReportErr');
   if (!text?.trim()) { err.textContent = 'Bitte Beschreibung eingeben.'; return; }
+  // Red-Team #9: Debounce gegen Bug-Report-Flood.
+  if (!_debounceCheck('bugReport', 2000)) {
+    err.textContent = 'Bitte einen Moment warten, bevor du erneut absendest.';
+    return;
+  }
+  const submitBtn = document.querySelector('[onclick*="sendBugReport"]');
+  if (submitBtn) submitBtn.disabled = true;
   try {
     await submitBugReport(currentUser.uid,
       userData?.name || currentUser.displayName || 'Nutzer',
@@ -7649,6 +8348,7 @@ window.LF.sendBugReport = async () => {
     if (isClaudeAccount()) loadClaudeBugList();
   } catch(e) {
     err.textContent = e.message || 'Konnte nicht abgesendet werden.';
+    if (submitBtn) setTimeout(() => { submitBtn.disabled = false; }, 1000);
   }
 };
 

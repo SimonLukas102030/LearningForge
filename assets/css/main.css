@@ -381,14 +381,8 @@ input, textarea, select { font-family: var(--font); }
 .subject-card .s-meta {
   font-size: 13px; color: var(--text-muted);
 }
-.subject-card .s-grade {
-  position: absolute; top: 16px; right: 16px;
-  width: 32px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  font-size: 14px; font-weight: 700; color: #fff;
-  background: var(--subject-color, var(--accent));
-}
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #22: .subject-card .s-grade entfernt —
+   Subject-Cards rendern keine Grade-Pill in dieser Slot mehr. */
 
 /* Year cards */
 .years-grid {
@@ -744,10 +738,8 @@ input, textarea, select { font-family: var(--font); }
 }
 @media(max-width: 600px) { .profile-grid { grid-template-columns: 1fr; } }
 
-.profile-info-card {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 24px;
-}
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #19: .profile-info-card unused
+   (Profile-Render nutzt jetzt .profile-card / .profile-tabs). */
 .profile-avatar-large {
   width: 72px; height: 72px; border-radius: 50%;
   background: var(--accent); color: #fff;
@@ -1084,7 +1076,8 @@ input, textarea, select { font-family: var(--font); }
 }
 
 /* Spectacle Overlay: Glanz-Ring um Avatare */
-.role-glow-none { /* no-op */ }
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #21: .role-glow-none entfernt
+   (outlineFor() returnt '' wenn kein Glow — keine Klasse wird emittiert). */
 .role-glow-admin {
   box-shadow:
     0 0 0 2px var(--bg-card),
@@ -1108,30 +1101,9 @@ input, textarea, select { font-family: var(--font); }
   50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px #a78bfa, 0 0 22px 4px rgba(139,92,246,0.7); }
 }
 
-/* Eigener Header-Banner für Admin/Tester */
-.role-banner {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-left: 8px;
-  vertical-align: middle;
-}
-.role-banner.role-banner-admin {
-  background: linear-gradient(90deg, #fbbf24, #f59e0b);
-  color: #78350f;
-  box-shadow: 0 0 12px rgba(245,158,11,0.4);
-}
-.role-banner.role-banner-tester {
-  background: linear-gradient(90deg, #c4b5fd, #8b5cf6);
-  color: #4c1d95;
-  box-shadow: 0 0 12px rgba(139,92,246,0.4);
-}
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #20: .role-banner / -admin / -tester
+   entfernt — alter Header-Banner durch inline roleBadge() (.role-badge .role-admin/
+   .role-tester) ersetzt. */
 
 /* Sim-Tipp-Bubble */
 .sim-tip {
@@ -1284,7 +1256,6 @@ input, textarea, select { font-family: var(--font); }
 
 /* Dynamic nav collapse — JS adds this class when content overflows */
 .navbar--collapsed .nav-center { display: none; }
-.navbar--collapsed .hamburger  { display: flex !important; }
 
 /* ── 24. Nav separator ──────────────────── */
 .nav-sep-bar {
@@ -1621,7 +1592,8 @@ input, textarea, select { font-family: var(--font); }
 [data-theme="dark"] .penalty-banner { background: #450a0a; border-color: #7f1d1d; color: #fca5a5; }
 
 /* ── 30. Mobile nav ─────────────────────── */
-.hamburger { display: none; }
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #22: .hamburger entfernt — durch
+   bottom-tab-bar Mobile-UI ersetzt. */
 
 .mobile-nav {
   display: none; flex-direction: column; padding: 8px;
@@ -1637,7 +1609,7 @@ input, textarea, select { font-family: var(--font); }
   font-size: 15px; font-weight: 500; color: var(--text);
   cursor: pointer; transition: background var(--transition);
 }
-.mobile-nav-link:hover, .mobile-nav-link.mnl-active {
+.mobile-nav-link:hover {
   background: var(--bg-input); color: var(--accent);
 }
 .mobile-nav-sep  { height: 1px; background: var(--border); margin: 4px 0; }
@@ -1776,8 +1748,6 @@ input, textarea, select { font-family: var(--font); }
   font-weight: 300;
   line-height: 1;
 }
-
-.subtopic-detail { }
 
 .subtopic-detail-title {
   font-size: 22px;
@@ -2149,7 +2119,8 @@ input, textarea, select { font-family: var(--font); }
   flex-shrink: 0;
 }
 
-.nav-link-admin { color: var(--accent) !important; font-weight: 700; }
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #22: .nav-link-admin entfernt —
+   Admin-Link nutzt jetzt inline style="color:var(--accent)". */
 .success-msg {
   padding: 12px 16px;
   background: #d1fae5;
@@ -2616,7 +2587,6 @@ input, textarea, select { font-family: var(--font); }
 .tw-body {
   overflow-y: auto; padding: 10px; flex: 1;
 }
-.tw-section { }
 .tw-table {
   width: 100%; border-collapse: collapse; font-size: 12px;
 }
@@ -2714,11 +2684,8 @@ input, textarea, select { font-family: var(--font); }
 [data-theme="dark"] .prereq-banner {
   background: #1c1a05; border-color: #713f12;
 }
-.prereq-banner-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-.prereq-banner-body { flex: 1; }
-.prereq-banner-title { font-weight: 700; margin-bottom: 6px; color: #92400e; }
-[data-theme="dark"] .prereq-banner-title { color: #fde68a; }
-.prereq-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #22: .prereq-banner-icon/-body/-title
+   und .prereq-tags entfernt — JS emittiert nur .prereq-banner + .prereq-tag. */
 .prereq-tag {
   background: #fef3c7; border: 1px solid #fde047;
   border-radius: var(--radius-pill); padding: 3px 10px;
@@ -2741,18 +2708,14 @@ input, textarea, select { font-family: var(--font); }
 .srs-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(245,158,11,.45); }
 
 /* ── Flashcard Session (F-15) ────────────── */
-.fc-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 20px; flex-wrap: wrap; gap: 8px;
-}
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #14: alte Flashcard-Layout-Klassen
+   (.fc-question, -answer, -answer-label, -front-label, -tap-hint, -flip-btn,
+   -btn-knew, -btn-didnt, -header, -progress-bar-fill, -score-num, -score-label)
+   entfernt — neue renderFlashcard() nutzt fc-text/fc-label/fc-hint/fc-btn-yes/-no. */
 .fc-counter { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .fc-progress-bar {
   height: 4px; background: var(--border); border-radius: 2px;
   margin-bottom: 24px; overflow: hidden;
-}
-.fc-progress-bar-fill {
-  height: 100%; background: var(--accent); border-radius: 2px;
-  transition: width .3s ease;
 }
 .fc-card-scene {
   width: 100%; perspective: 1000px;
@@ -2774,19 +2737,6 @@ input, textarea, select { font-family: var(--font); }
   min-height: 200px; box-shadow: var(--shadow);
 }
 .fc-back { transform: rotateY(180deg); }
-.fc-front-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--text-light); margin-bottom: 12px;
-}
-.fc-question { font-size: 18px; font-weight: 600; line-height: 1.4; }
-.fc-answer   { font-size: 16px; line-height: 1.5; color: var(--text); }
-.fc-answer-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--accent); margin-bottom: 10px;
-}
-.fc-tap-hint {
-  font-size: 12px; color: var(--text-light); margin-top: 16px;
-}
 .fc-actions {
   display: flex; justify-content: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;
 }
@@ -2797,16 +2747,6 @@ input, textarea, select { font-family: var(--font); }
   font-size: 15px; font-weight: 700; transition: transform .15s, box-shadow .15s;
 }
 .fc-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
-.fc-btn-knew  { background: #10b981; color: #fff; }
-.fc-btn-didnt { background: #ef4444; color: #fff; }
-.fc-flip-btn {
-  display: block; width: 100%;
-  background: var(--accent); color: #fff;
-  border: none; border-radius: var(--radius); padding: 12px;
-  font-size: 15px; font-weight: 700;
-  transition: background .15s;
-}
-.fc-flip-btn:hover { background: var(--accent-hover); }
 .fc-done {
   text-align: center; padding: 48px 24px;
   background: var(--bg-card); border: 1px solid var(--border);
@@ -2824,10 +2764,6 @@ input, textarea, select { font-family: var(--font); }
 }
 .fc-score-knew   { border: 2px solid #10b981; }
 .fc-score-didnt  { border: 2px solid #ef4444; }
-.fc-score-num    { font-size: 36px; font-weight: 800; }
-.fc-score-knew   .fc-score-num { color: #10b981; }
-.fc-score-didnt  .fc-score-num { color: #ef4444; }
-.fc-score-label  { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-top: 4px; }
 
 /* ── Pomodoro Widget (F-17) ──────────────── */
 .pomo-widget {
@@ -2850,11 +2786,6 @@ input, textarea, select { font-family: var(--font); }
   animation: fadeIn .2s ease;
 }
 .pomo-panel.hidden { display: none; }
-.pomo-title {
-  font-size: 13px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .06em; color: var(--text-muted); margin-bottom: 12px;
-  display: flex; align-items: center; justify-content: space-between;
-}
 .pomo-mode-pill {
   font-size: 11px; background: var(--accent-subtle);
   color: var(--accent); border-radius: var(--radius-pill);
@@ -2875,32 +2806,14 @@ input, textarea, select { font-family: var(--font); }
 .pomo-controls {
   display: flex; gap: 8px; justify-content: center; margin-bottom: 14px;
 }
-.pomo-btn {
-  flex: 1; padding: 8px; border: none; border-radius: var(--radius-sm);
-  font-size: 13px; font-weight: 700; transition: background .15s;
-}
-.pomo-btn-start { background: var(--accent); color: #fff; }
-.pomo-btn-start:hover { background: var(--accent-hover); }
-.pomo-btn-reset { background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border); }
-.pomo-btn-reset:hover { background: var(--border); }
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #16: alter Pomodoro-Buttons-/
+   Config-Block (.pomo-title, -btn, -btn-start, -btn-reset, -config-item,
+   -config-label, -config-input) entfernt — pomodoroHTML() nutzt jetzt
+   generische .btn .btn-primary / .btn-ghost und einen verschlankten Config. */
 .pomo-config {
   border-top: 1px solid var(--border); padding-top: 12px;
   display: flex; gap: 10px; flex-wrap: wrap;
 }
-.pomo-config-item {
-  flex: 1; min-width: 80px;
-}
-.pomo-config-label {
-  font-size: 11px; font-weight: 600; color: var(--text-muted);
-  margin-bottom: 4px; display: block;
-}
-.pomo-config-input {
-  width: 100%; background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); padding: 6px 8px;
-  font-size: 14px; font-weight: 700; color: var(--text);
-  text-align: center;
-}
-.pomo-config-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
 @media (max-width: 480px) {
   .pomo-widget { right: 12px; bottom: 16px; }
   .pomo-panel  { width: 210px; }
@@ -2921,8 +2834,8 @@ input, textarea, select { font-family: var(--font); }
   transition: border-color .15s;
 }
 .notes-toggle.open { border-bottom-color: var(--border); }
-.notes-toggle-icon { color: var(--text-muted); font-size: 18px; transition: transform .2s; }
-.notes-toggle.open .notes-toggle-icon { transform: rotate(180deg); }
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #22: .notes-toggle-icon entfernt —
+   notes-toggle nutzt das Pfeil-Span (Text), keine icon-child. */
 .notes-body {
   padding: 0; max-height: 0; overflow: hidden;
   transition: max-height .3s ease, padding .3s ease;
@@ -2943,12 +2856,8 @@ input, textarea, select { font-family: var(--font); }
 .notes-status.saved { color: #10b981; }
 
 /* ── Lesezeichen-Seite (F-19) ────────────── */
-.lesezeichen-empty {
-  text-align: center; padding: 64px 24px;
-  color: var(--text-muted);
-}
-.lesezeichen-empty-icon { font-size: 48px; margin-bottom: 16px; }
-.lesezeichen-empty h3   { font-size: 18px; margin-bottom: 8px; }
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #22: .lesezeichen-empty / -icon
+   entfernt — renderLesezeichen() nutzt generisches .empty-state / .empty-icon. */
 
 /* ── SRS Review (F-16) ───────────────────── */
 .srs-progress-bar {
@@ -2967,28 +2876,11 @@ input, textarea, select { font-family: var(--font); }
   min-height: 200px; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
-.srs-card-type {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--text-light); margin-bottom: 12px;
-}
-.srs-question { font-size: 20px; font-weight: 600; line-height: 1.4; }
-.srs-answer-reveal {
-  margin-top: 20px; padding-top: 20px;
-  border-top: 1px dashed var(--border); width: 100%;
-  animation: fadeIn .2s ease;
-}
-.srs-answer-label {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--accent); margin-bottom: 8px;
-}
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #15: alte SRS-Layout-Klassen
+   (-question, -answer-label, -answer-reveal, -card-type, -reveal-btn,
+   -stat, -stat-label, -stat-num, -stats-row, -rate-emoji) entfernt —
+   neue renderSRSCard() nutzt srs-q/srs-answer/srs-rate-row/srs-rate-btn. */
 .srs-answer { font-size: 16px; line-height: 1.5; }
-.srs-reveal-btn {
-  margin-top: 24px; padding: 11px 32px;
-  background: var(--accent); color: #fff; border: none;
-  border-radius: var(--radius-pill); font-size: 14px; font-weight: 700;
-  transition: background .15s, transform .15s;
-}
-.srs-reveal-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
 .srs-rate-row {
   display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
 }
@@ -3018,7 +2910,6 @@ input, textarea, select { font-family: var(--font); }
 [data-theme="dark"] .srs-rate-btn:hover[data-rating="3"] { background: #021809; }
 [data-theme="dark"] .srs-rate-btn:hover[data-rating="4"] { background: #021812; }
 [data-theme="dark"] .srs-rate-btn:hover[data-rating="5"] { background: var(--accent-subtle); }
-.srs-rate-emoji { font-size: 18px; }
 .srs-done {
   text-align: center; padding: 64px 24px;
   background: var(--bg-card); border: 1px solid var(--border);
@@ -3027,34 +2918,15 @@ input, textarea, select { font-family: var(--font); }
 .srs-done-icon { font-size: 56px; margin-bottom: 16px; }
 .srs-done h2   { font-size: 24px; margin-bottom: 8px; }
 .srs-done p    { color: var(--text-muted); margin-bottom: 24px; }
-.srs-stats-row {
-  display: flex; justify-content: center; gap: 20px; margin: 12px 0 24px; flex-wrap: wrap;
-}
-.srs-stat {
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px 24px; text-align: center;
-}
-.srs-stat-num   { font-size: 28px; font-weight: 800; color: var(--accent); }
-.srs-stat-label { font-size: 12px; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
 
 /* ── Wissens-Check (F-20) ────────────────── */
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #17: alte Variants entfernt
+   (wc-ft-input, wc-opt-letter, wc-reveal-btn, wissens-check-badge,
+   wissens-check-header) — buildWissensCheck() nutzt nur die unten verbliebenen. */
 .wissens-check {
   margin-top: 28px;
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius); overflow: hidden;
-}
-.wissens-check-header {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 18px; border-bottom: 1px solid var(--border);
-  background: var(--bg-input);
-}
-.wissens-check-header h3 {
-  font-size: 15px; font-weight: 700; flex: 1;
-}
-.wissens-check-badge {
-  background: var(--accent-subtle); color: var(--accent);
-  border-radius: var(--radius-pill); padding: 3px 10px;
-  font-size: 12px; font-weight: 700;
 }
 .wc-items { padding: 16px; display: flex; flex-direction: column; gap: 20px; }
 .wc-item {
@@ -3080,32 +2952,6 @@ input, textarea, select { font-family: var(--font); }
 [data-theme="dark"] .wc-opt.correct { background: #022c22; color: #6ee7b7; }
 [data-theme="dark"] .wc-opt.wrong   { background: #1c0b0b; color: #fca5a5; }
 .wc-opt:disabled { cursor: default; }
-.wc-opt-letter {
-  width: 22px; height: 22px; border-radius: 50%;
-  background: var(--border); color: var(--text-muted);
-  font-size: 12px; font-weight: 800; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .15s, color .15s;
-}
-.wc-opt.correct .wc-opt-letter { background: #10b981; color: #fff; }
-.wc-opt.wrong   .wc-opt-letter { background: #ef4444; color: #fff; }
-.wc-ft-input {
-  width: 100%; background: var(--bg-input); border: 2px solid var(--border);
-  border-radius: var(--radius-sm); padding: 10px 14px;
-  font-size: 14px; color: var(--text); transition: border-color .15s;
-}
-.wc-ft-input:focus { outline: none; border-color: var(--accent); }
-.wc-ft-input.correct { border-color: #10b981; background: #ecfdf5; }
-.wc-ft-input.wrong   { border-color: #ef4444; background: #fef2f2; }
-[data-theme="dark"] .wc-ft-input.correct { background: #022c22; }
-[data-theme="dark"] .wc-ft-input.wrong   { background: #1c0b0b; }
-.wc-reveal-btn {
-  margin: 0 12px 12px; padding: 8px 18px;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius-pill); font-size: 13px; font-weight: 600;
-  color: var(--text-muted); transition: background .15s, color .15s;
-}
-.wc-reveal-btn:hover { background: var(--border); color: var(--text); }
 .wc-fb {
   padding: 10px 16px; font-size: 13px; font-weight: 600;
   border-top: 1px solid var(--border); line-height: 1.4;
@@ -3116,23 +2962,9 @@ input, textarea, select { font-family: var(--font); }
 [data-theme="dark"] .wc-fb.correct { background: #022c22; color: #6ee7b7; }
 [data-theme="dark"] .wc-fb.wrong   { background: #1c0b0b; color: #fca5a5; }
 
-/* ── Study Time Chart (F-17 dashboard) ──── */
-.study-time-row {
-  display: flex; gap: 4px; align-items: flex-end;
-  height: 60px; margin-top: 8px;
-}
-.study-time-bar-wrap {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-}
-.study-time-bar {
-  width: 100%; background: var(--accent);
-  border-radius: 3px 3px 0 0; min-height: 2px;
-  transition: height .3s ease; opacity: .8;
-}
-.study-time-bar:hover { opacity: 1; }
-.study-time-day {
-  font-size: 10px; color: var(--text-light); font-weight: 600;
-}
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #18: alter Statistik-Page
+   "study-time-*" Block geloescht — gehoerte zur entfernten renderStatistics().
+   Neue Stats nutzen .stc-col / .stc-bar-wrap / .stc-bar / .stc-mins / .stc-label. */
 
 /* ══════════════════════════════════════════
    Phase 3 — Gamification 3.0 CSS
@@ -3866,13 +3698,8 @@ input, textarea, select { font-family: var(--font); }
 .avatar-emoji-btn:hover  { background: var(--hover-bg, var(--border)); }
 .avatar-emoji-btn.selected { border-color: var(--accent); background: var(--accent-light, #eef2ff); }
 .profile-edit-row { width: 100%; margin: 6px 0 4px; }
-.profile-name-input {
-  width: 100%;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 600;
-  padding: 6px 10px;
-}
+/* Mission 2 Phase 2 / Ghost-Code-Cycle-1 #19: .profile-name-input entfernt —
+   das Profil-Input nutzt .form-input (#profileNameInput ist nur die ID). */
 
 /* ══════════════════════════════════════════
    Mission 1 — UX-Overhaul Components
@@ -4301,12 +4128,171 @@ input, textarea, select { font-family: var(--font); }
   font-weight: 700;
 }
 
-/* ── Hide hamburger on desktop, show on mobile ── */
+/* ── Hide mobile-nav on desktop ── */
 @media (min-width: 769px) {
-  .hamburger { display: none; }
   .mobile-nav { display: none; }
 }
 @media (max-width: 600px) {
   .nav-streak-chip { display: none; }
   .nav-inv-btn { display: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Mission 4 — App-Tour (Spotlight + Tooltip + Pfeil)
+   ════════════════════════════════════════════════════════════════ */
+.lf-tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.lf-tour-overlay > * { pointer-events: auto; }
+.lf-tour-backdrop {
+  position: absolute;
+  inset: 0;
+  background: transparent;  /* dimming kommt vom spotlight box-shadow */
+}
+.lf-tour-spotlight {
+  position: fixed;
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px var(--modal-overlay);
+  pointer-events: none;
+  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  z-index: 2001;
+}
+.lf-tour-tooltip {
+  position: fixed;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px 14px;
+  max-width: min(360px, 90vw);
+  max-height: 60vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  z-index: 2003;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.lf-tour-tooltip-head {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.lf-tour-tooltip-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.lf-tour-tooltip-body {
+  margin: 0 0 12px;
+  color: var(--text);
+}
+.lf-tour-tooltip-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+.lf-tour-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color var(--transition), background var(--transition);
+}
+.lf-tour-close:hover { color: var(--text); background: var(--bg-input); }
+.lf-tour-arrow {
+  position: fixed;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  z-index: 2002;
+}
+.lf-tour-arrow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.lf-tour-arrow-down::before { clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.lf-tour-arrow-left::before { clip-path: polygon(100% 0, 100% 100%, 0 50%); }
+.lf-tour-arrow-right::before { clip-path: polygon(0 0, 0 100%, 100% 50%); }
+
+/* Wizard-Close (Bug B) */
+.wizard-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+  z-index: 5;
+  transition: color var(--transition), background var(--transition);
+}
+.wizard-close:hover { color: var(--text); background: var(--bg-input); }
+.wizard-card { position: relative; }
+
+/* Tour-Toast fuer Bestands-User */
+.lf-tour-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  z-index: 1900;
+  max-width: 92vw;
+  width: min(440px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.lf-tour-toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Avatar-Picker active-state (Casey #3.4 — Onboarding-Highlight) */
+.avatar-emoji-btn.active,
+.avatar-emoji-btn.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: var(--accent-subtle);
+}
+
+@media (max-width: 768px) {
+  .lf-tour-tooltip {
+    max-width: 92vw;
+    font-size: 13px;
+  }
+  .lf-tour-tooltip-actions .btn { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-tour-spotlight { transition: none; }
+  .lf-tour-overlay   { transition: none; }
 }

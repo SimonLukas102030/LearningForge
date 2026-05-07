@@ -27,10 +27,6 @@ export function outlineForLevel(level) {
   return best;
 }
 
-export function unlockedOutlines(level) {
-  return OUTLINE_TIERS.filter(t => level >= t.level);
-}
-
 // ── Themes ───────────────────────────────────────────────
 // 10 Themes (inkl. default). Durch 1en und 2en bei Tests freigeschaltet.
 export const THEMES = [
@@ -62,18 +58,6 @@ export function rollThemeDrop(grade, alreadyOwned) {
   const pool = ALL_THEME_IDS.filter(id => !alreadyOwned.includes(id));
   if (!pool.length) return null;
   return pool[Math.floor(Math.random() * pool.length)];
-}
-
-// ── Active-Outline-Klasse für einen User ────────────────
-// Reihenfolge: Echte Rolle (admin/tester) > User-Auswahl > Default
-export function resolveOutlineClass(userInfo) {
-  if (!userInfo) return '';
-  const role = userInfo.role;
-  if (role === 'admin')  return 'role-glow-admin';
-  if (role === 'tester') return 'role-glow-tester';
-  const tierId = userInfo.activeOutline || 'none';
-  const tier = OUTLINE_TIERS.find(t => t.id === tierId);
-  return tier?.css || '';
 }
 
 // ── Anwenden eines Themes auf <html> ────────────────────

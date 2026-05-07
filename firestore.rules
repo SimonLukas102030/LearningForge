@@ -4,6 +4,15 @@ rules_version = '2';
 //  LearningForge — Firestore Security Rules
 //
 //  Deploy: firebase deploy --only firestore:rules
+//
+//  Mission 2 Phase 2 (Marcus Hayes, 2026-05-07): hardening pass after
+//  Ramsey's Red-Team-Cycle-1 audit. Field-level allow-list on users,
+//  XP-delta cap, klasse-validator, leaderboard/dailyScores clamps,
+//  comment-likes-self-only, dead pendingTopics block removed, feed
+//  author-only update/delete, group-members own-key-only, bugReports
+//  uid-bind, shareLinks owner-only-read, users.list admin-only.
+//  Soft-caps mark spots where Cloud Functions (Mission 3 ADR) are the
+//  real fix.
 // ════════════════════════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -16,40 +25,142 @@ service cloud.firestore {
                                 && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }
     function onlyChanged(fs) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fs); }
 
+    // Hardcoded admin/tester whitelist for role-sensitive self-writes
+    // (so syncUserRole / markAsClaude / markAsHacker keep working for
+    // Simon and the test accounts without going through a Cloud Function).
+    function adminOrTesterEmail() {
+      return ['simonkoper27@gmail.com', 'bohmrobin797@gmail.com'];
+    }
+
+    // Explicit allow-list of user-doc fields a normal owner may write to
+    // their own doc. EXCLUDES role, isBanned, isClaude, isHacker — those
+    // are role-sensitive and only writable via the admin-whitelist branch
+    // or by a real admin.
+    function ownerSafeFields() {
+      return [
+        'name', 'photoURL', 'klasse', 'email', 'createdAt', 'onboardedAt',
+        'grades', 'xp', 'xpLog',
+        'achievements', 'bookmarks', 'notes', 'srs', 'studyTime',
+        'freezeDays', 'dailyChallenges', 'totalQuestionsAnswered',
+        'srsReviewsTotal', 'dailyChallengesCompleted',
+        'streakCount', 'lastStreakDate', 'testsToday',
+        'activeOutline', 'activeTheme', 'outlines', 'themes', 'themeDrops',
+        'friendIds', 'friendRequests', 'friendRequestsSent', 'groupIds',
+        'weakQuestions',
+        // Mission 1 settings page (Farben + Icons pro Fach)
+        'settings',
+        // Mission 4 (App-Tour) state — toast-trigger + completion markers
+        'tourCompletedAt', 'tourSkippedAt', 'tourPromptedAt'
+      ];
+    }
+
+    // Soft-cap helpers (real fix = Cloud Function in Mission 3 ADR)
+    // ----------------------------------------------------------------
+    // XP delta per write capped at 200 (rough max from one perfect
+    // 90-min test plus achievement rewards).
+    function xpDeltaOk() {
+      return !('xp' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.xp is number
+              && request.resource.data.xp - resource.data.get('xp', 0) <= 200);
+    }
+
+    // Klasse must be one of the allowed grade strings 5..13.
+    function klasseOk() {
+      return !('klasse' in request.resource.data)
+          || request.resource.data.klasse in ['5','6','7','8','9','10','11','12','13'];
+    }
+
+    // Outlines / themes / achievements: bound growth at +2 per write.
+    // Real fix = server-side validation that the user actually earned
+    // the new entries (Mission 3). Inlined per-field below because
+    // Firestore-rules helpers cannot index maps by a variable name.
+    function outlinesGrowthOk() {
+      return !('outlines' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.outlines.size() - resource.data.get('outlines', []).size() <= 2);
+    }
+    function themesGrowthOk() {
+      return !('themes' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.themes.size() - resource.data.get('themes', []).size() <= 2);
+    }
+    function achievementsGrowthOk() {
+      return !('achievements' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.achievements.size() - resource.data.get('achievements', []).size() <= 2);
+    }
+
     // ── users ─────────────────────────────────────────────────────────────
-    // Read/List: jeder authentifizierte User darf User-Profile lesen.
-    // Create:    nur eigenes Doc.
+    // Read:    any auth'd user may .get() a single user doc (needed for
+    //          friend lookups, comment-author display, etc.).
+    // List:    only admins may .list() the whole collection. This locks
+    //          down getAllUsers() / mass email-harvest (Cheat #18).
+    // Create:  only own doc.
     // Update:
-    //   - eigenes Doc: alles erlaubt
-    //   - Admin: alles erlaubt (für Role-Management)
-    //   - fremdes Doc: nur friendRequests + friendIds + groupIds darf modifiziert
-    //                  werden (Friend-Request, Accept, kickFromGroup, Group-Löschung
-    //                  durch Creator → muss bei jedem Member groupIds aktualisieren).
-    // Delete:    nur eigenes Doc oder Admin.
+    //   A) owner writes ONLY safe fields (no role-escalation possible)
+    //      AND klasse stays in 5..13
+    //      AND xp delta <= 200
+    //      AND outlines/themes/achievements grow by <= 2 per write
+    //   B) owner is on the admin/tester email whitelist — may also write
+    //      role-sensitive fields to their own doc (markAsClaude etc.)
+    //   C) any user with role:'admin' on their own doc — full access
+    //   D) cross-user friend/group writes: friendRequests, friendIds,
+    //      groupIds (used by acceptFriendRequest, kickFromGroup,
+    //      group deletion ripple).
+    // Delete:  only own doc or admin.
     match /users/{uid} {
-      allow read, list: if isAuth();
-      allow create:     if isOwner(uid);
-      allow update:     if isOwner(uid)
-                         || isAdmin()
-                         || (isAuth() && onlyChanged(['friendRequests', 'friendIds', 'groupIds']));
-      allow delete:     if isOwner(uid) || isAdmin();
+      allow get:    if isAuth();
+      allow list:   if isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if (
+                        // Case A: owner writing only safe fields
+                        (isOwner(uid)
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(ownerSafeFields())
+                          && klasseOk()
+                          && xpDeltaOk()
+                          && outlinesGrowthOk()
+                          && themesGrowthOk()
+                          && achievementsGrowthOk())
+                        // Case B: owner from admin/tester whitelist may also write role-sensitive fields
+                        || (isOwner(uid) && request.auth.token.email in adminOrTesterEmail())
+                        // Case C: real admin (any user with role:'admin' in their own doc)
+                        || isAdmin()
+                        // Case D: cross-user friend/group writes
+                        || (isAuth() && onlyChanged(['friendRequests', 'friendIds', 'groupIds']))
+                      );
+      allow delete: if isOwner(uid) || isAdmin();
     }
 
     // ── groups ────────────────────────────────────────────────────────────
+    // members carve-out REMOVED (Cheat #14). If we add a public-join flow
+    // later, carve out a tighter rule that only lets the auth user touch
+    // their OWN key in the members map.
     match /groups/{groupId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.creatorUid == request.auth.uid;
       allow update:     if isAuth()
                          && (resource.data.creatorUid == request.auth.uid
-                             || isAdmin()
-                             || onlyChanged(['members']));
+                             || isAdmin());
       allow delete:     if isAuth() && (resource.data.creatorUid == request.auth.uid || isAdmin());
     }
 
     // ── leaderboard ───────────────────────────────────────────────────────
+    // Soft-cap: each write may change at most ONE scores key (so an
+    // attacker cannot forge 50 inflated topic-keys in a single write).
+    // Per-key value validation is not expressible cleanly in rules
+    // (Firestore-rules cannot iterate map values), so the per-key cap
+    // lives in the test-engine clamp + Cloud Function (Mission 3 ADR).
+    // isClaude / isHacker stay owner-writable for now (mirrored by
+    // markAsClaude / markAsHacker via the user-doc whitelist branch).
     match /leaderboard/{uid} {
       allow read, list: if isAuth();
-      allow write:      if isOwner(uid) || isAdmin();
+      allow create:     if isOwner(uid);
+      allow update:     if (isOwner(uid)
+                            && (
+                              // No scores change -> ok (display fields update)
+                              !('scores' in request.resource.data.diff(resource.data).affectedKeys())
+                              // OR scores changed: at most ONE key added/changed per write
+                              || request.resource.data.scores.diff(resource.data.get('scores', {})).affectedKeys().size() <= 1
+                            ))
+                         || isAdmin();
+      allow delete:     if isOwner(uid) || isAdmin();
     }
 
     // ── customTopics ──────────────────────────────────────────────────────
@@ -61,59 +172,84 @@ service cloud.firestore {
     }
 
     // ── pendingTopics ─────────────────────────────────────────────────────
-    match /pendingTopics/{topicId} {
-      allow read, list: if isAuth();
-      allow create:     if isAuth() && request.resource.data.submittedBy == request.auth.uid;
-      allow update:     if isAuth();
-      allow delete:     if isAuth();
-    }
+    // REMOVED (Mission 2 / Cheat #12 + Ghost-Code finding). The collection
+    // is dead — submitTopicForReview / voteCustomTopic / getPendingTopics
+    // were imported but never called. Wrapper functions deleted from
+    // auth.js in the same commit.
 
     // ── dailyScores ───────────────────────────────────────────────────────
+    // Soft-caps (Cheat #4 partial): points <= maxPoints, maxPoints <= 100.
+    // Real fix = server-side validation of the actual challenge length
+    // and answer correctness (Mission 3 Cloud Function).
     match /dailyScores/{date} {
       allow read, list: if isAuth();
     }
     match /dailyScores/{date}/users/{uid} {
       allow read, list: if isAuth();
-      allow write:      if isOwner(uid) || isAdmin();
+      allow create:     if (isOwner(uid)
+                            && request.resource.data.points is number
+                            && request.resource.data.maxPoints is number
+                            && request.resource.data.points >= 0
+                            && request.resource.data.maxPoints <= 100
+                            && request.resource.data.points <= request.resource.data.maxPoints)
+                         || isAdmin();
+      allow update:     if (isOwner(uid)
+                            && request.resource.data.points is number
+                            && request.resource.data.maxPoints is number
+                            && request.resource.data.points >= 0
+                            && request.resource.data.maxPoints <= 100
+                            && request.resource.data.points <= request.resource.data.maxPoints)
+                         || isAdmin();
+      allow delete:     if isOwner(uid) || isAdmin();
     }
 
     // ── feed ──────────────────────────────────────────────────────────────
+    // Cheat #13: only the original author may update/delete their feed entry.
     match /feed/{entryId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
-      allow update:     if isAuth();
+      allow update:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
       allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // ── comments ──────────────────────────────────────────────────────────
-    // Topic-Doc selbst (kann auch leer sein, dient nur als Container für die Subcollection)
+    // Topic-Doc selbst (kann auch leer sein, dient nur als Container fuer die Subcollection)
     match /comments/{topicKey} {
       allow read, list: if isAuth();
-      // Auto-create implizit erlaubt (für Kommentar-Subcollection-Anlage)
+      // Auto-create implizit erlaubt (fuer Kommentar-Subcollection-Anlage)
       allow create:     if isAuth();
     }
-    // Kommentar-Einträge — DAS ist die richtige Stelle (Subcollection!)
+    // Kommentar-Eintraege — DAS ist die richtige Stelle (Subcollection!)
+    // Cheat #11: likes-only branch tightened. A user may only flip THEIR
+    // OWN key in the likes map, not the entire map.
     match /comments/{topicKey}/entries/{commentId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
-      allow update:     if isAuth() && (resource.data.uid == request.auth.uid
-                                         || isAdmin()
-                                         || onlyChanged(['likes']));
+      allow update:     if isAuth() && (
+                            resource.data.uid == request.auth.uid
+                            || isAdmin()
+                            || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+                                && request.resource.data.likes.diff(resource.data.likes)
+                                      .affectedKeys().hasOnly([request.auth.uid]))
+                          );
       allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // ── shareLinks ────────────────────────────────────────────────────────
-    // Eltern-Bericht: Token-Doc darf jeder lesen (auch unauth, fuer den Bericht-Link),
-    // aber nur der Owner kann anlegen/loeschen.
+    // Cheat #17 (partial): tightened to owner-only read on the token doc.
+    // The frontend share-bericht route still reads the linked users/{uid}
+    // doc directly — Ethan owns the deeper fix (curated payload via a
+    // future shareData Cloud Function in Mission 3). For now: lock down
+    // the shareLinks doc itself so it cannot be enumerated.
     match /shareLinks/{tokenId} {
-      allow read, list: if true;
+      allow get, list:  if isAuth() && resource.data.uid == request.auth.uid;
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
       allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // ── bugReports ────────────────────────────────────────────────────────
-    // Jeder eingeloggte User darf eigene Reports einreichen + alle Reports lesen.
-    // Resolved markieren / loeschen darf nur der Reporter selbst oder ein Admin.
+    // Cheat #16: bind report.uid to request.auth.uid on create (already
+    // done — restated explicitly here for clarity).
     match /bugReports/{reportId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
