@@ -3,6 +3,15 @@
   "entries": [
     {
       "date": "2026-05-07",
+      "type": "added",
+      "subject": "Physik",
+      "year": "Klasse-9",
+      "topic": "Superpositionsprinzip",
+      "title": "Interaktive Simulationen + einklappbare Sektionen",
+      "description": "6 Live-Simulationen (Schwimmer-im-Fluss, Galileo, waagerecht, senkrecht hoch, Wurf nach unten mit Frei-Fall-Vergleich, schiefer Wurf mit 45°-Optimum). Beispielaufgaben und Anwendungen einklappbar."
+    },
+    {
+      "date": "2026-05-07",
       "type": "fixed",
       "subject": "",
       "year": "",

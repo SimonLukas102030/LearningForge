@@ -4,6 +4,7 @@
 
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
+import { initPhysikSimulations } from './physik-sim.js';
 import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile } from './auth.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -896,6 +897,10 @@ async function renderTopic(subjectId, yearId, topicId) {
   }
   // F-22: Prism für Informatik
   if (subjectId === 'Informatik') maybeLoadPrism();
+  // Physik: interaktive Simulationen einhängen (Single-Content-Pfad)
+  if (subjectId === 'Physik' && meta.content) {
+    initPhysikSimulations(document.querySelector('.content-body'));
+  }
 }
 
 function renderSubtopicGrid(subtopics) {
@@ -4595,6 +4600,9 @@ window.LF = {
         <h2 class="subtopic-detail-title">${st.name}</h2>
         <div class="content-body">${st.content}</div>
       </div>`;
+    // Physik-Simulationen ggf. initialisieren
+    initPhysikSimulations(grid.querySelector('.content-body'));
+    grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
   },
 
   closeSubtopic: () => {

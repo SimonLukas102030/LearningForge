@@ -853,6 +853,149 @@ input, textarea, select { font-family: var(--font); }
 .cl-desc  { font-size: 13px; color: var(--text); line-height: 1.4; }
 .cl-arrow { font-size: 20px; color: var(--text-muted); flex-shrink: 0; align-self: center; }
 
+/* ── Physik-Simulationen + Collapsibles ───────────────────── */
+.lf-sim {
+  display: block;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 16px 0;
+  box-shadow: var(--shadow-sm);
+}
+.sim-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #fef3c7;
+}
+.sim-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.sim-slider {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.sim-slider-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px;
+}
+.sim-slider-label { color: var(--text); font-weight: 500; }
+.sim-slider-value {
+  color: var(--accent); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-input);
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 12px;
+}
+.sim-slider input[type=range] {
+  width: 100%;
+  -webkit-appearance: none; appearance: none;
+  height: 6px; background: var(--bg-input); border-radius: 999px;
+  outline: none; cursor: pointer;
+}
+.sim-slider input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  cursor: pointer;
+}
+.sim-slider input[type=range]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  cursor: pointer;
+}
+.sim-readout {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px;
+  background: var(--bg-input);
+  padding: 6px 12px; border-radius: var(--radius-sm);
+}
+.sim-readout-label { color: var(--text-muted); }
+.sim-readout-value {
+  color: var(--text); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sim-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.sim-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-card); color: var(--text);
+  padding: 8px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all var(--transition);
+}
+.sim-btn:hover { background: var(--bg-input); transform: translateY(-1px); }
+.sim-btn-primary {
+  background: var(--accent); color: #fff;
+  border-color: var(--accent);
+}
+.sim-btn-primary:hover { filter: brightness(1.1); }
+.sim-error {
+  padding: 12px; color: #ef4444;
+  background: #fee2e2; border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+/* Collapsible details */
+.content-body details.lf-collapse {
+  margin: 12px 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: all var(--transition);
+}
+.content-body details.lf-collapse[open] {
+  box-shadow: var(--shadow-sm);
+}
+.content-body details.lf-collapse > summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  background: linear-gradient(90deg, var(--bg-input) 0%, transparent 100%);
+}
+.content-body details.lf-collapse > summary::-webkit-details-marker { display: none; }
+.content-body details.lf-collapse > summary::before {
+  content: '▶';
+  font-size: 11px;
+  color: var(--accent);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.content-body details.lf-collapse[open] > summary::before {
+  transform: rotate(90deg);
+}
+.content-body details.lf-collapse > summary:hover {
+  background: var(--bg-input);
+}
+.content-body details.lf-collapse > .lf-collapse-body {
+  padding: 4px 16px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Sim-Tipp-Bubble */
+.sim-tip {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 3px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: #78350f;
+}
+
 /* Setup banner */
 .setup-banner {
   background: var(--bg-card); border: 1px solid #f59e0b;
