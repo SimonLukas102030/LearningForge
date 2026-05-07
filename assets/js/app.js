@@ -22,6 +22,14 @@ const ADMIN_EMAIL = 'simonkoper27@gmail.com';
 // ── Rollen-Helper ─────────────────────────
 function isAdmin() { return userData?.role === 'admin' || currentUser?.email === ADMIN_EMAIL; }
 function isClaudeAccount() { return !!userData?.isClaude; }
+// Claude-Test-Account darf lesen + privat testen, aber NICHT in fuer andere
+// User sichtbare State schreiben (Comments, Friend-Requests, Group-Joins,
+// Group-Topic-Uploads). Returnt true wenn der Aufruf abgebrochen werden soll.
+function _blockClaudeWrite(what = 'Diese Aktion') {
+  if (!isClaudeAccount()) return false;
+  showToast(`${what} ist f\xfcr den Claude-Test-Account deaktiviert (kein Spam in geteiltem State).`, 'info');
+  return true;
+}
 function userRole(u) {
   // u kann ein User-Doc oder undefined sein. Bei undefined → eigener User.
   if (u !== undefined) return u?.role || null;
@@ -1396,6 +1404,26 @@ async function callAIChat(messages, maxTokens = 400) {
       }
     } catch {}
   }
+  // Gemini-Fallback: messages → flacher Prompt (Gemini hat kein system/role)
+  if (CONFIG.gemini?.apiKey) {
+    try {
+      const flat = messages.map(m =>
+        m.role === 'system' ? `[Anleitung] ${m.content}`
+        : m.role === 'user' ? `Sch\xfcler: ${m.content}`
+        : `Tutor: ${m.content}`
+      ).join('\n\n');
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: flat }] }] }) }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        if (text) return text;
+      }
+    } catch {}
+  }
   throw new Error('Kein KI-Provider verf\xfcgbar');
 }
 
@@ -2692,7 +2720,7 @@ async function renderAdmin() {
     <div class="page">
       <div class="page-header">
         <h1>Admin-Panel</h1>
-        <div class="sub">Nur für ${ADMIN_EMAIL}</div>
+        <div class="sub">Nur f&uuml;r Administratoren</div>
       </div>
       <div id="adminContent"><div class="spinner" style="margin:40px auto"></div></div>
     </div>`;
@@ -3525,13 +3553,16 @@ async function grantXPAndAchievements(ctx = {}) {
   const p = [];
   if (xpGained > 0) {
     p.push(saveXP(uid, xpGained).catch(console.error));
-    // Mirror XP + Rolle zum leaderboard-Doc, damit Banner in Ranglisten auftaucht
-    p.push(db().collection('leaderboard').doc(uid).set({
-      xp: userData.xp,
-      displayName: currentUser.displayName || 'Nutzer',
-      photoURL: currentUser.photoURL || null,
-      role: userRole() || null
-    }, { merge: true }).catch(console.error));
+    // Mirror XP + Rolle zum leaderboard-Doc, damit Banner in Ranglisten auftaucht.
+    // Claude-Test-Account NICHT mirroren — sonst taucht er im XP-Tab der Rangliste auf.
+    if (!isClaudeAccount()) {
+      p.push(db().collection('leaderboard').doc(uid).set({
+        xp: userData.xp,
+        displayName: currentUser.displayName || 'Nutzer',
+        photoURL: currentUser.photoURL || null,
+        role: userRole() || null
+      }, { merge: true }).catch(console.error));
+    }
   }
   if (newOnes.length) p.push(saveAchievements(uid, newOnes.map(a => a.id)).catch(console.error));
   await Promise.all(p);
@@ -4108,6 +4139,7 @@ window.LF = {
 
   // ── Gruppen ──────────────────────────────
   groupCreate: async () => {
+    if (_blockClaudeWrite('Gruppen erstellen')) return;
     const name = document.getElementById('newGroupName')?.value.trim();
     if (!name) { showToast('Bitte einen Gruppennamen eingeben.', 'error'); return; }
     const groupIds = userData?.groupIds || [];
@@ -4122,6 +4154,7 @@ window.LF = {
   },
 
   groupJoin: async () => {
+    if (_blockClaudeWrite('Gruppen beitreten')) return;
     const code = document.getElementById('joinCode')?.value.trim();
     if (!code || code.length !== 6) { showToast('Bitte gültigen 6-stelligen Code eingeben.', 'error'); return; }
     const groupIds = userData?.groupIds || [];
@@ -4708,6 +4741,7 @@ window.LF = {
   },
 
   builderUploadGroup: async (groupId, groupName) => {
+    if (_blockClaudeWrite('Gruppen-Uploads')) return;
     const msg = document.getElementById('builderUploadMsg');
     if (msg) msg.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
     try {
@@ -4728,8 +4762,26 @@ window.LF = {
 
   startCustomTest: () => {
     if (!customTopicData) return;
-    const questions = customTopicData.questions || [];
-    if (!questions.length) { showToast('Keine Fragen in diesem Thema.', 'error'); return; }
+    const raw = customTopicData.questions || [];
+    if (!raw.length) { showToast('Keine Fragen in diesem Thema.', 'error'); return; }
+    // MC-Optionen mischen + shuffledCorrectIndex setzen, sonst marked evaluateAnswers
+    // alle MC-Antworten als falsch (parseInt(answer) === undefined → false).
+    const questions = raw.map(q => {
+      if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
+        const indexed = q.options.map((opt, i) => ({ opt, correct: i === q.correct }));
+        for (let i = indexed.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+        }
+        return {
+          ...q,
+          shuffledOptions:      indexed.map(x => x.opt),
+          shuffledCorrectIndex: indexed.findIndex(x => x.correct),
+          points: q.points || 2
+        };
+      }
+      return { ...q, maxPoints: q.maxPoints || 4 };
+    });
     const fakeSubject = { name: customTopicData.fach || 'Eigene Inhalte' };
     const fakeTopic   = { name: customTopicData.thema || 'Unbenannt' };
     renderActiveTest(questions, 30, '_custom', '_custom', customTopicData.id, fakeSubject, fakeTopic);
@@ -5053,6 +5105,7 @@ window.LF.submitTest = async () => {
       }
     } catch(e) { console.warn('[theme-drop]', e); }
     // Claude-Test-Account: nichts in Rangliste/Feed schreiben.
+    // (Doppelt abgesichert: hier Bypass + isClaude-Filter beim Read.)
     if (!isClaudeAccount()) {
       writeFeedEntry(currentUser.uid, 'test', {
         name: currentUser.displayName || 'Nutzer',
@@ -5703,9 +5756,11 @@ function _relTime(date) {
 }
 
 function _avatar(photo, name) {
+  // Attribut-XSS verhindern: photo kann ein User-controlled string sein.
+  // escapeHtml escapt auch Quotes, sodass src="…" nicht ausbrechbar ist.
   return photo
-    ? `<img src="${photo}" alt="" class="comment-avatar-img">`
-    : `<span class="comment-avatar-letter">${(name || '?')[0].toUpperCase()}</span>`;
+    ? `<img src="${escapeHtml(photo)}" alt="" class="comment-avatar-img">`
+    : `<span class="comment-avatar-letter">${escapeHtml((name || '?')[0].toUpperCase())}</span>`;
 }
 
 // ── F-30: Freunde ─────────────────────────
@@ -5806,13 +5861,17 @@ async function renderFeed() {
     ? entries.map(e => {
         const time = e.createdAt?.toDate ? _relTime(e.createdAt.toDate()) : 'gerade eben';
         const icon = e.type === 'test' ? '📝' : e.type === 'achievement' ? '🏅' : e.type === 'content' ? '📚' : '⚡';
+        const name  = escapeHtml(e.payload?.name || '');
+        const topic = escapeHtml(e.payload?.topic || '');
+        const title = escapeHtml(e.payload?.title || '');
+        const grade = escapeHtml(e.payload?.grade ?? '');
         const text = e.type === 'test'
-          ? `<strong>${e.payload?.name}</strong> hat <em>${e.payload?.topic}</em> mit Note <strong>${e.payload?.grade}</strong> abgeschlossen`
+          ? `<strong>${name}</strong> hat <em>${topic}</em> mit Note <strong>${grade}</strong> abgeschlossen`
           : e.type === 'achievement'
-          ? `<strong>${e.payload?.name}</strong> hat das Achievement <em>${e.payload?.title}</em> erhalten`
+          ? `<strong>${name}</strong> hat das Achievement <em>${title}</em> erhalten`
           : e.type === 'content'
-          ? `<strong>${e.payload?.name}</strong> hat neuen Inhalt hochgeladen: <em>${e.payload?.topic}</em>`
-          : `<strong>${e.payload?.name}</strong> war aktiv`;
+          ? `<strong>${name}</strong> hat neuen Inhalt hochgeladen: <em>${topic}</em>`
+          : `<strong>${name}</strong> war aktiv`;
         return `
           <div class="feed-entry">
             <div class="feed-icon">${icon}</div>
@@ -5953,13 +6012,14 @@ window.LF.loadComments = async () => {
     const likeCount = Object.keys(c.likes || {}).length;
     const liked     = !!(c.likes?.[currentUser?.uid]);
     const canDel    = c.uid === currentUser?.uid || isAdmin();
-    const safeText  = c.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const safeText  = escapeHtml(c.text || '');
+    const safeName  = escapeHtml(c.name || 'Nutzer');
     return `
       <div class="comment-card" id="cmt_${c.id}">
         <div class="comment-avatar ${outlineFor(c)}">${_avatar(c.photo, c.name)}</div>
         <div class="comment-body">
           <div class="comment-header">
-            <span class="comment-author">${c.name} ${roleBadge(c.role)}</span>
+            <span class="comment-author">${safeName} ${roleBadge(c.role)}</span>
             <span class="comment-time">${time}</span>
           </div>
           <div class="comment-text">${safeText}</div>
@@ -5977,6 +6037,7 @@ window.LF.submitComment = async () => {
   const input = document.getElementById('commentInput');
   const text  = input?.value?.trim();
   if (!text || !_commentTopicKey) return;
+  if (_blockClaudeWrite('Kommentieren')) return;
   input.disabled = true;
   try {
     await addComment(_commentTopicKey, currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, text, userRole());
@@ -5990,6 +6051,7 @@ window.LF.submitComment = async () => {
 
 window.LF.likeComment = async (commentId) => {
   if (!_commentTopicKey) return;
+  if (_blockClaudeWrite('Liken')) return;
   const btn = document.querySelector(`#cmt_${commentId} .comment-like-btn`);
   try {
     const nowLiked = await toggleCommentLike(_commentTopicKey, commentId, currentUser.uid);
@@ -6034,8 +6096,9 @@ window.LF.searchFriends = async (query) => {
 };
 
 window.LF.sendFriendReq = async (toUid, toName, toPhoto) => {
+  if (_blockClaudeWrite('Freundesanfragen senden')) return;
   try {
-    await sendFriendRequest(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, toUid);
+    await sendFriendRequest(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, toUid, userRole());
     userData.friendRequestsSent = [...(userData.friendRequestsSent || []), toUid];
     showToast(`Anfrage an ${toName} gesendet.`, 'success');
     await window.LF.searchFriends(document.getElementById('friendSearch')?.value || '');
@@ -6043,6 +6106,7 @@ window.LF.sendFriendReq = async (toUid, toName, toPhoto) => {
 };
 
 window.LF.acceptFriend = async (fromUid, fromName, fromPhoto) => {
+  if (_blockClaudeWrite('Freundesanfragen annehmen')) return;
   try {
     await acceptFriendRequest(currentUser.uid, fromUid);
     userData.friendIds = [...(userData.friendIds || []), fromUid];

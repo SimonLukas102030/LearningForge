@@ -408,15 +408,16 @@ export async function incrementCounter(uid, field, by = 1) {
 }
 
 // ── Daily Challenge Score (F-26) ──────────
+// Subcollection-Pfad — passt zu firestore.rules (write nur fuer eigenen uid).
 export async function saveDailyScore(uid, displayName, photoURL, dateKey, grade, points, maxPoints, role) {
-  await _db.collection('dailyScores').doc(dateKey).set({
-    [`scores.${uid}`]: { uid, displayName, photoURL: photoURL || null, grade, points, maxPoints, role: role || null }
+  await _db.collection('dailyScores').doc(dateKey).collection('users').doc(uid).set({
+    uid, displayName, photoURL: photoURL || null, grade, points, maxPoints, role: role || null
   }, { merge: true });
 }
 
 export async function getDailyScores(dateKey) {
-  const doc = await _db.collection('dailyScores').doc(dateKey).get({ source: 'server' });
-  return doc.exists ? Object.values(doc.data().scores || {}) : [];
+  const snap = await _db.collection('dailyScores').doc(dateKey).collection('users').get({ source: 'server' });
+  return snap.docs.map(d => d.data());
 }
 
 // ── Streak-Freeze (F-27) ──────────────────
@@ -472,24 +473,24 @@ export async function searchUsers(query, currentUid) {
     .map(d => ({ uid: d.id, name: d.data().name, photo: d.data().photoURL || null, role: d.data().role || null }));
 }
 
-export async function sendFriendRequest(fromUid, fromName, fromPhoto, toUid) {
+export async function sendFriendRequest(fromUid, fromName, fromPhoto, toUid, fromRole) {
   await _db.collection('users').doc(toUid).set({
-    friendRequests: { [fromUid]: { name: fromName, photo: fromPhoto || null, ts: Date.now() } }
+    friendRequests: { [fromUid]: {
+      name: fromName, photo: fromPhoto || null,
+      role: fromRole || null, ts: Date.now()
+    } }
   }, { merge: true });
 }
 
 export async function acceptFriendRequest(uid, fromUid) {
   const batch = _db.batch();
   batch.set(_db.collection('users').doc(uid),
-    { friendIds: firebase.firestore.FieldValue.arrayUnion(fromUid) }, { merge: true });
+    { friendIds: firebase.firestore.FieldValue.arrayUnion(fromUid),
+      [`friendRequests.${fromUid}`]: firebase.firestore.FieldValue.delete() },
+    { merge: true });
   batch.set(_db.collection('users').doc(fromUid),
     { friendIds: firebase.firestore.FieldValue.arrayUnion(uid) }, { merge: true });
   await batch.commit();
-  await _db.collection('users').doc(uid).update({
-    [`friendRequests.${fromUid}`]: firebase.firestore.FieldValue.delete()
-  }).catch(console.error);
-  const doc = await _db.collection('users').doc(uid).get({ source: 'server' });
-  userData = { ...userData, ...doc.data() };
 }
 
 export async function rejectFriendRequest(uid, fromUid) {

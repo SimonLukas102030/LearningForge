@@ -87,7 +87,7 @@ export async function getChangelog() {
 
 async function fetchSubjectsConfig() {
   try {
-    const res = await fetch(`${RAW()}/F%C3%A4cher/subjects-config.json`);
+    const res = await fetch(`${RAW()}/F%C3%A4cher/subjects-config.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) return {};
     return await res.json();
   } catch { return {}; }

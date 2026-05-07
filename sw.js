@@ -2,7 +2,7 @@
 //  LearningForge — Service Worker (F-11)
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'lf-v10';
+const CACHE_NAME = 'lf-v13';
 
 // Minimales App-Shell-Precache
 const PRECACHE_URLS = ['/', '/index.html', '/manifest.json'];
@@ -74,7 +74,10 @@ async function networkFirst(req) {
 }
 
 async function cacheFirst(req) {
-  const cached = await caches.match(req, { ignoreSearch: true });
+  // Exact-Match: ?v=… Querystring MUSS unterscheiden, sonst liefert lf-v13
+  // den alten main.js?v=…c aus dem geerbten Cache obwohl index.html schon
+  // ?v=…e anfordert. ignoreSearch nur fuer Navigations-Fallback (s.u.).
+  const cached = await caches.match(req);
   if (cached) return cached;
   try {
     const res = await fetch(req);
@@ -84,9 +87,10 @@ async function cacheFirst(req) {
     }
     return res;
   } catch {
-    // Navigation-Request → App-Shell ausliefern
+    // Navigation-Request → App-Shell ausliefern (hier ignoreSearch ok,
+    // weil die Shell selbst keine Versionierung im Querystring hat).
     if (req.mode === 'navigate') {
-      const shell = await caches.match('/index.html');
+      const shell = await caches.match('/index.html', { ignoreSearch: true });
       if (shell) return shell;
     }
     return new Response('Offline', { status: 503 });

@@ -22,15 +22,16 @@ service cloud.firestore {
     // Update:
     //   - eigenes Doc: alles erlaubt
     //   - Admin: alles erlaubt (für Role-Management)
-    //   - fremdes Doc: nur friendRequests + friendIds darf modifiziert werden
-    //                  (für Friend-Request senden bzw. accept)
+    //   - fremdes Doc: nur friendRequests + friendIds + groupIds darf modifiziert
+    //                  werden (Friend-Request, Accept, kickFromGroup, Group-Löschung
+    //                  durch Creator → muss bei jedem Member groupIds aktualisieren).
     // Delete:    nur eigenes Doc oder Admin.
     match /users/{uid} {
       allow read, list: if isAuth();
       allow create:     if isOwner(uid);
       allow update:     if isOwner(uid)
                          || isAdmin()
-                         || (isAuth() && onlyChanged(['friendRequests', 'friendIds']));
+                         || (isAuth() && onlyChanged(['friendRequests', 'friendIds', 'groupIds']));
       allow delete:     if isOwner(uid) || isAdmin();
     }
 
@@ -101,8 +102,10 @@ service cloud.firestore {
       allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
-    // ── shareTokens ───────────────────────────────────────────────────────
-    match /shareTokens/{tokenId} {
+    // ── shareLinks ────────────────────────────────────────────────────────
+    // Eltern-Bericht: Token-Doc darf jeder lesen (auch unauth, fuer den Bericht-Link),
+    // aber nur der Owner kann anlegen/loeschen.
+    match /shareLinks/{tokenId} {
       allow read, list: if true;
       allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
       allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
