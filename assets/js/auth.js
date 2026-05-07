@@ -337,9 +337,9 @@ export async function incrementCounter(uid, field, by = 1) {
 }
 
 // ── Daily Challenge Score (F-26) ──────────
-export async function saveDailyScore(uid, displayName, photoURL, dateKey, grade, points, maxPoints) {
+export async function saveDailyScore(uid, displayName, photoURL, dateKey, grade, points, maxPoints, role) {
   await _db.collection('dailyScores').doc(dateKey).set({
-    [`scores.${uid}`]: { uid, displayName, photoURL: photoURL || null, grade, points, maxPoints }
+    [`scores.${uid}`]: { uid, displayName, photoURL: photoURL || null, grade, points, maxPoints, role: role || null }
   }, { merge: true });
 }
 

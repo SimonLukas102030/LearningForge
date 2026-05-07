@@ -1031,6 +1031,24 @@ input, textarea, select { font-family: var(--font); }
   border-top: 1px solid var(--border);
 }
 
+/* Klasse-Prompt */
+.klasse-prompt {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(90deg, var(--accent-subtle), var(--bg-card));
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 16px 0;
+  cursor: pointer;
+  transition: transform var(--transition);
+}
+.klasse-prompt:hover { transform: translateX(3px); }
+.klasse-prompt-icon { font-size: 22px; }
+.klasse-prompt-text { flex: 1; }
+.klasse-prompt-title { font-size: 14px; font-weight: 700; color: var(--accent); }
+.klasse-prompt-sub   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.klasse-prompt-arrow { font-size: 24px; color: var(--accent); }
+
 /* ── Rollen-Badges + Spectacle Overlay ─────────────────── */
 .role-badge {
   display: inline-flex;

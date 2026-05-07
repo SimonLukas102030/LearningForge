@@ -131,8 +131,33 @@ export function toggleTheme() {
   if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
 }
 
+// ── Autoupdate (alle 5 Minuten heimlich auf neue Commits prüfen) ──
+let _lastDeploySha = null;
+async function checkForUpdate() {
+  if (testState) return; // niemals während Test reloaden
+  if (vocabState && !vocabState.done) return;
+  try {
+    const url = `https://api.github.com/repos/${CONFIG.github.owner}/${CONFIG.github.repo}/commits/${CONFIG.github.branch}`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.sha) return;
+    if (_lastDeploySha === null) {
+      _lastDeploySha = data.sha;
+    } else if (_lastDeploySha !== data.sha) {
+      console.log('[autoupdate] new commit:', data.sha);
+      location.reload();
+    }
+  } catch {}
+}
+function startAutoUpdate() {
+  setTimeout(() => checkForUpdate(), 30 * 1000); // initialer Check nach 30s
+  setInterval(checkForUpdate, 5 * 60 * 1000);
+}
+
 // ── App starten ──────────────────────────
 export function startApp() {
+  startAutoUpdate();
   onAuthStateChanged(async user => {
     currentUser = user;
     if (user) {
@@ -581,6 +606,15 @@ function renderDashboard() {
           <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">SRS fällig</span>
         </div>` : ''}
       </div>
+      ${!userData?.klasse ? `
+        <div class="klasse-prompt" onclick="location.hash='#/profil'">
+          <span class="klasse-prompt-icon">&#9888;&#65039;</span>
+          <div class="klasse-prompt-text">
+            <div class="klasse-prompt-title">Klassenstufe noch nicht gesetzt</div>
+            <div class="klasse-prompt-sub">Setze deine Klasse im Profil &mdash; sonst kommen Daily-Challenge-Fragen aus allen Klassen.</div>
+          </div>
+          <span class="klasse-prompt-arrow">&rsaquo;</span>
+        </div>` : ''}
       ${renderDailyChallengeCard()}
       ${attentionHtml}
       ${recommendations.length ? `
@@ -906,7 +940,7 @@ async function renderTopic(subjectId, yearId, topicId) {
       <button class="notes-toggle" onclick="window.LF.toggleNotes()">
         📝 Notizen <span id="notesArrow">▼</span>
       </button>
-      <div class="notes-body" id="notesBody" style="display:none">
+      <div class="notes-body" id="notesBody">
         <textarea class="notes-textarea" id="notesInput" placeholder="Deine Notizen zu diesem Thema…"
           oninput="window.LF.onNoteInput('${topicKey}',this.value)">${savedNote}</textarea>
         <div class="notes-status" id="notesStatus"></div>
@@ -1966,6 +2000,16 @@ function renderProfile() {
                      placeholder="Anzeigename" maxlength="40">
             </div>
 
+            <!-- Klasse -->
+            <div class="profile-edit-row" style="margin-top:8px">
+              <label class="form-label" style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Klassenstufe</label>
+              <select class="form-input" id="profileKlasseInput">
+                ${[5,6,7,8,9,10,11,12,13].map(k =>
+                  `<option value="${k}" ${userData?.klasse == k ? 'selected' : ''}>Klasse ${k}</option>`
+                ).join('')}
+              </select>
+            </div>
+
             <div style="display:flex;gap:8px;margin-top:4px">
               <button class="btn btn-primary btn-sm" id="profileSaveBtn" onclick="window.LF.saveProfile()">Speichern</button>
               <button class="btn btn-ghost btn-sm" onclick="window.LF.profileEditClose()">Abbrechen</button>
@@ -2080,8 +2124,8 @@ async function renderLeaderboard() {
     return `
       <div class="lb-row${isMe?' lb-me':''}">
         <div class="lb-rank">${medal}</div>
-        <div class="lb-avatar">${av}</div>
-        <div class="lb-name">${u.displayName||'Unbekannt'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+        <div class="lb-avatar role-glow-${u.role||'none'}">${av}</div>
+        <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
         <div class="lb-meta">${count} Test${count!==1?'s':''}</div>
         <div class="lb-score" style="color:var(--accent)">${score}</div>
       </div>`;
@@ -2113,8 +2157,8 @@ async function renderLeaderboard() {
     return `
       <div class="lb-row${isMe?' lb-me':''}">
         <div class="lb-rank">${medal}</div>
-        <div class="lb-avatar">${av}</div>
-        <div class="lb-name">${u.displayName||'Unbekannt'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+        <div class="lb-avatar role-glow-${u.role||'none'}">${av}</div>
+        <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
         <div class="lb-meta">Lv.${xi.level} ${xi.title}</div>
         <div class="lb-score" style="color:#f59e0b">${u.xp} XP</div>
       </div>`;
@@ -2411,8 +2455,8 @@ async function renderGroupDetail(groupId) {
       return `
         <div class="lb-row${isMe ? ' lb-me' : ''}">
           <div class="lb-rank">${i < 3 ? medals[i] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`}</div>
-          <div class="lb-avatar">${av}</div>
-          <div class="lb-name">${u.displayName||'Unbekannt'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+          <div class="lb-avatar role-glow-${u.role||'none'}">${av}</div>
+          <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
           <div class="lb-meta">${u.testCount} Test${u.testCount!==1?'s':''}</div>
           <div class="lb-score" style="color:var(--accent)">${u.total}</div>
         </div>`;
@@ -3306,8 +3350,13 @@ async function grantXPAndAchievements(ctx = {}) {
   const p = [];
   if (xpGained > 0) {
     p.push(saveXP(uid, xpGained).catch(console.error));
-    // Mirror XP to leaderboard doc so XP-tab can show it
-    p.push(db().collection('leaderboard').doc(uid).set({ xp: userData.xp, displayName: currentUser.displayName || 'Nutzer', photoURL: currentUser.photoURL || null }, { merge: true }).catch(console.error));
+    // Mirror XP + Rolle zum leaderboard-Doc, damit Banner in Ranglisten auftaucht
+    p.push(db().collection('leaderboard').doc(uid).set({
+      xp: userData.xp,
+      displayName: currentUser.displayName || 'Nutzer',
+      photoURL: currentUser.photoURL || null,
+      role: userRole() || null
+    }, { merge: true }).catch(console.error));
   }
   if (newOnes.length) p.push(saveAchievements(uid, newOnes.map(a => a.id)).catch(console.error));
   await Promise.all(p);
@@ -3461,10 +3510,22 @@ async function getDailyChallengeQuestions() {
   const seed    = dateKey.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
   const rand    = _seededRand(seed);
 
-  const allTopics = Object.values(structure || {})
+  let allTopics = Object.values(structure || {})
     .flatMap(s => Object.values(s.years || {})
       .flatMap(y => Object.values(y.topics || {})
         .map(t => ({ subjectId: s.id, yearId: y.id, topicId: t.id }))));
+
+  // Klassen-Filter (#7): Topics aus passender Klasse, plus solche ohne Klassenzuordnung (z.B. "Grammatik")
+  const userKlasse = userData?.klasse;
+  if (userKlasse) {
+    const klPattern = new RegExp(`^Klasse[-_]?${userKlasse}$`, 'i');
+    allTopics = allTopics.filter(t => {
+      // Topics deren yearId mit "Klasse-X" matcht ODER nicht klassen-spezifisch ist
+      const isClassYear = /^Klasse[-_]?\d+$/i.test(t.yearId);
+      if (!isClassYear) return true; // z.B. "Grammatik" → für alle
+      return klPattern.test(t.yearId);
+    });
+  }
 
   if (!allTopics.length) return [];
 
@@ -3537,8 +3598,8 @@ async function renderDailyChallenge() {
       return `
         <div class="lb-row${isMe?' lb-me':''}">
           <div class="lb-rank">${m}</div>
-          <div class="lb-avatar">${u.displayName?.[0]?.toUpperCase()||'?'}</div>
-          <div class="lb-name">${u.displayName||'?'}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+          <div class="lb-avatar role-glow-${u.role||'none'}">${u.displayName?.[0]?.toUpperCase()||'?'}</div>
+          <div class="lb-name">${u.displayName||'?'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
           <div class="lb-meta">${u.points}/${u.maxPoints} Pkt</div>
           <div class="lb-score" style="color:${gradeColor(u.grade)}">${u.grade}</div>
         </div>`;
@@ -3955,7 +4016,7 @@ window.LF = {
     userData.dailyChallenges[dateKey] = { grade: gi.grade, points: pts, maxPoints: max };
     userData.dailyChallengesCompleted = (userData.dailyChallengesCompleted || 0) + 1;
     await incrementCounter(currentUser.uid, 'dailyChallengesCompleted').catch(console.error);
-    await saveDailyScore(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, dateKey, gi.grade, pts, max).catch(console.error);
+    await saveDailyScore(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, dateKey, gi.grade, pts, max, userRole()).catch(console.error);
     await db().collection('users').doc(currentUser.uid).set({ dailyChallenges: { [dateKey]: userData.dailyChallenges[dateKey] } }, { merge: true }).catch(console.error);
 
     const xpBonus = gi.grade === 1 ? 80 : gi.grade <= 2 ? 50 : 30;
@@ -4015,13 +4076,16 @@ window.LF = {
 
   // ── Notizen (F-18) ───────────────────────
   toggleNotes: () => {
-    const body  = document.getElementById('notesBody');
-    const arrow = document.getElementById('notesArrow');
+    const body   = document.getElementById('notesBody');
+    const arrow  = document.getElementById('notesArrow');
+    const toggle = document.querySelector('.notes-toggle');
     if (!body) return;
-    const open = body.style.display !== 'none';
-    body.style.display = open ? 'none' : 'block';
-    if (arrow) arrow.textContent = open ? '▼' : '▲';
-    if (!open) document.getElementById('notesInput')?.focus();
+    const willOpen = !body.classList.contains('open');
+    body.classList.toggle('open', willOpen);
+    body.style.removeProperty('display'); // alten inline-display entfernen
+    if (toggle) toggle.classList.toggle('open', willOpen);
+    if (arrow) arrow.textContent = willOpen ? '▲' : '▼';
+    if (willOpen) document.getElementById('notesInput')?.focus();
   },
 
   onNoteInput: (key, value) => {
@@ -5955,8 +6019,10 @@ window.LF.handleProfileFile = async (input) => {
 
 window.LF.saveProfile = async () => {
   const nameInput = document.getElementById('profileNameInput');
+  const klInput   = document.getElementById('profileKlasseInput');
   const btn       = document.getElementById('profileSaveBtn');
   const newName   = nameInput?.value?.trim();
+  const newKlasse = klInput ? parseInt(klInput.value, 10) : (userData?.klasse || null);
   if (!newName) { showToast('Name darf nicht leer sein.', 'error'); return; }
 
   btn.disabled    = true;
@@ -5965,6 +6031,10 @@ window.LF.saveProfile = async () => {
   const photoURL = _pendingProfilePhotoURL ?? userData?.photoURL ?? currentUser.photoURL ?? null;
   try {
     await updateUserProfile(currentUser.uid, newName, photoURL);
+    if (newKlasse) {
+      await db().collection('users').doc(currentUser.uid).set({ klasse: newKlasse }, { merge: true });
+      userData.klasse = newKlasse;
+    }
     userData.name     = newName;
     userData.photoURL = photoURL;
     _pendingProfilePhotoURL = null;
