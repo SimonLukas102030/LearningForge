@@ -1,0 +1,23 @@
+{
+  "_comment": "Liste aller inhaltlichen Änderungen am Lernmaterial. Neueste zuerst. Felder: date (YYYY-MM-DD), type (added|expanded|fixed), subject, year, topic, title, description.",
+  "entries": [
+    {
+      "date": "2026-05-07",
+      "type": "expanded",
+      "subject": "Physik",
+      "year": "Klasse-9",
+      "topic": "Superpositionsprinzip",
+      "title": "Inhalte deutlich ausgebaut",
+      "description": "Herleitungen, Energieerhaltung, mehrere Beispielaufgaben pro Subtopic, historischer Kontext (Galileo) und Sport-Anwendungen ergänzt."
+    },
+    {
+      "date": "2026-05-07",
+      "type": "added",
+      "subject": "Physik",
+      "year": "Klasse-9",
+      "topic": "Superpositionsprinzip",
+      "title": "Wurf nach unten + 5 Unterthemen",
+      "description": "Neues Subtopic „Wurf nach unten\" und Aufteilung in 5 strukturierte Unterthemen (wie bei Geschichte)."
+    }
+  ]
+}

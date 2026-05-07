@@ -76,6 +76,15 @@ export async function getTopicQuestions(subjectId, yearId, topicId) {
   } catch { return []; }
 }
 
+export async function getChangelog() {
+  try {
+    const res = await fetch(`${RAW()}/changelog.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.entries || [];
+  } catch { return []; }
+}
+
 async function fetchSubjectsConfig() {
   try {
     const res = await fetch(`${RAW()}/F%C3%A4cher/subjects-config.json`);

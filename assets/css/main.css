@@ -827,6 +827,32 @@ input, textarea, select { font-family: var(--font); }
   font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
 }
 
+/* Changelog — Was ist neu? */
+.changelog-list { display: flex; flex-direction: column; gap: 8px; }
+.changelog-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-color, var(--accent));
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  cursor: pointer; transition: transform var(--transition), box-shadow var(--transition);
+}
+.changelog-item:hover { transform: translateX(3px); box-shadow: var(--shadow-sm); }
+.cl-icon { font-size: 22px; flex-shrink: 0; line-height: 1; padding-top: 2px; }
+.cl-info { flex: 1; min-width: 0; }
+.cl-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.cl-type {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 2px 8px; border-radius: 999px; color: #fff;
+}
+.cl-type-added    { background: #10b981; }
+.cl-type-expanded { background: #3b82f6; }
+.cl-type-fixed    { background: #f59e0b; }
+.cl-date { font-size: 11px; color: var(--text-muted); }
+.cl-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.cl-sub   { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.cl-desc  { font-size: 13px; color: var(--text); line-height: 1.4; }
+.cl-arrow { font-size: 20px; color: var(--text-muted); flex-shrink: 0; align-self: center; }
+
 /* Setup banner */
 .setup-banner {
   background: var(--bg-card); border: 1px solid #f59e0b;

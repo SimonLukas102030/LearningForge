@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════
 
 import { CONFIG } from './config.js';
-import { getStructure, getTopicMeta, getTopicQuestions, idToName } from './scanner.js';
+import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile } from './auth.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -25,6 +25,7 @@ let tabSwitchPenalty   = false;
 let visibilityHandler  = null;
 let calcExpr           = '';
 let currentSubtopics   = null;
+let changelog          = [];
 let vocabState         = null;
 let builderState       = null;
 let _visualDragIdx     = null;
@@ -130,6 +131,10 @@ export function startApp() {
         return;
       }
       structure = await getStructure();
+      getChangelog().then(entries => {
+        changelog = entries;
+        if (location.hash === '' || location.hash === '#/' || location.hash === '#') renderDashboard();
+      });
       await loadToolsOverride();
       checkAndShowWeeklySummary();
     }
@@ -583,8 +588,59 @@ function renderDashboard() {
         </div>` : ''}
       <div class="section-title" style="margin-top:${attention.length?'32px':'0'}">📚 Fächer</div>
       <div class="subjects-grid">${subjectCards}</div>
+      ${renderChangelogSection()}
       ${recentHtml}
     </div>`;
+}
+
+// ── Was ist neu? — Changelog-Sektion ───────
+function renderChangelogSection() {
+  if (!changelog || changelog.length === 0) return '';
+  const TYPE_LABEL = { added: 'Neu', expanded: 'Erweitert', fixed: 'Korrigiert' };
+  const items = changelog.slice(0, 8).map(e => {
+    const subjectColor = getSubjectColor(e.subject);
+    const subjectIcon  = getSubjectIcon(e.subject);
+    const dateStr      = formatRelativeDate(e.date);
+    const subjectName  = structure?.[e.subject]?.name || e.subject;
+    const yearName     = structure?.[e.subject]?.years?.[e.year]?.name || idToName(e.year || '');
+    const topicName    = structure?.[e.subject]?.years?.[e.year]?.topics?.[e.topic]?.name || idToName(e.topic || '');
+    const href         = (e.subject && e.year && e.topic)
+      ? `#/fach/${e.subject}/${e.year}/${e.topic}`
+      : (e.subject ? `#/fach/${e.subject}` : '#/');
+    const typeLabel    = TYPE_LABEL[e.type] || 'Update';
+    return `
+      <div class="changelog-item" onclick="location.hash='${href}'"
+           style="--subject-color:${subjectColor}">
+        <span class="cl-icon">${subjectIcon}</span>
+        <div class="cl-info">
+          <div class="cl-head">
+            <span class="cl-type cl-type-${e.type || 'added'}">${typeLabel}</span>
+            <span class="cl-date">${dateStr}</span>
+          </div>
+          <div class="cl-title">${e.title || topicName}</div>
+          <div class="cl-sub">${subjectName} · ${yearName} · ${topicName}</div>
+          ${e.description ? `<div class="cl-desc">${e.description}</div>` : ''}
+        </div>
+        <span class="cl-arrow">›</span>
+      </div>`;
+  }).join('');
+  return `
+    <div class="section-title" style="margin-top:32px">✨ Was ist neu?</div>
+    <div class="changelog-list">${items}</div>`;
+}
+
+function formatRelativeDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return iso;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = Math.round((today - d) / 86400000);
+  if (days === 0) return 'heute';
+  if (days === 1) return 'gestern';
+  if (days < 7)  return `vor ${days} Tagen`;
+  if (days < 14) return 'letzte Woche';
+  if (days < 30) return `vor ${Math.floor(days/7)} Wochen`;
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 // ── Fach-Seite (Jahresauswahl) ────────────
