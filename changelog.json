@@ -3,6 +3,24 @@
   "entries": [
     {
       "date": "2026-05-07",
+      "type": "added",
+      "subject": "",
+      "year": "",
+      "topic": "",
+      "title": "Inventar: 11 Avatar-Outlines + 11 Themes + Testing-Bereich",
+      "description": "Avatar-Umrandungen schaltest du durch Level frei (Bronze ab Lv. 3, Kosmisch ab Lv. 100). Themes droppen bei Note 1 (25%) oder 2 (5%). Wähl alles im neuen Inventar-Tab. Admin/Tester haben einen Testing-Tab mit Stats-Manipulation."
+    },
+    {
+      "date": "2026-05-07",
+      "type": "fixed",
+      "subject": "",
+      "year": "",
+      "topic": "",
+      "title": "5 Bugs gefixt: Banner, Notizen, Latein, Klassen, Autoupdate",
+      "description": "Banner taucht jetzt in Ranglisten auf · Notizen klappen wieder auf · Latein-Verben hat 34 Test-Fragen · Klassenstufe filtert Daily-Challenge · App reloaded heimlich alle 5 Min wenn neuer Commit (außer im Test)."
+    },
+    {
+      "date": "2026-05-07",
       "type": "fixed",
       "subject": "",
       "year": "",

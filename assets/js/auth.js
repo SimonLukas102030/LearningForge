@@ -111,6 +111,34 @@ export async function setUserRole(uid, role) {
   }
 }
 
+// ── Cosmetics: Outlines + Themes ────────────────────────
+export async function unlockTheme(uid, themeId) {
+  await _db.collection('users').doc(uid).set({
+    themes: firebase.firestore.FieldValue.arrayUnion(themeId)
+  }, { merge: true });
+}
+
+export async function setActiveTheme(uid, themeId) {
+  await _db.collection('users').doc(uid).set({ activeTheme: themeId }, { merge: true });
+}
+
+export async function setActiveOutline(uid, outlineId) {
+  await _db.collection('users').doc(uid).set({ activeOutline: outlineId }, { merge: true });
+}
+
+// ── Admin-Tools (für Testing-Tab) ───────────────────────
+export async function adminPatchUser(uid, patch) {
+  // Setzt beliebige Felder auf einem User-Doc — nur via Admin-Rolle in Rules erlaubt
+  await _db.collection('users').doc(uid).set(patch, { merge: true });
+}
+
+export async function adminUnlockAllForUser(uid, allOutlines, allThemes) {
+  await _db.collection('users').doc(uid).set({
+    themes:   allThemes,
+    outlines: allOutlines
+  }, { merge: true });
+}
+
 // ── Note speichern ──────────────────────
 export async function saveGrade(uid, subjectId, yearId, topicId, gradeData) {
   const key = `grades.${subjectId}__${yearId}__${topicId}`;

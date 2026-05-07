@@ -1,0 +1,462 @@
+/* ════════════════════════════════════════════════════════════
+   LearningForge — Cosmetics
+   Outlines (Level-basiert) + Themes (Note-basiert)
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Outline-Stufen ─────────────────────────────────────── */
+
+/* Bronze (Lv 3) — schlichte warme Umrandung */
+.outline-bronze {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #cd7f32;
+}
+
+/* Silver (Lv 8) — kühle Umrandung mit leichtem Glow */
+.outline-silver {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #cbd5e1,
+    0 0 6px rgba(203,213,225,0.5);
+}
+
+/* Gold (Lv 15) — pulsiert sanft */
+.outline-gold {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #fbbf24,
+    0 0 10px rgba(251,191,36,0.5);
+  animation: outline-pulse 4s ease-in-out infinite;
+}
+@keyframes outline-pulse {
+  0%,100% { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #fbbf24, 0 0 8px rgba(251,191,36,0.4); }
+  50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #fcd34d, 0 0 14px rgba(251,191,36,0.7); }
+}
+
+/* Emerald (Lv 22) — grüner Glow */
+.outline-emerald {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #10b981,
+    0 0 12px rgba(16,185,129,0.5);
+  animation: outline-pulse-emerald 3.5s ease-in-out infinite;
+}
+@keyframes outline-pulse-emerald {
+  0%,100% { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #10b981, 0 0 10px rgba(16,185,129,0.5); }
+  50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #34d399, 0 0 18px rgba(16,185,129,0.8); }
+}
+
+/* Sapphire (Lv 30) — tiefblau mit Welleneffekt */
+.outline-sapphire {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #2563eb,
+    0 0 14px rgba(37,99,235,0.6);
+  animation: outline-pulse-sapphire 3s ease-in-out infinite;
+}
+@keyframes outline-pulse-sapphire {
+  0%,100% { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #2563eb, 0 0 12px rgba(37,99,235,0.55); }
+  50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #60a5fa, 0 0 22px rgba(37,99,235,0.85); }
+}
+
+/* Ruby (Lv 40) — Rot, intensiver Pulse */
+.outline-ruby {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #dc2626,
+    0 0 16px rgba(220,38,38,0.65);
+  animation: outline-pulse-ruby 2.5s ease-in-out infinite;
+}
+@keyframes outline-pulse-ruby {
+  0%,100% { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #dc2626, 0 0 14px rgba(220,38,38,0.6); }
+  50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px #f87171, 0 0 26px rgba(220,38,38,0.9); }
+}
+
+/* Amethyst (Lv 52) — lila mit Doppelring */
+.outline-amethyst {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #a855f7,
+    0 0 0 5px rgba(168,85,247,0.3),
+    0 0 18px rgba(168,85,247,0.7);
+  animation: outline-pulse-amethyst 2.8s ease-in-out infinite;
+}
+@keyframes outline-pulse-amethyst {
+  0%,100% { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #a855f7, 0 0 0 5px rgba(168,85,247,0.3), 0 0 16px rgba(168,85,247,0.6); }
+  50%     { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #c084fc, 0 0 0 6px rgba(192,132,252,0.4), 0 0 28px rgba(168,85,247,0.9); }
+}
+
+/* Diamond (Lv 65) — heller Glanz, animierter Border */
+.outline-diamond {
+  position: relative;
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 3px #e0f2fe,
+    0 0 0 5px rgba(125,211,252,0.5),
+    0 0 22px rgba(125,211,252,0.8);
+  animation: outline-pulse-diamond 2.2s ease-in-out infinite;
+}
+@keyframes outline-pulse-diamond {
+  0%,100% {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px #e0f2fe, 0 0 0 5px rgba(125,211,252,0.5), 0 0 18px rgba(125,211,252,0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px #fff, 0 0 0 6px rgba(56,189,248,0.6), 0 0 32px rgba(125,211,252,1);
+  }
+}
+
+/* Rainbow (Lv 80) — rotierender Conic-Gradient */
+.outline-rainbow {
+  position: relative;
+  background: var(--bg-card);
+}
+.outline-rainbow::before {
+  content: '';
+  position: absolute; inset: -5px;
+  border-radius: 50%; z-index: -1;
+  background: conic-gradient(
+    from 0deg,
+    #ef4444, #f59e0b, #fbbf24, #10b981,
+    #06b6d4, #3b82f6, #8b5cf6, #ec4899, #ef4444);
+  filter: blur(2px);
+  animation: outline-rainbow-spin 4s linear infinite;
+}
+@keyframes outline-rainbow-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Cosmic (Lv 100) — animierter Universumseffekt mit Sternen */
+.outline-cosmic {
+  position: relative;
+  background: var(--bg-card);
+}
+.outline-cosmic::before {
+  content: '';
+  position: absolute; inset: -8px;
+  border-radius: 50%; z-index: -2;
+  background:
+    radial-gradient(circle at 20% 30%, #fff 0.5px, transparent 1.5px),
+    radial-gradient(circle at 70% 60%, #fff 0.5px, transparent 1.5px),
+    radial-gradient(circle at 40% 80%, #fff 0.5px, transparent 1.5px),
+    radial-gradient(circle at 85% 25%, #fff 0.5px, transparent 1.5px),
+    conic-gradient(from 0deg, #1e1b4b, #6366f1, #a855f7, #ec4899, #f59e0b, #1e1b4b);
+  filter: blur(1px);
+  animation: outline-cosmic-spin 6s linear infinite;
+}
+.outline-cosmic::after {
+  content: '';
+  position: absolute; inset: -3px;
+  border-radius: 50%; z-index: -1;
+  box-shadow:
+    inset 0 0 0 2px var(--bg-card),
+    0 0 28px rgba(168,85,247,0.8),
+    0 0 50px rgba(99,102,241,0.5);
+}
+@keyframes outline-cosmic-spin {
+  to { transform: rotate(-360deg); }
+}
+
+/* ── Echt-Rollen Spectacle (überschreibt alle Tier-Outlines) ── */
+/* Admin: gold-rotating mit Glow-Aura — sehr auffällig */
+.role-glow-admin {
+  position: relative;
+  background: var(--bg-card);
+}
+.role-glow-admin::before {
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 50%; z-index: -1;
+  background: conic-gradient(
+    from 0deg,
+    #fbbf24 0%, #f59e0b 20%, #fef3c7 35%,
+    #fbbf24 50%, #d97706 65%, #fef3c7 80%, #fbbf24 100%);
+  filter: blur(2px);
+  animation: outline-rainbow-spin 3s linear infinite;
+}
+.role-glow-admin::after {
+  content: '';
+  position: absolute; inset: -2px;
+  border-radius: 50%; z-index: -1;
+  box-shadow:
+    inset 0 0 0 2px var(--bg-card),
+    0 0 24px rgba(245,158,11,0.9),
+    0 0 50px rgba(251,191,36,0.5);
+  animation: admin-glow-pulse 2s ease-in-out infinite;
+}
+@keyframes admin-glow-pulse {
+  0%,100% { filter: brightness(1); }
+  50%     { filter: brightness(1.4); }
+}
+
+/* Tester: lila-rotating mit Beta-Pattern */
+.role-glow-tester {
+  position: relative;
+  background: var(--bg-card);
+}
+.role-glow-tester::before {
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 50%; z-index: -1;
+  background: conic-gradient(
+    from 0deg,
+    #8b5cf6 0%, #a78bfa 25%, #c4b5fd 40%,
+    #8b5cf6 60%, #6366f1 75%, #c4b5fd 90%, #8b5cf6 100%);
+  filter: blur(2px);
+  animation: outline-rainbow-spin 3.2s linear infinite reverse;
+}
+.role-glow-tester::after {
+  content: '';
+  position: absolute; inset: -2px;
+  border-radius: 50%; z-index: -1;
+  box-shadow:
+    inset 0 0 0 2px var(--bg-card),
+    0 0 24px rgba(139,92,246,0.9),
+    0 0 50px rgba(167,139,250,0.5);
+  animation: admin-glow-pulse 2.2s ease-in-out infinite;
+}
+
+/* Stelle sicher dass Outlines auch im Leaderboard sichtbar sind */
+.lb-avatar.outline-rainbow,
+.lb-avatar.outline-cosmic,
+.lb-avatar.role-glow-admin,
+.lb-avatar.role-glow-tester {
+  /* die ::before/::after brauchen z-index-Stacking-Context */
+  isolation: isolate;
+}
+
+/* ── Themes (durch 1en/2en freischaltbar) ─────────────────── */
+/* Themes überschreiben Tokens aus :root */
+
+[data-app-theme="ocean"] {
+  --accent: #0891b2; --accent-hover: #0e7490; --accent-subtle: #ecfeff;
+  --bg: #ecfeff;
+}
+[data-app-theme="ocean"][data-theme="dark"] {
+  --bg: #042f3a; --bg-card: #083d4d; --bg-input: #0c4a5d;
+  --accent: #22d3ee; --accent-subtle: #0c4a5d; --border: #155e75;
+}
+
+[data-app-theme="forest"] {
+  --accent: #16a34a; --accent-hover: #15803d; --accent-subtle: #f0fdf4;
+  --bg: #f0fdf4;
+}
+[data-app-theme="forest"][data-theme="dark"] {
+  --bg: #052e16; --bg-card: #0a3d1f; --bg-input: #14532d;
+  --accent: #4ade80; --accent-subtle: #14532d; --border: #166534;
+}
+
+[data-app-theme="sunset"] {
+  --accent: #ea580c; --accent-hover: #c2410c; --accent-subtle: #fff7ed;
+  --bg: linear-gradient(135deg, #fff7ed, #fed7aa);
+}
+[data-app-theme="sunset"][data-theme="dark"] {
+  --bg: linear-gradient(135deg, #431407, #7c2d12);
+  --bg-card: #431407; --bg-input: #7c2d12;
+  --accent: #fb923c; --accent-subtle: #7c2d12; --border: #9a3412;
+}
+
+[data-app-theme="lavender"] {
+  --accent: #a855f7; --accent-hover: #9333ea; --accent-subtle: #faf5ff;
+  --bg: #faf5ff;
+}
+[data-app-theme="lavender"][data-theme="dark"] {
+  --bg: #2e1065; --bg-card: #3b0764; --bg-input: #4c1d95;
+  --accent: #c4b5fd; --accent-subtle: #4c1d95; --border: #5b21b6;
+}
+
+[data-app-theme="crimson"] {
+  --accent: #dc2626; --accent-hover: #b91c1c; --accent-subtle: #fef2f2;
+  --bg: #fef2f2;
+}
+[data-app-theme="crimson"][data-theme="dark"] {
+  --bg: #450a0a; --bg-card: #7f1d1d; --bg-input: #991b1b;
+  --accent: #f87171; --accent-subtle: #7f1d1d; --border: #b91c1c;
+}
+
+[data-app-theme="mint"] {
+  --accent: #14b8a6; --accent-hover: #0f766e; --accent-subtle: #f0fdfa;
+  --bg: #f0fdfa;
+}
+[data-app-theme="mint"][data-theme="dark"] {
+  --bg: #042f2e; --bg-card: #134e4a; --bg-input: #115e59;
+  --accent: #5eead4; --accent-subtle: #115e59; --border: #0f766e;
+}
+
+[data-app-theme="cherry"] {
+  --accent: #ec4899; --accent-hover: #db2777; --accent-subtle: #fdf2f8;
+  --bg: #fdf2f8;
+}
+[data-app-theme="cherry"][data-theme="dark"] {
+  --bg: #500724; --bg-card: #831843; --bg-input: #9d174d;
+  --accent: #f9a8d4; --accent-subtle: #831843; --border: #be185d;
+}
+
+[data-app-theme="carbon"] {
+  --accent: #525252; --accent-hover: #404040; --accent-subtle: #f5f5f5;
+  --bg: #fafafa; --bg-card: #f5f5f5;
+}
+[data-app-theme="carbon"][data-theme="dark"] {
+  --bg: #0a0a0a; --bg-card: #171717; --bg-input: #262626;
+  --accent: #a3a3a3; --accent-subtle: #262626; --border: #404040;
+}
+
+/* Aurora — animierter Hintergrund (legendary) */
+[data-app-theme="aurora"] {
+  --accent: #06b6d4; --accent-hover: #0891b2; --accent-subtle: #ecfeff;
+}
+[data-app-theme="aurora"] body {
+  background:
+    linear-gradient(135deg,
+      rgba(99,102,241,0.08) 0%,
+      rgba(168,85,247,0.10) 25%,
+      rgba(236,72,153,0.10) 50%,
+      rgba(6,182,212,0.10) 75%,
+      rgba(99,102,241,0.08) 100%);
+  background-size: 200% 200%;
+  animation: aurora-shift 15s ease infinite;
+}
+[data-app-theme="aurora"][data-theme="dark"] {
+  --bg: #0c0a1f; --bg-card: #1a1735; --bg-input: #251f50;
+  --border: #3b3372;
+}
+[data-app-theme="aurora"][data-theme="dark"] body {
+  background:
+    linear-gradient(135deg,
+      rgba(99,102,241,0.15) 0%,
+      rgba(168,85,247,0.18) 25%,
+      rgba(236,72,153,0.15) 50%,
+      rgba(6,182,212,0.18) 75%,
+      rgba(99,102,241,0.15) 100%),
+    #0c0a1f;
+  background-size: 200% 200%;
+  animation: aurora-shift 15s ease infinite;
+}
+@keyframes aurora-shift {
+  0%,100% { background-position: 0% 50%; }
+  50%     { background-position: 100% 50%; }
+}
+
+/* Cyberpunk (legendary) — Neon mit dunkel */
+[data-app-theme="cyberpunk"] {
+  --bg: #0a0014; --bg-card: #1a0033; --bg-input: #2d0a4e;
+  --text: #f0f0f0; --text-muted: #b794f6;
+  --border: #6b21a8;
+  --accent: #f0abfc; --accent-hover: #e879f9; --accent-subtle: #2d0a4e;
+}
+[data-app-theme="cyberpunk"] body {
+  background:
+    radial-gradient(circle at 20% 50%, rgba(236,72,153,0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(99,102,241,0.15) 0%, transparent 50%),
+    #0a0014;
+}
+[data-app-theme="cyberpunk"] .btn-primary {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  box-shadow: 0 0 16px rgba(236,72,153,0.5);
+}
+
+/* ── Inventory-UI ─────────────────────────────────────────── */
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.inv-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.inv-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.inv-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.inv-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.inv-card.locked:hover { transform: none; border-color: var(--border); }
+.inv-preview {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--accent-subtle);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 22px; color: var(--accent);
+  margin: 0 auto 12px;
+}
+.inv-name { font-weight: 600; font-size: 14px; }
+.inv-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.inv-rarity {
+  display: inline-block;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  margin-top: 6px;
+}
+.inv-rarity-common    { background: var(--bg-input); color: var(--text-muted); }
+.inv-rarity-rare      { background: #dbeafe; color: #1e40af; }
+.inv-rarity-epic      { background: #f3e8ff; color: #7e22ce; }
+.inv-rarity-legendary { background: linear-gradient(90deg, #fbbf24, #ec4899); color: #fff; }
+[data-theme="dark"] .inv-rarity-rare { background: #1e3a8a; color: #bfdbfe; }
+[data-theme="dark"] .inv-rarity-epic { background: #581c87; color: #e9d5ff; }
+
+.inv-theme-preview {
+  width: 100%; height: 64px; border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+}
+.inv-active-tag {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--accent); color: #fff;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 10px; font-weight: 700;
+}
+
+/* Theme-Drop-Toast (special) */
+.theme-drop-toast {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, #fbbf24, #ec4899);
+  color: #fff;
+  padding: 24px 32px; border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(236,72,153,0.3);
+  z-index: 10000;
+  text-align: center;
+  animation: theme-drop-pop 4s ease forwards;
+}
+.theme-drop-title { font-size: 14px; opacity: 0.9; }
+.theme-drop-name  { font-size: 28px; font-weight: 800; margin: 8px 0; }
+.theme-drop-sub   { font-size: 12px; opacity: 0.8; }
+@keyframes theme-drop-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  10%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  20%  { transform: translate(-50%, -50%) scale(1); }
+  90%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0; pointer-events: none; }
+}
+
+/* Testing-Tab */
+.testing-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.testing-section-title {
+  font-size: 14px; font-weight: 700; color: var(--accent);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.testing-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.testing-section.admin-section {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, var(--bg-card), rgba(245,158,11,0.05));
+}

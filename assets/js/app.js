@@ -5,7 +5,8 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser } from './auth.js';
+import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, unlockedOutlines, themeById, rollThemeDrop, resolveOutlineClass, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
 import {
@@ -29,6 +30,38 @@ function userRole(u) {
 function roleBadge(role) {
   if (role === 'admin')  return '<span class="role-badge role-admin" title="Administrator">&#128081;</span>';
   if (role === 'tester') return '<span class="role-badge role-tester" title="Beta-Tester">&#129514;</span>';
+  return '';
+}
+
+// ── Outline-Auflösung für jeden User ────────────────────
+// Bevorzugt: Echte Rolle > User-Auswahl > Default (basierend auf Level)
+function showThemeDropToast(themeId) {
+  const t = themeById(themeId);
+  const el = document.createElement('div');
+  el.className = 'theme-drop-toast';
+  el.innerHTML = `
+    <div class="theme-drop-title">&#127873; Neues Theme freigeschaltet!</div>
+    <div class="theme-drop-name">${t.name}</div>
+    <div class="theme-drop-sub">Im Inventar w&auml;hlbar &mdash; viel Spa&szlig;!</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+function outlineFor(userInfo) {
+  if (!userInfo) return '';
+  if (userInfo.role === 'admin')  return 'role-glow-admin';
+  if (userInfo.role === 'tester') return 'role-glow-tester';
+  // User-Wahl
+  if (userInfo.activeOutline) {
+    const tier = OUTLINE_TIERS.find(t => t.id === userInfo.activeOutline);
+    if (tier?.css) return tier.css;
+  }
+  // Default: höchste freigeschaltene Outline
+  if (typeof userInfo.xp === 'number') {
+    const lvl = calcLevel(userInfo.xp).level;
+    const tier = outlineForLevel(lvl);
+    return tier.css;
+  }
   return '';
 }
 
@@ -178,6 +211,8 @@ export function startApp() {
             : user.email === 'bohmrobin797@gmail.com' ? 'tester'
             : undefined);
       } catch(e) { console.warn('[role-sync]', e); }
+      // Theme anwenden (User-Doc → localStorage-Fallback)
+      try { applyTheme(userData?.activeTheme || getStoredTheme()); } catch(e) {}
       structure = await getStructure();
       getChangelog().then(entries => {
         changelog = entries;
@@ -250,6 +285,11 @@ function route() {
   } else if (parts[0] === 'admin') {
     if (isAdmin()) renderAdmin();
     else location.hash = '#/';
+  } else if (parts[0] === 'inventar') {
+    renderInventory();
+  } else if (parts[0] === 'testing') {
+    if (isAdmin() || userData?.role === 'tester') renderTesting();
+    else location.hash = '#/';
   } else if (parts[0] === 'builder') {
     renderBuilder();
   } else if (parts[0] === 'meine-inhalte') {
@@ -306,9 +346,10 @@ function renderNav(breadcrumbs = []) {
           <a class="nav-link ${act('Meine Inhalte')}" onclick="location.hash='#/meine-inhalte'">Meine Inhalte</a>
           <a class="nav-link ${act('Builder')}"        onclick="location.hash='#/builder'">Builder</a>
           <a class="nav-link ${act('Profil')}"       onclick="location.hash='#/profil'">Profil</a>
+          <a class="nav-link ${act('Inventar')}"      onclick="location.hash='#/inventar'">Inventar</a>
           <a class="nav-link ${act('Einstellungen')}" onclick="location.hash='#/einstellungen'">Einstellungen</a>
           <a class="nav-link ${act('Hilfe')}" onclick="location.hash='#/hilfe'">Hilfe</a>
-          ${isAdmin() ? `<a class="nav-link nav-link-admin ${act('Admin')}" onclick="location.hash='#/admin'">Admin</a>` : ''}
+          ${(isAdmin() || userData?.role === 'tester') ? `<a class="nav-link nav-link-admin ${act('Testing')}" onclick="location.hash='#/testing'">Testing</a>` : ''}
         </div>
       </div>
       <div class="nav-right">
@@ -1959,7 +2000,7 @@ function renderProfile() {
 
           <!-- Ansicht -->
           <div id="profileView">
-            <div class="profile-avatar-large role-glow-${userRole() || 'none'}">${
+            <div class="profile-avatar-large ${outlineFor({role:userRole(),activeOutline:userData?.activeOutline,xp:userData?.xp})}">${
               (userData?.photoURL || currentUser.photoURL)
                 ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
                 : initial
@@ -2124,7 +2165,7 @@ async function renderLeaderboard() {
     return `
       <div class="lb-row${isMe?' lb-me':''}">
         <div class="lb-rank">${medal}</div>
-        <div class="lb-avatar role-glow-${u.role||'none'}">${av}</div>
+        <div class="lb-avatar ${outlineFor(u)}">${av}</div>
         <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
         <div class="lb-meta">${count} Test${count!==1?'s':''}</div>
         <div class="lb-score" style="color:var(--accent)">${score}</div>
@@ -2157,7 +2198,7 @@ async function renderLeaderboard() {
     return `
       <div class="lb-row${isMe?' lb-me':''}">
         <div class="lb-rank">${medal}</div>
-        <div class="lb-avatar role-glow-${u.role||'none'}">${av}</div>
+        <div class="lb-avatar ${outlineFor(u)}">${av}</div>
         <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
         <div class="lb-meta">Lv.${xi.level} ${xi.title}</div>
         <div class="lb-score" style="color:#f59e0b">${u.xp} XP</div>
@@ -2455,7 +2496,7 @@ async function renderGroupDetail(groupId) {
       return `
         <div class="lb-row${isMe ? ' lb-me' : ''}">
           <div class="lb-rank">${i < 3 ? medals[i] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`}</div>
-          <div class="lb-avatar role-glow-${u.role||'none'}">${av}</div>
+          <div class="lb-avatar ${outlineFor(u)}">${av}</div>
           <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
           <div class="lb-meta">${u.testCount} Test${u.testCount!==1?'s':''}</div>
           <div class="lb-score" style="color:var(--accent)">${u.total}</div>
@@ -3598,7 +3639,7 @@ async function renderDailyChallenge() {
       return `
         <div class="lb-row${isMe?' lb-me':''}">
           <div class="lb-rank">${m}</div>
-          <div class="lb-avatar role-glow-${u.role||'none'}">${u.displayName?.[0]?.toUpperCase()||'?'}</div>
+          <div class="lb-avatar ${outlineFor(u)}">${u.displayName?.[0]?.toUpperCase()||'?'}</div>
           <div class="lb-name">${u.displayName||'?'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
           <div class="lb-meta">${u.points}/${u.maxPoints} Pkt</div>
           <div class="lb-score" style="color:${gradeColor(u.grade)}">${u.grade}</div>
@@ -4833,6 +4874,16 @@ window.LF.submitTest = async () => {
     };
     userData.grades[key] = gradeEntry;
     await saveGrade(currentUser.uid, subjectId, yearId, topicId, gradeEntry).catch(console.error);
+    // Theme-Drop bei Note 1 oder 2 (cosmetics)
+    try {
+      const owned = userData.themes || ['default'];
+      const drop = rollThemeDrop(bestInfo.grade, owned);
+      if (drop) {
+        userData.themes = [...owned, drop];
+        await unlockTheme(currentUser.uid, drop).catch(console.error);
+        showThemeDropToast(drop);
+      }
+    } catch(e) { console.warn('[theme-drop]', e); }
     writeFeedEntry(currentUser.uid, 'test', {
       name: currentUser.displayName || 'Nutzer',
       subject: subjectId, topic: topicId, grade: bestInfo.grade
@@ -5504,7 +5555,7 @@ async function renderFriends() {
       <div class="section-title" style="margin-bottom:16px">Anfragen (${myRequests.length})</div>
       ${myRequests.map(([fromUid, req]) => `
         <div class="friend-request-card">
-          <div class="friend-avatar role-glow-${req.role || 'none'}">${_avatar(req.photo, req.name)}</div>
+          <div class="friend-avatar ${outlineFor(req)}">${_avatar(req.photo, req.name)}</div>
           <div class="friend-info">
             <div class="friend-name">${req.name} ${roleBadge(req.role)}</div>
             <div class="friend-sub">Möchte dein Freund sein</div>
@@ -5523,7 +5574,7 @@ async function renderFriends() {
         const lv = calcLevel(f.xp || 0);
         return `
           <div class="friend-card">
-            <div class="friend-avatar role-glow-${f.role || 'none'}">${_avatar(f.photo, f.name)}</div>
+            <div class="friend-avatar ${outlineFor(f)}">${_avatar(f.photo, f.name)}</div>
             <div class="friend-info">
               <div class="friend-name">${f.name} ${roleBadge(f.role)}</div>
               <div class="friend-sub">Lv. ${lv.level} — ${lv.title}</div>
@@ -5734,7 +5785,7 @@ window.LF.loadComments = async () => {
     const safeText  = c.text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     return `
       <div class="comment-card" id="cmt_${c.id}">
-        <div class="comment-avatar role-glow-${c.role || 'none'}">${_avatar(c.photo, c.name)}</div>
+        <div class="comment-avatar ${outlineFor(c)}">${_avatar(c.photo, c.name)}</div>
         <div class="comment-body">
           <div class="comment-header">
             <span class="comment-author">${c.name} ${roleBadge(c.role)}</span>
@@ -5799,7 +5850,7 @@ window.LF.searchFriends = async (query) => {
     const isPending = myReqSentTo.includes(u.uid);
     return `
       <div class="friend-search-item">
-        <div class="friend-avatar role-glow-${u.role || 'none'}">${_avatar(u.photo, u.name)}</div>
+        <div class="friend-avatar ${outlineFor(u)}">${_avatar(u.photo, u.name)}</div>
         <div class="friend-name" style="flex:1">${u.name} ${roleBadge(u.role)}</div>
         ${isFriend
           ? `<span class="badge badge-success">Freund</span>`
@@ -6046,4 +6097,269 @@ window.LF.saveProfile = async () => {
     btn.disabled    = false;
     btn.textContent = 'Speichern';
   }
+};
+
+// ════════════════════════════════════════════════════════════════
+//  Inventar — Outlines + Themes
+// ════════════════════════════════════════════════════════════════
+function renderInventory() {
+  const xp           = userData?.xp || 0;
+  const lvl          = calcLevel(xp).level;
+  const ownedThemes  = userData?.themes || ['default'];
+  const activeTheme  = userData?.activeTheme || 'default';
+  const activeOL     = userData?.activeOutline || null;
+  const isAdminTester = isAdmin() || userData?.role === 'tester';
+
+  // Outline-Karten
+  const outlineCards = OUTLINE_TIERS.map(tier => {
+    const unlocked = lvl >= tier.level || isAdminTester || (userData?.outlines || []).includes(tier.id);
+    const active   = activeOL === tier.id || (!activeOL && tier.id === outlineForLevel(lvl).id);
+    const previewClass = unlocked ? tier.css : '';
+    return `
+      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
+           ${unlocked ? `onclick="window.LF.selectOutline('${tier.id}')"` : ''}>
+        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
+        <div class="inv-preview ${previewClass}">${tier.id === 'none' ? '—' : '◉'}</div>
+        <div class="inv-name">${tier.name}</div>
+        <div class="inv-meta">${unlocked ? `Level ${tier.level}` : `Erfordert Lv. ${tier.level}`}</div>
+        ${tier.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${tier.rarity}">${tier.rarity}</span>` : ''}
+      </div>`;
+  }).join('');
+
+  // Theme-Karten
+  const themeCards = THEMES.map(t => {
+    const unlocked = ownedThemes.includes(t.id) || isAdminTester;
+    const active   = activeTheme === t.id;
+    return `
+      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
+           ${unlocked ? `onclick="window.LF.selectTheme('${t.id}')"` : ''}>
+        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
+        <div class="inv-theme-preview" data-theme-preview="${t.id}"></div>
+        <div class="inv-name">${t.name}</div>
+        <div class="inv-meta">${unlocked ? '&#10003; Freigeschaltet' : 'Erspielen mit Note 1 (25%) oder 2 (5%)'}</div>
+        ${t.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${t.rarity}">${t.rarity}</span>` : ''}
+      </div>`;
+  }).join('');
+
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Inventar' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>&#127919; Inventar</h1>
+        <div class="sub">${isAdminTester ? `<span style="color:var(--accent)">${roleBadge(userRole())} Als ${userRole()} sind alle Outlines + Themes freigeschaltet.</span>` : `Du bist Level ${lvl}. Schalte mehr durch h&ouml;heres Level oder gute Noten frei.`}</div>
+      </div>
+
+      <div class="section-title">Avatar-Umrandungen (durch Level)</div>
+      <div class="inv-grid">${outlineCards}</div>
+
+      <div class="section-title" style="margin-top:32px">App-Themes (durch Note 1 oder 2)</div>
+      <div class="inv-grid">${themeCards}</div>
+    </div>`;
+
+  // Theme-Previews zeichnen (kleine Farb-Kacheln)
+  setTimeout(() => {
+    document.querySelectorAll('[data-theme-preview]').forEach(el => {
+      const t = el.dataset.themePreview;
+      const map = {
+        'default':   'linear-gradient(135deg,#6366f1,#a855f7)',
+        'ocean':     'linear-gradient(135deg,#0891b2,#22d3ee)',
+        'forest':    'linear-gradient(135deg,#16a34a,#4ade80)',
+        'sunset':    'linear-gradient(135deg,#ea580c,#fbbf24)',
+        'lavender':  'linear-gradient(135deg,#a855f7,#c4b5fd)',
+        'crimson':   'linear-gradient(135deg,#dc2626,#f87171)',
+        'mint':      'linear-gradient(135deg,#14b8a6,#5eead4)',
+        'cherry':    'linear-gradient(135deg,#ec4899,#f9a8d4)',
+        'carbon':    'linear-gradient(135deg,#171717,#525252)',
+        'aurora':    'linear-gradient(135deg,#6366f1,#a855f7,#ec4899,#06b6d4)',
+        'cyberpunk': 'linear-gradient(135deg,#0a0014,#ec4899,#8b5cf6)',
+      };
+      el.style.background = map[t] || map.default;
+    });
+  }, 0);
+}
+
+window.LF.selectOutline = async (tierId) => {
+  if (!currentUser) return;
+  userData.activeOutline = tierId;
+  await setActiveOutline(currentUser.uid, tierId).catch(console.error);
+  showToast('Umrandung ge&auml;ndert', 'success');
+  renderInventory();
+};
+
+window.LF.selectTheme = async (themeId) => {
+  if (!currentUser) return;
+  userData.activeTheme = themeId;
+  applyTheme(themeId);
+  await setActiveTheme(currentUser.uid, themeId).catch(console.error);
+  showToast('Theme aktiviert', 'success');
+  renderInventory();
+};
+
+// ════════════════════════════════════════════════════════════════
+//  Testing-Tab (Admin + Tester) + Admin-Tab (nur Admin)
+// ════════════════════════════════════════════════════════════════
+function renderTesting() {
+  const isA = isAdmin();
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Testing' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>&#129514; Testing-Bereich</h1>
+        <div class="sub">${roleBadge(userRole())} ${isA ? 'Du hast Admin-Zugriff &mdash; volle Kontrolle.' : 'Du bist Tester &mdash; experimentiere mit deinen eigenen Stats.'}</div>
+      </div>
+
+      <div class="testing-section">
+        <div class="testing-section-title">&#128202; Eigene Stats modifizieren</div>
+        <div class="testing-grid">
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetXP(0)">XP zur&uuml;cksetzen</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetXP(1000)">+1000 XP</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetXP(10000)">+10k XP</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetXP(50000)">+50k XP (Lv 80+)</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetXP(150000)">+150k XP (Lv 100+)</button>
+        </div>
+      </div>
+
+      <div class="testing-section">
+        <div class="testing-section-title">&#127912; Cosmetics</div>
+        <div class="testing-grid">
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testUnlockAllThemes()">Alle Themes freischalten</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testUnlockAllOutlines()">Alle Outlines freischalten</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.testResetCosmetics()">Cosmetics zur&uuml;cksetzen</button>
+        </div>
+      </div>
+
+      <div class="testing-section">
+        <div class="testing-section-title">&#128293; Streak / Klasse</div>
+        <div class="testing-grid">
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetStreak(7)">Streak: 7 Tage</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetStreak(30)">Streak: 30 Tage</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetStreak(100)">Streak: 100 Tage</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.testSetStreak(0)">Streak: 0</button>
+        </div>
+      </div>
+
+      <div class="testing-section">
+        <div class="testing-section-title">&#9851;&#65039; Reset / Wipe</div>
+        <div class="testing-grid">
+          <button class="btn btn-danger btn-sm" onclick="window.LF.testWipeGrades()">Alle Noten l&ouml;schen</button>
+          <button class="btn btn-danger btn-sm" onclick="window.LF.testWipeAll()">Alles l&ouml;schen (User-Doc reset)</button>
+        </div>
+      </div>
+
+      ${isA ? `
+        <div class="testing-section admin-section">
+          <div class="testing-section-title" style="color:#f59e0b">&#128081; ADMIN-Bereich</div>
+          <div style="margin-bottom:12px">
+            <input class="form-input" id="adminUserSearch" placeholder="Nutzer suchen (Name oder E-Mail)..." oninput="window.LF.adminSearchUsers(this.value)" style="margin-bottom:8px">
+            <div id="adminUserResults"></div>
+          </div>
+        </div>` : ''}
+    </div>`;
+}
+
+// ── Testing-Aktionen (eigener Account) ──────────────────
+window.LF.testSetXP = async (xp) => {
+  await adminPatchUser(currentUser.uid, { xp }).catch(e => { showToast(e.message, 'error'); throw e; });
+  userData.xp = xp;
+  showToast(`XP auf ${xp} gesetzt`, 'success');
+  renderTesting();
+};
+
+window.LF.testUnlockAllThemes = async () => {
+  await adminPatchUser(currentUser.uid, { themes: ALL_THEME_IDS }).catch(e => { showToast(e.message, 'error'); throw e; });
+  userData.themes = ALL_THEME_IDS;
+  showToast('Alle Themes freigeschaltet', 'success');
+};
+
+window.LF.testUnlockAllOutlines = async () => {
+  const ids = OUTLINE_TIERS.map(t => t.id);
+  await adminPatchUser(currentUser.uid, { outlines: ids }).catch(e => { showToast(e.message, 'error'); throw e; });
+  userData.outlines = ids;
+  showToast('Alle Outlines freigeschaltet', 'success');
+};
+
+window.LF.testResetCosmetics = async () => {
+  await adminPatchUser(currentUser.uid, { themes: ['default'], outlines: [], activeOutline: null, activeTheme: 'default' }).catch(console.error);
+  userData.themes = ['default'];
+  userData.outlines = [];
+  userData.activeOutline = null;
+  userData.activeTheme = 'default';
+  applyTheme('default');
+  showToast('Cosmetics zur&uuml;ckgesetzt', 'info');
+};
+
+window.LF.testSetStreak = async (n) => {
+  const today = new Date().toISOString().slice(0, 10);
+  await adminPatchUser(currentUser.uid, { streakCount: n, lastStreakDate: today }).catch(console.error);
+  userData.streakCount = n;
+  showToast(`Streak: ${n}`, 'success');
+};
+
+window.LF.testWipeGrades = async () => {
+  if (!confirm('Wirklich alle Noten l&ouml;schen?')) return;
+  await adminPatchUser(currentUser.uid, { grades: {} }).catch(console.error);
+  userData.grades = {};
+  showToast('Alle Noten gel&ouml;scht', 'info');
+};
+
+window.LF.testWipeAll = async () => {
+  if (!confirm('WARNUNG: Komplettes User-Doc reset (au&szlig;er name/email/role). Sicher?')) return;
+  await adminPatchUser(currentUser.uid, {
+    grades: {}, xp: 0, streakCount: 0, themes: ['default'], outlines: [],
+    activeOutline: null, activeTheme: 'default', achievements: {}, srs: {}
+  }).catch(console.error);
+  showToast('User-Doc reset, lade neu...', 'info');
+  setTimeout(() => location.reload(), 1500);
+};
+
+// ── Admin: User-Suche + Aktionen ───────────────────────
+window.LF.adminSearchUsers = async (query) => {
+  const res = document.getElementById('adminUserResults');
+  if (!res) return;
+  if (!query?.trim()) { res.innerHTML = ''; return; }
+  res.innerHTML = '<div class="text-muted" style="padding:8px 0">Suche&hellip;</div>';
+  try {
+    const all = await getAllUsers();
+    const q = query.toLowerCase().trim();
+    const matches = all.filter(u =>
+      (u.name||'').toLowerCase().includes(q) ||
+      (u.email||'').toLowerCase().includes(q)
+    ).slice(0, 10);
+    if (!matches.length) { res.innerHTML = '<div class="text-muted">Keine Treffer.</div>'; return; }
+    res.innerHTML = matches.map(u => `
+      <div class="friend-search-item" style="margin-bottom:6px">
+        <div class="friend-avatar ${outlineFor(u)}">${_avatar(u.photoURL, u.name)}</div>
+        <div class="friend-name" style="flex:1">
+          ${u.name || 'Unbekannt'} ${roleBadge(u.role)}
+          <div style="font-size:11px;color:var(--text-muted)">${u.email || ''}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${u.uid}', 'admin')">+Admin</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${u.uid}', 'tester')">+Tester</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${u.uid}', null)">Rolle entfernen</button>
+          <button class="btn btn-${u.isBanned ? 'secondary' : 'danger'} btn-sm" onclick="window.LF.adminToggleBan('${u.uid}', ${!u.isBanned})">${u.isBanned ? 'Entsperren' : 'Sperren'}</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    console.error('[adminSearch]', e);
+    res.innerHTML = `<div class="text-muted" style="color:#ef4444">Fehler: ${e.message}</div>`;
+  }
+};
+
+window.LF.adminSetRole = async (uid, role) => {
+  try {
+    await setUserRole(uid, role);
+    showToast(`Rolle gesetzt: ${role || 'keine'}`, 'success');
+    const q = document.getElementById('adminUserSearch')?.value;
+    if (q) window.LF.adminSearchUsers(q);
+  } catch(e) { showToast(e.message, 'error'); }
+};
+
+window.LF.adminToggleBan = async (uid, ban) => {
+  try {
+    await setBanStatus(uid, ban);
+    showToast(ban ? 'Gesperrt' : 'Entsperrt', 'info');
+    const q = document.getElementById('adminUserSearch')?.value;
+    if (q) window.LF.adminSearchUsers(q);
+  } catch(e) { showToast(e.message, 'error'); }
 };

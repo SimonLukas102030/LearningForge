@@ -18,7 +18,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#6366f1">
-  <link rel="stylesheet" href="assets/css/main.css?v=20260507d">
+  <link rel="stylesheet" href="assets/css/main.css?v=20260507e">
+  <link rel="stylesheet" href="assets/css/cosmetics.css?v=20260507a">
+  <script>
+    // Theme früh anwenden, vermeidet Flicker
+    (function(){
+      try {
+        var t = localStorage.getItem('lf_app_theme');
+        if (t) document.documentElement.setAttribute('data-app-theme', t);
+      } catch {}
+    })();
+  </script>
 </head>
 <body>
 
