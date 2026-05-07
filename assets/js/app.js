@@ -758,6 +758,11 @@ function renderDashboard() {
 }
 
 // ── Bug-Reports auf dem Dashboard ─────────
+function escapeHtml(s) {
+  return (s == null ? '' : String(s))
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 async function loadBugReportSection() {
   const host = document.getElementById('bugReportSection');
   if (!host || !currentUser) return;
@@ -6576,7 +6581,7 @@ window.LF.sendBugReport = async () => {
 };
 
 window.LF.resolveBugReport = async (id) => {
-  const note = prompt('Optional: kurze Notiz zur L&ouml;sung (wird im Log gespeichert):', '');
+  const note = prompt('Optional: kurze Notiz zur Lösung (wird im Log gespeichert):', '');
   if (note === null) return;
   try {
     await resolveBugReport(id, note || null);
@@ -6587,7 +6592,7 @@ window.LF.resolveBugReport = async (id) => {
 };
 
 window.LF.deleteBugReport = async (id) => {
-  if (!confirm('Bug-Report wirklich l&ouml;schen?')) return;
+  if (!confirm('Bug-Report wirklich löschen?')) return;
   try {
     await deleteBugReport(id);
     showToast('Geloescht.', 'info');
