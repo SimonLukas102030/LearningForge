@@ -6,3 +6,15 @@ keystore.jks
 
 # Lokale Tools (Node-Portable, firebase-tools)
 .tools/
+
+# Firebase Emulator artifacts (Mission 9)
+firestore-debug.log
+ui-debug.log
+firebase-debug.log
+*.local
+.firebase/
+
+# functions/ tree was deleted in Mission-6 (replaced by Cloudflare Worker
+# in workers/) but local node_modules + package-lock.json may still linger
+# from old `firebase deploy` invocations. Don't accidentally re-commit them.
+functions/

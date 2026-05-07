@@ -6,7 +6,7 @@ import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
 import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, loginAsHacker, markAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus } from './auth.js';
-import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
+import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
 import {
@@ -16,6 +16,7 @@ import {
   selectVocabQuestions, evaluateVocabAnswer
 } from './test-engine.js';
 import * as cf from './cf.js';
+import { lfIcon, lfFlag, ICONS as LUCIDE_ICONS, FLAGS as FLAG_ICONS } from './icons.js';
 
 // ── Globaler State ───────────────────────
 const ADMIN_EMAIL = 'simonkoper27@gmail.com';
@@ -52,8 +53,37 @@ function showThemeDropToast(themeId) {
   el.className = 'theme-drop-toast';
   el.innerHTML = `
     <div class="theme-drop-title">&#127873; Neues Theme freigeschaltet!</div>
-    <div class="theme-drop-name">${t.name}</div>
+    <div class="theme-drop-name">${escapeHtml(t.name)}</div>
     <div class="theme-drop-sub">Im Inventar w&auml;hlbar &mdash; viel Spa&szlig;!</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+// Mission 7: Doppel-Drop → XP-Conversion. Theme war schon owned, Server hat
+// stattdessen XP gegeben. XP groß, Theme-Name klein (umgekehrte Hierarchie zum
+// normalen Drop-Toast). Akzent-Farbe statt Pink-Gradient — XP-Bonus ist
+// "technischer Reward", kein Rarity-Glanz.
+function showThemeDropDoubleToast(themeId, xpGranted) {
+  const t = themeById(themeId);
+  const el = document.createElement('div');
+  el.className = 'theme-drop-toast theme-drop-toast-double';
+  el.innerHTML = `
+    <div class="theme-drop-title">+${xpGranted} XP</div>
+    <div class="theme-drop-name">Bonus-XP statt Doppel-Drop</div>
+    <div class="theme-drop-sub">Du hattest &bdquo;${escapeHtml(t.name)}&ldquo; schon &mdash; XP gibt's trotzdem.</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+// Mission 7: Trostpreis bei "alle 11 Themes besessen". Server gibt +30 XP
+// pro Note-1/2-Test, weil kein Drop mehr gerollt werden kann.
+function showTrostpreisToast(xpGranted) {
+  const el = document.createElement('div');
+  el.className = 'theme-drop-toast theme-drop-toast-double';
+  el.innerHTML = `
+    <div class="theme-drop-title">+${xpGranted} XP</div>
+    <div class="theme-drop-name">Du hast alle Themes!</div>
+    <div class="theme-drop-sub">+${xpGranted} XP f&uuml;r Konsequenz.</div>`;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 4500);
 }
@@ -155,24 +185,20 @@ function updateOnlineStatus(isOnline) {
       const el = document.createElement('div');
       el.id = 'offlineBanner';
       el.className = 'offline-banner';
-      el.innerHTML = '📶 Offline — du siehst gespeicherte Inhalte';
+      el.innerHTML = `${lfIcon('wifi-off')} Offline — du siehst gespeicherte Inhalte`;
       document.body.appendChild(el);
     }
   } else {
     if (existing) {
       existing.remove();
-      showToast('Wieder online ✓', 'success');
+      showToast('Wieder online', 'success');
     }
   }
 }
 
-const AVATAR_EMOJIS = ['🐼','🦁','🐯','🦊','🐻','🐨','🐸','🦋','🐺','🦄','🐙','🦑','🐳','🦅','🐉','🌟','🔥','⚡','🎮','🚀','🎭','🎨','🏆','💡'];
-
-function emojiToPhotoURL(emoji) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><text y="32" font-size="30" text-anchor="middle" x="20">${emoji}</text></svg>`;
-  try { return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))); }
-  catch { return null; }
-}
+// Mission 8 Q1=C: AVATAR_EMOJIS + emojiToPhotoURL entfernt — kein Emoji-Picker mehr.
+// Avatare = File-Upload ODER Initial-Letter-Fallback. Bestehende userData.photoURL
+// bleibt unangetastet (alte SVG-Data-URLs aus Emoji-Zeit rendern weiter als <img>).
 
 // Gibt bestPoints/bestMaxPoints aus altem und neuem Format zurück
 function _gp(g) {
@@ -216,7 +242,8 @@ export function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   setCookie('lf_theme', next, 365);
   const btn = document.getElementById('themeBtn');
-  if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
+  // Mission 8: btn-icon container holds an inline-SVG; rewrite via innerHTML.
+  if (btn) btn.innerHTML = next === 'dark' ? lfIcon('sun') : lfIcon('moon');
 }
 
 // ── Autoupdate (alle 5 Minuten heimlich auf neue Commits prüfen) ──
@@ -523,7 +550,7 @@ function renderNav(breadcrumbs = []) {
   return `
     <nav class="navbar">
       <div class="nav-brand" onclick="location.hash='#/'">
-        <span class="icon">⚡</span> LearningForge
+        <span class="icon">${lfIcon('zap')}</span> LearningForge
       </div>
       <div class="nav-center">
         <div class="nav-breadcrumb">
@@ -546,16 +573,16 @@ function renderNav(breadcrumbs = []) {
       <div class="nav-right">
         ${streak > 1 ? `
         <button class="nav-streak-chip" data-tour="streak-chip" title="${streak} Tage Streak" onclick="location.hash='#/profil'">
-          🔥 <span class="nav-streak-num">${streak}</span>
+          ${lfIcon('flame')} <span class="nav-streak-num">${streak}</span>
         </button>` : ''}
         ${xi ? `
         <div class="nav-xp-chip" title="Stufe ${xi.level} (${xi.title}) · Noch ${xi.xpNeeded - xi.xpCurrent} XP bis Stufe ${xi.level + 1}" onclick="location.hash='#/profil'">
           <span class="nav-xp-level">Lv.${xi.level}</span>
           <div class="nav-xp-track"><div class="nav-xp-fill" id="navXPFill" style="width:${xi.pct}%"></div></div>
         </div>` : ''}
-        <button class="btn-icon nav-inv-btn" title="Inventar" onclick="location.hash='#/profil?tab=inventar'">🎒</button>
+        <button class="btn-icon nav-inv-btn" title="Inventar" onclick="location.hash='#/profil?tab=inventar'">${lfIcon('backpack')}</button>
         <button class="btn-icon" id="themeBtn" onclick="window.LF.toggleTheme()" title="Theme wechseln">
-          ${theme === 'dark' ? '☀️' : '🌙'}
+          ${theme === 'dark' ? lfIcon('sun') : lfIcon('moon')}
         </button>
         <div class="user-chip" id="userChip" data-tour="user-chip" onclick="window.LF.toggleUserMenu(event)">
           <div class="avatar">${(userData?.photoURL || currentUser.photoURL)
@@ -569,57 +596,57 @@ function renderNav(breadcrumbs = []) {
               <div class="dd-meta">${userData?.klasse ? `Klasse ${userData.klasse}` : 'Klasse nicht gesetzt'}${xi ? ` · Lv.${xi.level} ${xi.title}` : ''}</div>
             </div>
             <div class="divider"></div>
-            ${ddItem('#/profil',                '👤', 'Mein Profil')}
-            ${ddItem('#/profil?tab=stats',      '📊', 'Statistiken')}
-            ${ddItem('#/profil?tab=erfolge',    '🏅', 'Erfolge')}
-            ${ddItem('#/profil?tab=inventar',   '🎒', 'Inventar')}
+            ${ddItem('#/profil',                lfIcon('user'),         'Mein Profil')}
+            ${ddItem('#/profil?tab=stats',      lfIcon('chart-bar'),    'Statistiken')}
+            ${ddItem('#/profil?tab=erfolge',    lfIcon('medal'),        'Erfolge')}
+            ${ddItem('#/profil?tab=inventar',   lfIcon('backpack'),     'Inventar')}
             <div class="divider"></div>
-            ${ddItem('#/freunde',               '👥', 'Freunde', friendReqCount ? String(friendReqCount) : '')}
-            ${ddItem('#/gruppen',               '🏠', 'Gruppen')}
-            ${ddItem('#/feed',                  '📰', 'Feed')}
+            ${ddItem('#/freunde',               lfIcon('users'),        'Freunde', friendReqCount ? String(friendReqCount) : '')}
+            ${ddItem('#/gruppen',               lfIcon('users-round'),  'Gruppen')}
+            ${ddItem('#/feed',                  lfIcon('newspaper'),    'Feed')}
             <div class="divider"></div>
-            ${ddItem('#/builder',               '🔨', 'Builder')}
-            ${ddItem('#/meine-inhalte',         '📚', 'Meine Inhalte')}
+            ${ddItem('#/builder',               lfIcon('hammer'),       'Builder')}
+            ${ddItem('#/meine-inhalte',         lfIcon('library'),      'Meine Inhalte')}
             <div class="divider"></div>
-            ${ddItem('#/einstellungen',         '⚙️', 'Einstellungen')}
-            ${isAdmin() ? ddItem('#/admin',     '👑', 'Admin-Panel') : ''}
-            ${(isAdmin() || role === 'tester') ? ddItem('#/testing', '🧪', 'Testing-Bereich') : ''}
+            ${ddItem('#/einstellungen',         lfIcon('settings'),     'Einstellungen')}
+            ${isAdmin() ? ddItem('#/admin',     lfIcon('crown'),        'Admin-Panel') : ''}
+            ${(isAdmin() || role === 'tester') ? ddItem('#/testing', lfIcon('flask-round'), 'Testing-Bereich') : ''}
             <div class="divider"></div>
-            <button class="danger" onclick="window.LF.doLogout()">🚪 Abmelden</button>
+            <button class="danger" onclick="window.LF.doLogout()">${lfIcon('log-out')} Abmelden</button>
           </div>
         </div>
       </div>
     </nav>
     <div class="bottom-tab-bar">
       <a class="bottom-tab ${!breadcrumbs.length ? 'active' : ''}" data-tour="mobile-nav-start" onclick="location.hash='#/'">
-        <span class="bt-icon">🏠</span><span class="bt-label">Start</span>
+        <span class="bt-icon">${lfIcon('house')}</span><span class="bt-label">Start</span>
       </a>
       <a class="bottom-tab ${act('Lernen')}" data-tour="mobile-nav-lernen" onclick="location.hash='#/lernen'">
-        <span class="bt-icon">📚</span><span class="bt-label">Lernen</span>
+        <span class="bt-icon">${lfIcon('book-open')}</span><span class="bt-label">Lernen</span>
       </a>
       <a class="bottom-tab ${act('Rangliste')}" data-tour="mobile-nav-rangliste" onclick="location.hash='#/rangliste'">
-        <span class="bt-icon">🏆</span><span class="bt-label">Rang</span>
+        <span class="bt-icon">${lfIcon('trophy')}</span><span class="bt-label">Rang</span>
       </a>
       <a class="bottom-tab ${act('Profil')}" data-tour="mobile-nav-profil" onclick="location.hash='#/profil'">
-        <span class="bt-icon">👤</span><span class="bt-label">Profil</span>
+        <span class="bt-icon">${lfIcon('user')}</span><span class="bt-label">Profil</span>
       </a>
       <a class="bottom-tab" data-tour="bottom-mehr" onclick="window.LF.toggleMobileMenu(event)">
-        <span class="bt-icon">☰</span><span class="bt-label">Mehr</span>
+        <span class="bt-icon">${lfIcon('menu')}</span><span class="bt-label">Mehr</span>
       </a>
     </div>
     <div class="mobile-nav" id="mobileNav">
-      <a class="mobile-nav-link ${act('Hilfe')}"          onclick="location.hash='#/hilfe';window.LF.closeMobileMenu()">❓ Hilfe</a>
-      <a class="mobile-nav-link ${act('Statistiken')}"    onclick="location.hash='#/profil?tab=stats';window.LF.closeMobileMenu()">📊 Statistiken</a>
-      <a class="mobile-nav-link ${act('Freunde')}"        onclick="location.hash='#/freunde';window.LF.closeMobileMenu()">👥 Freunde${friendReqCount ? ` (${friendReqCount})` : ''}</a>
-      <a class="mobile-nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">🏠 Gruppen</a>
-      <a class="mobile-nav-link ${act('Feed')}"           onclick="location.hash='#/feed';window.LF.closeMobileMenu()">📰 Feed</a>
-      <a class="mobile-nav-link ${act('Meine Inhalte')}"  onclick="location.hash='#/meine-inhalte';window.LF.closeMobileMenu()">📚 Meine Inhalte</a>
-      <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">🔨 Builder</a>
-      <a class="mobile-nav-link ${act('Einstellungen')}"  onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">⚙️ Einstellungen</a>
-      ${isAdmin() ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">👑 Admin-Panel</a>` : ''}
-      ${(isAdmin() || role === 'tester') ? `<a class="mobile-nav-link" onclick="location.hash='#/testing';window.LF.closeMobileMenu()">🧪 Testing</a>` : ''}
+      <a class="mobile-nav-link ${act('Hilfe')}"          onclick="location.hash='#/hilfe';window.LF.closeMobileMenu()">${lfIcon('circle-question-mark')} Hilfe</a>
+      <a class="mobile-nav-link ${act('Statistiken')}"    onclick="location.hash='#/profil?tab=stats';window.LF.closeMobileMenu()">${lfIcon('chart-bar')} Statistiken</a>
+      <a class="mobile-nav-link ${act('Freunde')}"        onclick="location.hash='#/freunde';window.LF.closeMobileMenu()">${lfIcon('users')} Freunde${friendReqCount ? ` (${friendReqCount})` : ''}</a>
+      <a class="mobile-nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">${lfIcon('users-round')} Gruppen</a>
+      <a class="mobile-nav-link ${act('Feed')}"           onclick="location.hash='#/feed';window.LF.closeMobileMenu()">${lfIcon('newspaper')} Feed</a>
+      <a class="mobile-nav-link ${act('Meine Inhalte')}"  onclick="location.hash='#/meine-inhalte';window.LF.closeMobileMenu()">${lfIcon('library')} Meine Inhalte</a>
+      <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">${lfIcon('hammer')} Builder</a>
+      <a class="mobile-nav-link ${act('Einstellungen')}"  onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">${lfIcon('settings')} Einstellungen</a>
+      ${isAdmin() ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">${lfIcon('crown')} Admin-Panel</a>` : ''}
+      ${(isAdmin() || role === 'tester') ? `<a class="mobile-nav-link" onclick="location.hash='#/testing';window.LF.closeMobileMenu()">${lfIcon('flask-round')} Testing</a>` : ''}
       <div class="mobile-nav-sep"></div>
-      <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">🚪 Abmelden</a>
+      <a class="mobile-nav-link mobile-nav-danger" onclick="window.LF.doLogout()">${lfIcon('log-out')} Abmelden</a>
     </div>`;
 }
 
@@ -632,11 +659,11 @@ function renderLogin() {
       <div class="login-card">
         <div style="position:absolute;top:16px;right:16px">
           <button class="btn-icon" onclick="window.LF.toggleTheme()" title="Theme">
-            ${document.documentElement.getAttribute('data-theme')==='dark' ? '☀️' : '🌙'}
+            ${document.documentElement.getAttribute('data-theme')==='dark' ? lfIcon('sun') : lfIcon('moon')}
           </button>
         </div>
         <div class="login-logo">
-          <div class="logo-icon">⚡</div>
+          <div class="logo-icon">${lfIcon('zap')}</div>
           <h1>LearningForge</h1>
           <p>Dein persönlicher Lernhub</p>
         </div>
@@ -855,7 +882,7 @@ function renderDashboard() {
       ${renderNav()}
       <div class="page">
         <div class="setup-banner">
-          <div class="setup-icon">⚙️</div>
+          <div class="setup-icon">${lfIcon('settings')}</div>
           <h2>Setup erforderlich</h2>
           <p>${structure._configError}</p>
           <p>Bearbeite <code>assets/js/config.js</code> und trage deinen GitHub-Username und den Branch ein.</p>
@@ -922,7 +949,7 @@ function renderDashboard() {
 
   // Braucht Aufmerksamkeit
   const attentionHtml = attention.length === 0 ? '' : `
-    <div class="section-title" style="margin-top:32px">⚠️ Braucht Aufmerksamkeit</div>
+    <div class="section-title" style="margin-top:32px">${lfIcon('triangle-alert')} Braucht Aufmerksamkeit</div>
     <div class="attention-list">
       ${attention.map(a => `
         <div class="attention-item" onclick="location.hash='#/fach/${a.subjectId}/${a.yearId}/${a.topicId}'"
@@ -938,7 +965,7 @@ function renderDashboard() {
 
   // Letzte Tests
   const recentHtml = recent.length === 0 ? '' : `
-    <div class="section-title" style="margin-top:32px">🕐 Letzte Tests</div>
+    <div class="section-title" style="margin-top:32px">${lfIcon('clock')} Letzte Tests</div>
     <div class="recent-list">
       ${recent.map(r => `
         <div class="recent-item" onclick="location.hash='#/fach/${r.subjectId}/${r.yearId}/${r.topicId}'"
@@ -957,24 +984,24 @@ function renderDashboard() {
     <div class="page">
       <div class="dash-header">
         <div>
-          <h1>Willkommen zurück, ${currentUser.displayName?.split(' ')[0] || 'Lernender'}! 👋</h1>
+          <h1>Willkommen zurück, ${currentUser.displayName?.split(' ')[0] || 'Lernender'}! ${lfIcon('hand', {cls:'inline-icon'})}</h1>
           <div class="sub">Wähle ein Fach und starte deine Lernsession.</div>
         </div>
-        ${streak > 1 ? `<div class="streak-badge">🔥 ${streak} Tage Streak</div>` : ''}
+        ${streak > 1 ? `<div class="streak-badge">${lfIcon('flame', {cls:'sx-streak'})} ${streak} Tage Streak</div>` : ''}
       </div>
       <div class="stats-bar">
         <div class="stat-chip"><span class="stat-val">${subjects.length}</span><span class="stat-lbl">Fächer</span></div>
         <div class="stat-chip"><span class="stat-val">${totalTests}</span><span class="stat-lbl">Tests gemacht</span></div>
         <div class="stat-chip"><span class="stat-val">${avgGrade}</span><span class="stat-lbl">Ø Note</span></div>
         <div class="stat-chip" onclick="location.hash='#/profil?tab=stats'" style="cursor:pointer">
-          <span class="stat-val">📊</span><span class="stat-lbl">Statistiken</span>
+          <span class="stat-val">${lfIcon('chart-bar')}</span><span class="stat-lbl">Statistiken</span>
         </div>
         ${getSRSDueCount() > 0 ? `
         <div class="stat-chip srs-chip" onclick="location.hash='#/srs'" style="cursor:pointer">
           <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">Wiederholen</span>
         </div>` : ''}
         <div class="stat-chip stat-chip-bug" data-tour="bug-chip" onclick="window.LF.openBugReport()" style="cursor:pointer">
-          <span class="stat-val">🐛</span><span class="stat-lbl">Problem melden</span>
+          <span class="stat-val">${lfIcon('bug')}</span><span class="stat-lbl">Problem melden</span>
         </div>
       </div>
       ${!userData?.klasse && !isClaudeAccount() && !isHackerAccount() ? `
@@ -1005,7 +1032,7 @@ function renderDashboard() {
       </div>` : ''}
       ${_installPrompt && !localStorage.getItem('lf_install_dismissed') ? `
         <div class="install-card" id="installCard">
-          <div class="install-card-icon">⚡</div>
+          <div class="install-card-icon">${lfIcon('zap')}</div>
           <div class="install-card-info">
             <div class="install-card-title">App installieren</div>
             <div class="install-card-sub">Offline nutzen &amp; schneller laden</div>
@@ -1017,12 +1044,12 @@ function renderDashboard() {
         </div>` : ''}
       ${top3Subjects.length ? `
         <div class="section-title" style="margin-top:${attention.length?'32px':'0'};display:flex;align-items:center;justify-content:space-between">
-          <span>⚡ Schnellstart</span>
+          <span>${lfIcon('zap')} Schnellstart</span>
           <a class="btn btn-ghost btn-sm" onclick="location.hash='#/lernen'">Alle Fächer →</a>
         </div>
         <div class="subjects-grid">${subjectCards}</div>` : `
         <div class="empty-state" style="margin-top:24px">
-          <div class="empty-icon">📚</div>
+          <div class="empty-icon">${lfIcon('book-open')}</div>
           ${subjects.length === 0
             ? 'Noch keine Fächer vorhanden — füge Ordner unter <code>Fächer/</code> hinzu.'
             : 'Mache deinen ersten Test, um Schnellstart-Karten hier zu sehen.'}
@@ -1033,7 +1060,7 @@ function renderDashboard() {
       <div id="bugReportSection"></div>
     </div>
     <!-- Bug-Report-FAB nur Mobile (CSS @media) — Mission 1 Open-Q-3 -->
-    <button class="bug-fab" data-tour="bug-fab" onclick="window.LF.openBugReport()" title="Problem melden" aria-label="Problem melden">🐛</button>`;
+    <button class="bug-fab" data-tour="bug-fab" onclick="window.LF.openBugReport()" title="Problem melden" aria-label="Problem melden">${lfIcon('bug')}</button>`;
   // Bug-Report-Sektion asynchron nachladen (Firestore-Reads).
   loadBugReportSection();
   if (isClaudeAccount()) loadClaudeBugList();
@@ -1118,7 +1145,7 @@ function renderChangelogSection() {
     const dateStr      = formatRelativeDate(e.date);
     const hasSubject   = !!e.subject;
     const subjectColor = hasSubject ? getSubjectColor(e.subject) : 'var(--accent)';
-    const subjectIcon  = hasSubject ? getSubjectIcon(e.subject) : '⚙️';
+    const subjectIcon  = hasSubject ? getSubjectIcon(e.subject) : lfIcon('settings');
     const subjectName  = hasSubject ? (structure?.[e.subject]?.name || e.subject) : 'App';
     const yearName     = e.year  ? (structure?.[e.subject]?.years?.[e.year]?.name || idToName(e.year))   : '';
     const topicName    = e.topic ? (structure?.[e.subject]?.years?.[e.year]?.topics?.[e.topic]?.name || idToName(e.topic)) : '';
@@ -1144,7 +1171,7 @@ function renderChangelogSection() {
       </div>`;
   }).join('');
   return `
-    <div class="section-title" style="margin-top:32px">✨ Was ist neu?</div>
+    <div class="section-title" style="margin-top:32px">${lfIcon('sparkles')} Was ist neu?</div>
     <div class="changelog-list">${items}</div>`;
 }
 
@@ -1171,7 +1198,7 @@ function renderSubject(subjectId) {
   const grades = userData?.grades || {};
 
   const yearCards = years.length === 0
-    ? `<div class="empty-state"><div class="empty-icon">📅</div>Noch keine Klassen vorhanden.</div>`
+    ? `<div class="empty-state"><div class="empty-icon">${lfIcon('calendar')}</div>Noch keine Klassen vorhanden.</div>`
     : years.map(y => {
         const topicCount = Object.keys(y.topics || {}).length;
         const doneCount  = Object.keys(y.topics || {}).filter(tid => grades[`${subjectId}__${y.id}__${tid}`]).length;
@@ -1205,7 +1232,7 @@ function renderYear(subjectId, yearId) {
   const grades = userData?.grades || {};
 
   const topicCards = topics.length === 0
-    ? `<div class="empty-state"><div class="empty-icon">📝</div>Noch keine Themen vorhanden.</div>`
+    ? `<div class="empty-state"><div class="empty-icon">${lfIcon('pen-line')}</div>Noch keine Themen vorhanden.</div>`
     : topics.map(t => {
         const g = grades[`${subjectId}__${yearId}__${t.id}`];
         const gp = g ? _gp(g) : null;
@@ -1222,7 +1249,7 @@ function renderYear(subjectId, yearId) {
             <div class="t-right">
               ${gradeInfo ? `<div class="t-grade" style="background:${gradeInfo.color}">${g.grade}</div>` : ''}
               <button class="bm-icon-btn ${isBm ? 'active' : ''}" title="Lesezeichen"
-                onclick="event.stopPropagation();window.LF.toggleBookmarkTopic('${tKey}')">🔖</button>
+                onclick="event.stopPropagation();window.LF.toggleBookmarkTopic('${tKey}')">${lfIcon('bookmark')}</button>
               <div class="t-arrow">›</div>
             </div>
           </div>`;
@@ -1351,7 +1378,7 @@ async function renderTopic(subjectId, yearId, topicId) {
   // F-15: Flashcard-Tab
   const flashcardTab = hasFlashcards
     ? `<div class="fc-start" id="fcStart">
-        <div class="fc-start-icon">🃏</div>
+        <div class="fc-start-icon">${lfIcon('layers', {cls:'lf-icon-2xl'})}</div>
         <h2>Karteikarten</h2>
         <p>${questions.length} Karte${questions.length !== 1 ? 'n' : ''} verfügbar</p>
         <button class="btn btn-primary btn-lg" onclick="window.LF.startFlashcards('${subjectId}','${yearId}','${topicId}')">Lernen starten</button>
@@ -1364,21 +1391,21 @@ async function renderTopic(subjectId, yearId, topicId) {
   document.getElementById('topicBody').innerHTML = `
     ${missedPrereqs.length ? `
       <div class="prereq-banner">
-        ⚠️ Empfohlene Voraussetzungen noch nicht abgeschlossen:
+        ${lfIcon('triangle-alert')} Empfohlene Voraussetzungen noch nicht abgeschlossen:
         ${missedPrereqs.map(p => `<span class="prereq-tag">${decodeURIComponent(p).replace(/-/g,' ')}</span>`).join('')}
       </div>` : ''}
     <div class="topic-toolbar">
       <button class="bookmark-btn ${isBookmarked ? 'active' : ''}" id="bookmarkBtn"
               onclick="window.LF.toggleBookmarkTopic('${topicKey}')">
-        ${isBookmarked ? '🔖 Gespeichert' : '🔖 Lesezeichen'}
+        ${isBookmarked ? `${lfIcon('bookmark')} Gespeichert` : `${lfIcon('bookmark')} Lesezeichen`}
       </button>
-      ${meta.content ? `<button class="btn btn-ghost btn-sm tutor-toggle-btn" onclick="window.LF.tutorToggle()">🤖 KI-Tutor</button>` : ''}
+      ${meta.content ? `<button class="btn btn-ghost btn-sm tutor-toggle-btn" onclick="window.LF.tutorToggle()">${lfIcon('bot')} KI-Tutor</button>` : ''}
     </div>
     <div class="topic-tabs" style="--subject-color:${color}">
       <button class="tab-btn active" id="tabBtnLernen"  onclick="window.LF.switchTab('Lernen')">Lernen</button>
       <button class="tab-btn"        id="tabBtnUeben"   onclick="window.LF.switchTab('Ueben')">Üben</button>
       <button class="tab-btn"        id="tabBtnTest"    onclick="window.LF.switchTab('Test')">Test</button>
-      ${hasFlashcards ? `<button class="tab-btn" id="tabBtnKarten" onclick="window.LF.switchTab('Karten')">🃏 Karten</button>` : ''}
+      ${hasFlashcards ? `<button class="tab-btn" id="tabBtnKarten" onclick="window.LF.switchTab('Karten')">${lfIcon('layers')} Karten</button>` : ''}
       ${hasVocab ? `<button class="tab-btn" id="tabBtnVokabeln" onclick="window.LF.switchTab('Vokabeln')">Vokabeln</button>` : ''}
       <button class="tab-btn" id="tabBtnKommentare" onclick="window.LF.switchTab('Kommentare')">Kommentare</button>
     </div>
@@ -1398,7 +1425,7 @@ async function renderTopic(subjectId, yearId, topicId) {
     </div>
     <div class="notes-panel" id="notesPanel">
       <button class="notes-toggle" onclick="window.LF.toggleNotes()">
-        📝 Notizen <span id="notesArrow">▼</span>
+        ${lfIcon('pencil')} Notizen <span id="notesArrow" class="notes-arrow open">${lfIcon('chevron-down')}</span>
       </button>
       <div class="notes-body" id="notesBody">
         <textarea class="notes-textarea" id="notesInput" placeholder="Deine Notizen zu diesem Thema…"
@@ -1437,7 +1464,7 @@ function renderVocabStart(cards) {
   const directions = [...new Set(cards.map(c => c.direction).filter(Boolean))];
   return `
     <div class="vocab-start" id="vocabArea">
-      <div class="vocab-start-icon">📖</div>
+      <div class="vocab-start-icon">${lfIcon('book-open', {cls:'lf-icon-2xl'})}</div>
       <h2>Vokabeltrainer</h2>
       <p>${cards.length} Karte${cards.length !== 1 ? 'n' : ''} in dieser Einheit</p>
       ${directions.length ? `<p class="vocab-direction-info">${directions.join(' · ')}</p>` : ''}
@@ -1472,7 +1499,9 @@ function renderVocabFeedback(result, card) {
   const { cards, index, correct, wrong } = vocabState;
   const isLast = index + 1 >= cards.length;
   const cls = result.correct ? (result.almost ? 'almost' : 'correct') : 'wrong';
-  const icon = result.correct ? (result.almost ? '~' : '✓') : '✗';
+  const icon = result.correct
+    ? (result.almost ? '~' : lfIcon('check', {cls:'sx-correct'}))
+    : lfIcon('x', {cls:'sx-wrong'});
   const msg  = result.correct
     ? (result.almost ? 'Fast! Kleiner Tippfehler.' : 'Richtig!')
     : `Falsch. Richtig: <strong>${card.answers[0]}</strong>`;
@@ -1716,7 +1745,7 @@ function mountTutor() {
   widget.className = 'tutor-widget';
   widget.innerHTML = `
     <div class="tutor-header">
-      <span>🤖 KI-Tutor</span>
+      <span>${lfIcon('bot')} KI-Tutor</span>
       <button class="tutor-close-btn" onclick="window.LF.tutorToggle()">&#x2715;</button>
     </div>
     <div class="tutor-messages" id="tutorMessages">
@@ -1814,12 +1843,12 @@ function buildWissensCheck(questions, topicKey) {
     return `<div class="wc-item" id="wcItem_${topicKey}_${i}">
       <div class="wc-q">${i+1}. ${q.question}</div>
       <button class="btn btn-ghost btn-sm" onclick="window.LF.wissensCheckReveal('${topicKey}',${i})" id="wcRevealBtn_${topicKey}_${i}">Antwort anzeigen</button>
-      <div class="wc-fb" id="wcFb_${topicKey}_${i}" style="display:none"><strong>✓ ${q.answer || ''}</strong></div>
+      <div class="wc-fb" id="wcFb_${topicKey}_${i}" style="display:none"><strong>${lfIcon('check', {cls:'sx-correct'})} ${q.answer || ''}</strong></div>
     </div>`;
   }).join('');
   return `
     <div class="wissens-check">
-      <div class="wissens-check-title">🧪 Schnell-Check</div>
+      <div class="wissens-check-title">${lfIcon('flask-round')} Schnell-Check</div>
       <div class="wc-items">${items}</div>
     </div>`;
 }
@@ -1859,10 +1888,29 @@ export function getSubjectColor(subjectId) {
 }
 
 // ── Fach-Icon abrufen (Nutzer > Standard) ─
+// Mission 8: subjects-config.json ships Lucide-Icon-Names (with iconType:'lucide').
+// User-overrides via Settings stay emoji-based (per Adrian Q4: don't break working UX).
+// Resolution-order: customIconUrl (img) > customIcon (emoji string) > config-driven Lucide
+// or emoji > book-open Lucide-fallback.
 function getSubjectIcon(subjectId) {
   const url = userData?.settings?.customIconUrls?.[subjectId];
   if (url) return `<img class="subject-icon-img" src="${url}" alt="">`;
-  return userData?.settings?.customIcons?.[subjectId] || structure?.[subjectId]?.icon || '📚';
+  const custom = userData?.settings?.customIcons?.[subjectId];
+  if (custom) return custom;                                         // user-set emoji wins
+  const cfg = structure?.[subjectId];
+  if (cfg?.iconType === 'lucide' && cfg.icon) {
+    return lfIcon(cfg.icon, { cls: 'subject-icon' });
+  }
+  // Mission 8 Q2: country-flag for Sprachfaecher (Englisch=gb).
+  if (cfg?.iconType === 'flag' && cfg.icon) {
+    return lfFlag(cfg.icon, { cls: 'subject-icon subject-icon--flag' });
+  }
+  // Fallback to emoji if config has no iconType marker (legacy / custom subjects)
+  // OR if the icon name happens to be a known Lucide one (defensive auto-detect).
+  const ico = cfg?.icon;
+  if (ico && LUCIDE_ICONS[ico]) return lfIcon(ico, { cls: 'subject-icon' });
+  if (ico && FLAG_ICONS[ico]) return lfFlag(ico, { cls: 'subject-icon subject-icon--flag' });
+  return ico || lfIcon('book-open', { cls: 'subject-icon' });
 }
 
 function _resizeToDataUrl(file) {
@@ -1944,7 +1992,7 @@ function renderSettings() {
                  value="${emojiVal}" maxlength="2" style="width:54px;text-align:center;font-size:20px"
                  oninput="window.LF.onEmojiInput('${s.id}',this.value)">
           <label class="btn btn-ghost btn-sm icon-upload-label" title="PNG hochladen (64×64)">
-            📁
+            ${lfIcon('folder')}
             <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
                    onchange="window.LF.handleIconFile('${s.id}',this)">
           </label>
@@ -1959,16 +2007,16 @@ function renderSettings() {
     ${renderNav([{ label: 'Einstellungen' }])}
     <div class="page">
       <div class="page-header">
-        <h1>⚙️ Einstellungen</h1>
+        <h1>${lfIcon('settings')} Einstellungen</h1>
         <div class="sub">Passe LearningForge nach deinen Wünschen an.</div>
       </div>
 
       <div class="settings-card">
-        <div class="settings-section-title">🎨 Fächerfarben</div>
+        <div class="settings-section-title">${lfIcon('palette')} Fächerfarben</div>
         <p class="settings-hint">Die Farben werden nur für dein Konto gespeichert.</p>
         <div class="settings-color-list">
           ${subjects.length === 0
-            ? '<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden.</div>'
+            ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden.</div>`
             : colorRows}
         </div>
         ${subjects.length > 0 ? `
@@ -1983,7 +2031,7 @@ function renderSettings() {
         <p class="settings-hint">Emoji eingeben oder eigenes PNG hochladen (wird auf 64×64 px skaliert).</p>
         <div class="settings-color-list">
           ${subjects.length === 0
-            ? '<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden.</div>'
+            ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden.</div>`
             : iconRows}
         </div>
         ${subjects.length > 0 ? `
@@ -1993,14 +2041,14 @@ function renderSettings() {
       </div>
 
       <div class="settings-card" style="margin-top:16px">
-        <div class="settings-section-title">🌗 Darstellung</div>
+        <div class="settings-section-title">${lfIcon('contrast')} Darstellung</div>
         <div class="settings-color-row">
           <div class="settings-subject-info">
             <span class="settings-name">Hell oder Dunkel</span>
           </div>
           <div class="settings-color-right">
             <button class="btn btn-secondary" onclick="window.LF.toggleTheme()">
-              ${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Hell' : '🌙 Dunkel'}
+              ${document.documentElement.getAttribute('data-theme') === 'dark' ? `${lfIcon('sun')} Hell` : `${lfIcon('moon')} Dunkel`}
             </button>
           </div>
         </div>
@@ -2018,7 +2066,7 @@ function renderLernen() {
   const srsDue   = getSRSDueCount();
 
   const subjectCards = subjects.length === 0
-    ? `<div class="empty-state"><div class="empty-icon">📂</div>Noch keine Fächer vorhanden — füge Ordner unter <code>Fächer/</code> hinzu.</div>`
+    ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden — füge Ordner unter <code>Fächer/</code> hinzu.</div>`
     : subjects.map(s => {
         const prog = getSubjectProgress(s.id);
         const pct  = prog.total > 0 ? prog.tested / prog.total : 0;
@@ -2051,27 +2099,27 @@ function renderLernen() {
     ${renderNav([{ label: 'Lernen' }])}
     <div class="page">
       <div class="page-header">
-        <h1>📚 Lernen</h1>
+        <h1>${lfIcon('book-open')} Lernen</h1>
         <div class="sub">Deine Lern-Aktionen auf einen Blick.</div>
       </div>
 
       <div class="lernen-quick-grid">
         <div class="lernen-quick-card lernen-quick-daily" onclick="location.hash='#/daily-challenge'">
-          <div class="lernen-quick-icon">⚡</div>
+          <div class="lernen-quick-icon">${lfIcon('zap')}</div>
           <div class="lernen-quick-info">
             <div class="lernen-quick-title">Daily Challenge</div>
             <div class="lernen-quick-sub">Heute starten</div>
           </div>
         </div>
         <div class="lernen-quick-card lernen-quick-srs" onclick="location.hash='#/srs'">
-          <div class="lernen-quick-icon">🃏</div>
+          <div class="lernen-quick-icon">${lfIcon('layers')}</div>
           <div class="lernen-quick-info">
             <div class="lernen-quick-title">Wiederholen</div>
             <div class="lernen-quick-sub">${srsDue > 0 ? `${srsDue} fällig` : 'Keine Karten fällig'}</div>
           </div>
         </div>
         <div class="lernen-quick-card lernen-quick-bm" onclick="location.hash='#/lesezeichen'">
-          <div class="lernen-quick-icon">⭐</div>
+          <div class="lernen-quick-icon">${lfIcon('star')}</div>
           <div class="lernen-quick-info">
             <div class="lernen-quick-title">Lesezeichen</div>
             <div class="lernen-quick-sub">${bookmarks.length} gespeichert</div>
@@ -2080,10 +2128,10 @@ function renderLernen() {
       </div>
 
       <div class="lernen-search-row">
-        <input class="form-input" id="lernenSearch" placeholder="🔍 Fach suchen…" oninput="window.LF.filterLernenGrid(this.value)">
+        <input class="form-input" id="lernenSearch" placeholder="Fach suchen…" oninput="window.LF.filterLernenGrid(this.value)">
       </div>
 
-      <div class="section-title" style="margin-top:24px">📚 Alle Fächer</div>
+      <div class="section-title" style="margin-top:24px">${lfIcon('book-open')} Alle Fächer</div>
       <div class="subjects-grid" id="lernenSubjectsGrid">${subjectCards}</div>
     </div>`;
 }
@@ -2126,7 +2174,7 @@ function _renderOnboardingStep() {
   if (s.step === 1) {
     body = `
       <div class="wizard-step">
-        <div class="wizard-icon-large">⚡</div>
+        <div class="wizard-icon-large">${lfIcon('zap', {cls:'lf-icon-2xl'})}</div>
         <h2>Willkommen!</h2>
         <p>Wir richten dein Konto in 4 Schritten ein — dauert keine Minute.</p>
         ${dots(1)}
@@ -2163,23 +2211,22 @@ function _renderOnboardingStep() {
         </div>
       </div>`;
   } else if (s.step === 3) {
+    // Mission 8 Q1=C: Avatar-Picker = nur File-Upload, kein Emoji-Grid mehr.
+    // Default-Fallback fuer User ohne Bild bleibt der Initial-Letter (universal).
     body = `
       <div class="wizard-step">
         <div class="wizard-step-num">Schritt 3 von 4</div>
-        <h2>Wähle deinen Avatar.</h2>
-        <div class="avatar-picker" style="margin:16px 0">
-          ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn ${s.pickedEmoji === e ? 'active' : ''}" onclick="window.LF.onboardingPickEmoji('${e}')">${e}</button>`).join('')}
-        </div>
-        <div class="form-hint">…oder lade ein Bild hoch:</div>
-        <label class="btn btn-ghost btn-sm" style="cursor:pointer;display:inline-block;margin-top:8px">
-          📁 Bild hochladen
-          <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="window.LF.onboardingHandleFile(this)">
-        </label>
-        <div style="margin-top:16px">Aktuell:
+        <h2>Lade dein Profilbild hoch.</h2>
+        <div style="margin:16px 0">
           <div class="profile-avatar-large" style="margin:12px auto 0">${
             s.photoURL ? `<img src="${s.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">` : escapeHtml((s.name||'U')[0].toUpperCase())
           }</div>
         </div>
+        <div class="form-hint">Optional — wenn du ueberspringst, wird der Anfangsbuchstabe deines Namens als Avatar genutzt.</div>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-block;margin-top:12px">
+          ${lfIcon('folder')} Bild hochladen
+          <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="window.LF.onboardingHandleFile(this)">
+        </label>
         ${dots(3)}
         <div class="wizard-actions">
           <button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zurück</button>
@@ -2192,7 +2239,7 @@ function _renderOnboardingStep() {
     body = `
       <div class="wizard-step">
         <div class="wizard-step-num">Schritt 4 von 4</div>
-        <div class="wizard-icon-large">🎉</div>
+        <div class="wizard-icon-large">${lfIcon('party-popper', {cls:'lf-icon-2xl'})}</div>
         <h2>Alles klar, ${escapeHtml(s.name || 'Lernender')}!</h2>
         <p>Soll ich dir die wichtigsten Funktionen in 8 kurzen Schritten zeigen?</p>
         ${dots(4)}
@@ -2268,7 +2315,7 @@ const TOUR_STEPS = [
   {
     id: 'final', target: null, position: 'center',
     title: 'Das war\'s!',
-    body: 'Viel Spaß beim Lernen. Wenn du was vermisst, sag\'s über das 🐛-Icon.'
+    body: 'Viel Spaß beim Lernen. Wenn du was vermisst, sag\'s über das Bug-Icon (Käfer-Symbol unten rechts).'
   }
 ];
 
@@ -2629,7 +2676,7 @@ async function renderAdminUserEdit(uid) {
     const label = `${subject?.name || subjectId} · ${year?.name || yearId} · ${topic?.name || topicId} · Note ${g.grade}`;
     return `<div class="adm-grade-row">
       <span>${escapeHtml(label)}</span>
-      <button class="btn btn-ghost btn-sm" onclick="window.LF.adminEditUserDeleteGrade('${escapeHtml(key)}')">✕</button>
+      <button class="btn btn-ghost btn-sm" onclick="window.LF.adminEditUserDeleteGrade('${escapeHtml(key)}')">${lfIcon('x')}</button>
     </div>`;
   }).join('') || '<div class="empty-state" style="padding:8px">Keine Noten</div>';
 
@@ -2637,7 +2684,7 @@ async function renderAdminUserEdit(uid) {
     <div class="lf-modal-card lf-modal-large">
       <div class="lf-modal-header">
         <h3>User bearbeiten — ${escapeHtml(u.name || 'Unbekannt')}</h3>
-        <button class="btn-icon" onclick="document.getElementById('adminEditOverlay').remove()">✕</button>
+        <button class="btn-icon" onclick="document.getElementById('adminEditOverlay').remove()">${lfIcon('x')}</button>
       </div>
       <div class="lf-modal-body">
         <div class="adm-section-title">Identität</div>
@@ -2745,7 +2792,7 @@ function renderLesezeichen() {
         <div class="t-right">
           ${g ? `<div class="t-grade" style="background:${gradeColor(g.grade)}">${g.grade}</div>` : ''}
           <button class="bm-icon-btn active" title="Entfernen"
-            onclick="event.stopPropagation();window.LF.toggleBookmarkTopic('${key}')">🔖</button>
+            onclick="event.stopPropagation();window.LF.toggleBookmarkTopic('${key}')">${lfIcon('bookmark')}</button>
           <div class="t-arrow">›</div>
         </div>
       </div>`;
@@ -2755,12 +2802,12 @@ function renderLesezeichen() {
     ${renderNav([{ label: 'Lesezeichen' }])}
     <div class="page">
       <div class="page-header">
-        <h1>🔖 Lesezeichen</h1>
+        <h1>${lfIcon('bookmark')} Lesezeichen</h1>
         <div class="sub">Gespeicherte Themen</div>
       </div>
       ${cards
         ? `<div class="topic-list">${cards}</div>`
-        : `<div class="empty-state"><div class="empty-icon">🔖</div>Noch keine Lesezeichen.<br>Öffne ein Thema und klicke auf 🔖.</div>`}
+        : `<div class="empty-state"><div class="empty-icon">${lfIcon('bookmark')}</div>Noch keine Lesezeichen.<br>Öffne ein Thema und klicke auf das Lesezeichen-Symbol.</div>`}
     </div>`;
 }
 
@@ -2772,12 +2819,12 @@ function renderSRS() {
     ${renderNav([{ label: 'SRS — Wiederholung' }])}
     <div class="page">
       <div class="page-header">
-        <h1>🧠 Spaced Repetition</h1>
+        <h1>${lfIcon('brain')} Spaced Repetition</h1>
         <div class="sub">${due.length} Karte${due.length !== 1 ? 'n' : ''} heute fällig</div>
       </div>
       <div id="srsArea">
         ${due.length === 0
-          ? `<div class="empty-state"><div class="empty-icon">🧠</div>Alle Karten für heute erledigt!<br>Mach weiter beim <a href="#/" onclick="location.hash='#/'">Dashboard</a>.</div>`
+          ? `<div class="empty-state"><div class="empty-icon">${lfIcon('brain')}</div>Alle Karten für heute erledigt!<br>Mach weiter beim <a href="#/" onclick="location.hash='#/'">Dashboard</a>.</div>`
           : renderSRSCard(due, 0)}
       </div>
     </div>`;
@@ -2787,7 +2834,7 @@ function renderSRS() {
 
 function renderSRSCard(cards, idx) {
   if (idx >= cards.length) {
-    return `<div class="srs-done"><div class="srs-done-icon">🎉</div><h2>Session abgeschlossen!</h2>
+    return `<div class="srs-done"><div class="srs-done-icon">${lfIcon('party-popper', {cls:'lf-icon-2xl'})}</div><h2>Session abgeschlossen!</h2>
       <p>${cards.length} Karte${cards.length!==1?'n':''} wiederholt.</p>
       <button class="btn btn-primary" onclick="location.hash='#/'">Zurück</button></div>`;
   }
@@ -2804,10 +2851,10 @@ function renderSRSCard(cards, idx) {
         <div class="srs-q">${card.question}</div>
         <div class="srs-answer">${card.answer}</div>
         <div class="srs-rate-row">
-          <button class="srs-rate-btn rate-bad"   onclick="window.LF.rateSRS(1)">✗ Nicht gewusst</button>
+          <button class="srs-rate-btn rate-bad"   onclick="window.LF.rateSRS(1)">${lfIcon('x', {cls:'sx-wrong'})} Nicht gewusst</button>
           <button class="srs-rate-btn rate-ok"    onclick="window.LF.rateSRS(3)">~ Schwer</button>
-          <button class="srs-rate-btn rate-good"  onclick="window.LF.rateSRS(4)">✓ Gut</button>
-          <button class="srs-rate-btn rate-great" onclick="window.LF.rateSRS(5)">⚡ Leicht</button>
+          <button class="srs-rate-btn rate-good"  onclick="window.LF.rateSRS(4)">${lfIcon('check', {cls:'sx-correct'})} Gut</button>
+          <button class="srs-rate-btn rate-great" onclick="window.LF.rateSRS(5)">${lfIcon('zap')} Leicht</button>
         </div>
       </div>
     </div>`;
@@ -2827,11 +2874,11 @@ function renderFlashcard() {
     const total = knew + didntKnow;
     return `
       <div class="fc-done">
-        <div class="fc-done-icon">🎉</div>
+        <div class="fc-done-icon">${lfIcon('party-popper', {cls:'lf-icon-2xl'})}</div>
         <h2>Fertig!</h2>
         <div class="fc-score">
-          <span class="fc-score-knew">${knew} ✓ gewusst</span>
-          <span class="fc-score-didnt">${didntKnow} ✗ nicht gewusst</span>
+          <span class="fc-score-knew">${knew} ${lfIcon('check', {cls:'sx-correct'})} gewusst</span>
+          <span class="fc-score-didnt">${didntKnow} ${lfIcon('x', {cls:'sx-wrong'})} nicht gewusst</span>
         </div>
         <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="window.LF.startFlashcards(flashcardState?.topicKey?.split('__')[0]??'','',flashcardState?.topicKey?.split('__')[2]??'')">Nochmal</button>
@@ -2847,7 +2894,7 @@ function renderFlashcard() {
 
   return `
     <div class="fc-progress-bar"><div class="fc-progress-fill" style="width:${Math.round(current/cards.length*100)}%"></div></div>
-    <div class="fc-counter">${current+1} / ${cards.length} &nbsp;·&nbsp; ✓ ${knew} &nbsp; ✗ ${didntKnow}</div>
+    <div class="fc-counter">${current+1} / ${cards.length} &nbsp;·&nbsp; ${lfIcon('check', {cls:'sx-correct'})} ${knew} &nbsp; ${lfIcon('x', {cls:'sx-wrong'})} ${didntKnow}</div>
     <div class="fc-card-scene" onclick="window.LF.flipCard()">
       <div class="fc-card-inner" id="fcCardInner">
         <div class="fc-face fc-front">
@@ -2862,8 +2909,8 @@ function renderFlashcard() {
       </div>
     </div>
     <div class="fc-actions" id="fcActions" style="display:none">
-      <button class="fc-btn fc-btn-no" onclick="window.LF.fcDidntKnow()">✗ Nicht gewusst</button>
-      <button class="fc-btn fc-btn-yes" onclick="window.LF.fcKnew()">✓ Gewusst</button>
+      <button class="fc-btn fc-btn-no" onclick="window.LF.fcDidntKnow()">${lfIcon('x', {cls:'sx-wrong'})} Nicht gewusst</button>
+      <button class="fc-btn fc-btn-yes" onclick="window.LF.fcKnew()">${lfIcon('check', {cls:'sx-correct'})} Gewusst</button>
     </div>
     <div class="fc-actions-hint" id="fcActionsHint">Drehe die Karte um, um die Antwort zu sehen.</div>`;
 }
@@ -2887,16 +2934,16 @@ function pomodoroHTML() {
   const s = String(seconds%60).padStart(2,'0');
   return `
     <button class="pomo-toggle-btn" onclick="window.LF.pomodoroOpen()">
-      ⏱ ${m}:${s} <span class="pomo-mode-pill ${mode}">${mode==='work'?'Fokus':'Pause'}</span>
+      ${lfIcon('timer')} ${m}:${s} <span class="pomo-mode-pill ${mode}">${mode==='work'?'Fokus':'Pause'}</span>
     </button>
     <div class="pomo-panel" id="pomoPanel" style="display:none">
       <div class="pomo-display">
         <div class="pomo-time" id="pomoTime">${m}:${s}</div>
-        <div class="pomo-label">${mode==='work'?'🎯 Fokuszeit':'☕ Pause'} · ${sessions} Session${sessions!==1?'s':''}</div>
+        <div class="pomo-label">${mode==='work'?`${lfIcon('target')} Fokuszeit`:`${lfIcon('coffee')} Pause`} · ${sessions} Session${sessions!==1?'s':''}</div>
       </div>
       <div class="pomo-controls">
-        <button class="btn btn-primary btn-sm" onclick="window.LF.pomodoroToggle()">${running?'⏸ Pause':'▶ Start'}</button>
-        <button class="btn btn-ghost btn-sm" onclick="window.LF.pomodoroReset()">↺</button>
+        <button class="btn btn-primary btn-sm" onclick="window.LF.pomodoroToggle()">${running?`${lfIcon('pause')} Pause`:`${lfIcon('play')} Start`}</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.pomodoroReset()">${lfIcon('rotate-ccw')}</button>
       </div>
       <div class="pomo-config">
         <label>Fokus: <input type="number" id="pomoWork" value="${workMins}" min="1" max="90" style="width:48px"
@@ -2928,11 +2975,11 @@ function pomodoroTick() {
       if (currentUser) addStudyTime(currentUser.uid, pomodoroState.workMins).catch(console.error);
       pomodoroState.mode = 'break';
       pomodoroState.seconds = pomodoroState.breakMins * 60;
-      showToast('☕ Fokuszeit vorbei! Pause genießen.', 'info');
+      showToast('Fokuszeit vorbei! Pause genießen.', 'info');
     } else {
       pomodoroState.mode = 'work';
       pomodoroState.seconds = pomodoroState.workMins * 60;
-      showToast('🎯 Pause vorbei! Weiter geht\'s.', 'info');
+      showToast('Pause vorbei! Weiter geht\'s.', 'info');
     }
   }
   _updatePomodoroDisplay();
@@ -2946,7 +2993,7 @@ function _updatePomodoroDisplay() {
   const t = document.getElementById('pomoTime');
   const b = document.querySelector('.pomo-toggle-btn');
   if (t) t.textContent = `${m}:${s}`;
-  if (b) b.innerHTML = `⏱ ${m}:${s} <span class="pomo-mode-pill ${pomodoroState.mode}">${pomodoroState.mode==='work'?'Fokus':'Pause'}</span>`;
+  if (b) b.innerHTML = `${lfIcon('timer')} ${m}:${s} <span class="pomo-mode-pill ${pomodoroState.mode}">${pomodoroState.mode==='work'?'Fokus':'Pause'}</span>`;
 }
 
 // ── Profil-Seite ─────────────────────────
@@ -2979,7 +3026,7 @@ function renderProfile() {
         <div class="profile-meta">
           ${userData?.klasse ? `Klasse ${userData.klasse}` : '<span style="color:#f59e0b">Klasse nicht gesetzt</span>'}
           · Lv.${xpInfo.level} ${xpInfo.title}
-          ${streak > 1 ? ` · 🔥 ${streak} Tage` : ''}
+          ${streak > 1 ? ` · ${lfIcon('flame', {cls:'sx-streak'})} ${streak} Tage` : ''}
         </div>
         <div class="profile-email">${escapeHtml(currentUser.email || '')}</div>
         <div class="profile-actions">
@@ -3015,14 +3062,11 @@ function renderProfile() {
             ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
             : initial
         }</div>
-        <label class="btn btn-ghost btn-sm" style="margin:6px auto;cursor:pointer;display:block;width:fit-content">
-          📁 Bild hochladen
+        <label class="btn btn-secondary btn-sm" style="margin:6px auto;cursor:pointer;display:block;width:fit-content">
+          ${lfIcon('folder')} Bild hochladen
           <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
                  onchange="window.LF.handleProfileFile(this)">
         </label>
-        <div class="avatar-picker">
-          ${AVATAR_EMOJIS.map(e => `<button class="avatar-emoji-btn" onclick="window.LF.pickEmoji('${e}',event)" title="${e}">${e}</button>`).join('')}
-        </div>
         <div class="profile-edit-row">
           <input class="form-input" id="profileNameInput"
                  value="${(userData?.name || currentUser.displayName || '').replace(/"/g,'&quot;')}"
@@ -3116,7 +3160,7 @@ function _renderProfileStatsTab() {
   const allGrades = Object.values(grades).filter(g => g.grade);
   const totalTests = allGrades.length;
   if (totalTests === 0) {
-    return `<div class="empty-state"><div class="empty-icon">📊</div>Noch keine Tests gemacht — fang einfach an!</div>`;
+    return `<div class="empty-state"><div class="empty-icon">${lfIcon('chart-bar')}</div>Noch keine Tests gemacht — fang einfach an!</div>`;
   }
   const avgGrade   = (allGrades.reduce((s,g)=>s+g.grade,0)/totalTests).toFixed(2);
   const bestGrade  = Math.min(...allGrades.map(g=>g.grade));
@@ -3190,23 +3234,23 @@ function _renderProfileStatsTab() {
       <div class="stat-overview-card"><div class="soc-val">${totalTests}</div><div class="soc-lbl">Tests insgesamt</div></div>
       <div class="stat-overview-card"><div class="soc-val" style="color:${gradeColor(Math.round(parseFloat(avgGrade)))}">${avgGrade}</div><div class="soc-lbl">Ø Note gesamt</div></div>
       <div class="stat-overview-card"><div class="soc-val" style="color:${gradeColor(bestGrade)}">${bestGrade}</div><div class="soc-lbl">Beste Note</div></div>
-      <div class="stat-overview-card"><div class="soc-val">${streak}</div><div class="soc-lbl">🔥 Tage Streak</div></div>
+      <div class="stat-overview-card"><div class="soc-val">${streak}</div><div class="soc-lbl">${lfIcon('flame', {cls:'sx-streak'})} Tage Streak</div></div>
     </div>
 
     <div class="stats-section-grid">
       <div class="stats-card">
-        <div class="stats-card-title">📈 Fortschritt nach Fach</div>
+        <div class="stats-card-title">${lfIcon('trending-up')} Fortschritt nach Fach</div>
         <div class="subj-bars">${subjectBars || '<div class="empty-state" style="padding:16px">Keine Daten</div>'}</div>
       </div>
       <div class="stats-card">
-        <div class="stats-card-title">📊 Notenverteilung</div>
+        <div class="stats-card-title">${lfIcon('chart-bar')} Notenverteilung</div>
         <div class="grade-distribution">${gradeDistribution}</div>
         <div class="grade-dist-legend">Note 1 (sehr gut) → Note 6 (ungenügend)</div>
       </div>
     </div>
 
     <div class="stats-card" style="margin-top:16px">
-      <div class="stats-card-title">🕐 Letzte Versuche</div>
+      <div class="stats-card-title">${lfIcon('clock')} Letzte Versuche</div>
       ${testRows ? `
         <div class="table-wrap">
           <table class="stats-table">
@@ -3218,8 +3262,8 @@ function _renderProfileStatsTab() {
 
     <div class="stats-card" style="margin-top:16px">
       <div class="stats-card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>⏱ Lernzeit (letzte 7 Tage)</span>
-        <button class="btn btn-ghost btn-sm" onclick="window.LF.exportGradesCSV()">⬇ CSV exportieren</button>
+        <span>${lfIcon('timer')} Lernzeit (letzte 7 Tage)</span>
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.exportGradesCSV()">${lfIcon('download')} CSV exportieren</button>
       </div>
       <div class="study-time-chart">
         ${last7.map(d => `
@@ -3247,7 +3291,7 @@ function _renderProfileErfolgeTab() {
       <div class="ach-tile ${unlocked ? 'ach-unlocked' : 'ach-locked'}"
            onclick="window.LF.openAchievement('${a.id}')"
            title="${escapeHtml(a.title)}">
-        <div class="ach-code" style="${unlocked ? `background:${a.color}` : ''}">${a.code}</div>
+        <div class="ach-code" style="${unlocked ? `background:${a.color};color:#fff` : ''}">${a.iconName ? lfIcon(a.iconName) : escapeHtml(a.code)}<span class="ach-code-suffix">${escapeHtml(a.code)}</span></div>
         <div class="ach-title">${escapeHtml(a.title)}</div>
         ${unlocked ? `<div class="ach-xp">+${a.xp} XP</div>` : `<div class="ach-xp ach-xp-locked">${a.xp} XP</div>`}
       </div>`;
@@ -3269,6 +3313,42 @@ function _renderProfileErfolgeTab() {
 
 // ── Profil-Tab: Inventar ──────────────────
 // Behält die Logik aus renderInventory(); wird hier als Tab-Inhalt gerendert.
+//
+// Mission 7 — Locked-Cards-V2:
+// Statt opacity:0.5 + Klartext "Erfordert Lv. 80" → mysterioeses Schloss-Layout
+// mit "???"-Name, Rarity-Stripe, Hint-Zeile + Tap-Tooltip. Bei Epic/Legendary
+// laeuft die Animation im Hintergrund weiter (gedimmt). Old `.locked` bleibt
+// fuer Backwards-Compat, neuer Code nutzt `.inv-locked-v2`.
+//
+// Hint-Mapping verbatim aus Maya's Spec (Mission 7 Copy-Tabelle):
+function _lockedHintCompact(kind, tier) {
+  if (kind === 'outline') return `Erfordert Lv. ${tier.level}`;
+  // theme — by rarity:
+  if (tier.rarity === 'common')    return 'Drop in Tests';
+  if (tier.rarity === 'rare')      return 'Drop in Tests';
+  if (tier.rarity === 'epic')      return 'Seltener Drop';
+  if (tier.rarity === 'legendary') return 'Sehr seltener Drop';
+  return '';
+}
+function _lockedHintLong(kind, tier) {
+  if (kind === 'outline') {
+    return `Lerne weiter, um Level ${tier.level} zu erreichen — dann ist „${tier.name}“ deins.`;
+  }
+  if (tier.rarity === 'common') {
+    return `„${tier.name}“ dropt zu 60% bei Note 1 oder Note 2. Schreib gute Tests, der Drop kommt von alleine.`;
+  }
+  if (tier.rarity === 'rare') {
+    return `„${tier.name}“ dropt mit ca. 28% bei Note 1, 32% bei Note 2. Etwas Geduld zahlt sich aus.`;
+  }
+  if (tier.rarity === 'epic') {
+    return `„${tier.name}“ dropt zu 10% bei Note 1, 7% bei Note 2 — wenn der Drop kommt. Sammle Tests, das gibt mehr Würfe.`;
+  }
+  if (tier.rarity === 'legendary') {
+    return `„${tier.name}“ dropt nur in 1–2% der Fälle — und das nur bei Note 1 oder 2. Ein echtes Trophy-Item.`;
+  }
+  return '';
+}
+
 function _renderProfileInventarTab() {
   const xp           = userData?.xp || 0;
   const lvl          = calcLevel(xp).level;
@@ -3284,13 +3364,36 @@ function _renderProfileInventarTab() {
     const unlocked = lvl >= tier.level || isAdminTester || (userData?.outlines || []).includes(tier.id);
     const active   = activeOL === tier.id || (!activeOL && tier.id === outlineForLevel(lvl).id);
     const previewClass = unlocked ? tier.css : '';
+    if (unlocked) {
+      return `
+        <div class="inv-card ${active ? 'active' : ''}"
+             onclick="window.LF.selectOutline('${tier.id}')">
+          ${active ? '<span class="inv-active-tag">Aktiv</span>' : ''}
+          <div class="inv-preview ${previewClass}">${tier.id === 'none' ? '—' : '◉'}</div>
+          <div class="inv-name">${escapeHtml(tier.name)}</div>
+          <div class="inv-meta">Level ${tier.level}</div>
+          ${tier.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${tier.rarity}">${tier.rarity}</span>` : ''}
+        </div>`;
+    }
+    // Locked-V2 — Outline (Animation im Preview gedimmt fuer epic/legendary).
+    const hintShort = _lockedHintCompact('outline', tier);
+    const hintLong  = _lockedHintLong('outline', tier);
+    const ariaLabel = `${tier.name}, gesperrt — ${hintShort}`;
     return `
-      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
-           ${unlocked ? `onclick="window.LF.selectOutline('${tier.id}')"` : ''}>
-        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
-        <div class="inv-preview ${previewClass}">${tier.id === 'none' ? '—' : '◉'}</div>
-        <div class="inv-name">${escapeHtml(tier.name)}</div>
-        <div class="inv-meta">${unlocked ? `Level ${tier.level}` : `Erfordert Lv. ${tier.level}`}</div>
+      <div class="inv-card inv-locked-v2 inv-rarity-bg-${tier.rarity} locked"
+           role="button" aria-disabled="true" aria-label="${escapeHtml(ariaLabel)}"
+           tabindex="0"
+           data-hint="${escapeHtml(hintLong)}"
+           data-rarity="${tier.rarity}"
+           onclick="window.LF.showLockedHint(this)"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.LF.showLockedHint(this);}"
+           onfocus="window.LF.showLockedHint(this)">
+        <span class="inv-rarity-stripe"></span>
+        <div class="inv-preview ${tier.css || ''}">
+          <span class="inv-lock-overlay">${lfIcon('lock')}</span>
+        </div>
+        <div class="inv-name">???</div>
+        <div class="inv-meta">${escapeHtml(hintShort)}</div>
         ${tier.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${tier.rarity}">${tier.rarity}</span>` : ''}
       </div>`;
   }).join('');
@@ -3298,13 +3401,36 @@ function _renderProfileInventarTab() {
   const themeCards = THEMES.map(t => {
     const unlocked = ownedThemes.includes(t.id) || isAdminTester;
     const active   = activeTheme === t.id;
+    if (unlocked) {
+      return `
+        <div class="inv-card ${active ? 'active' : ''}"
+             onclick="window.LF.selectTheme('${t.id}')">
+          ${active ? '<span class="inv-active-tag">Aktiv</span>' : ''}
+          <div class="inv-theme-preview" data-theme-preview="${t.id}"></div>
+          <div class="inv-name">${escapeHtml(t.name)}</div>
+          <div class="inv-meta">${lfIcon('check', {cls:'sx-correct'})} Freigeschaltet</div>
+          ${t.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${t.rarity}">${t.rarity}</span>` : ''}
+        </div>`;
+    }
+    // Locked-V2 — Theme.
+    const hintShort = _lockedHintCompact('theme', t);
+    const hintLong  = _lockedHintLong('theme', t);
+    const ariaLabel = `${t.name}, gesperrt — ${hintShort}`;
     return `
-      <div class="inv-card ${active && unlocked ? 'active' : ''} ${unlocked ? '' : 'locked'}"
-           ${unlocked ? `onclick="window.LF.selectTheme('${t.id}')"` : ''}>
-        ${active && unlocked ? '<span class="inv-active-tag">Aktiv</span>' : ''}
-        <div class="inv-theme-preview" data-theme-preview="${t.id}"></div>
-        <div class="inv-name">${escapeHtml(t.name)}</div>
-        <div class="inv-meta">${unlocked ? '✓ Freigeschaltet' : 'Chance auf Drop: 25% bei Note 1, 5% bei Note 2'}</div>
+      <div class="inv-card inv-locked-v2 inv-rarity-bg-${t.rarity} locked"
+           role="button" aria-disabled="true" aria-label="${escapeHtml(ariaLabel)}"
+           tabindex="0"
+           data-hint="${escapeHtml(hintLong)}"
+           data-rarity="${t.rarity}"
+           onclick="window.LF.showLockedHint(this)"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.LF.showLockedHint(this);}"
+           onfocus="window.LF.showLockedHint(this)">
+        <span class="inv-rarity-stripe"></span>
+        <div class="inv-theme-preview" data-theme-preview="${t.id}">
+          <span class="inv-lock-overlay">${lfIcon('lock')}</span>
+        </div>
+        <div class="inv-name">???</div>
+        <div class="inv-meta">${escapeHtml(hintShort)}</div>
         ${t.rarity !== 'common' ? `<span class="inv-rarity inv-rarity-${t.rarity}">${t.rarity}</span>` : ''}
       </div>`;
   }).join('');
@@ -3339,6 +3465,8 @@ function _drawThemePreviews() {
         'default':   'linear-gradient(135deg,#6366f1,#a855f7)',
         'ocean':     'linear-gradient(135deg,#0891b2,#22d3ee)',
         'forest':    'linear-gradient(135deg,#16a34a,#4ade80)',
+        'sand':      'linear-gradient(135deg,#fde68a,#b45309)',
+        'schiefer':  'linear-gradient(135deg,#cbd5e1,#475569)',
         'sunset':    'linear-gradient(135deg,#ea580c,#fbbf24)',
         'lavender':  'linear-gradient(135deg,#a855f7,#c4b5fd)',
         'crimson':   'linear-gradient(135deg,#dc2626,#f87171)',
@@ -3364,7 +3492,7 @@ async function renderLeaderboard() {
     ${renderNav([{ label: 'Rangliste' }])}
     <div class="page">
       <div class="page-header">
-        <h1>🏆 Rangliste</h1>
+        <h1>${lfIcon('trophy')} Rangliste</h1>
         <div class="sub">Wer ist vorn?</div>
       </div>
       <div class="lb-tabs" id="lbTabs">
@@ -3391,7 +3519,7 @@ async function renderLeaderboard() {
   if (permError) {
     document.getElementById('lbContent').innerHTML = `
       <div class="empty-state">
-        <div class="empty-icon">🔒</div>
+        <div class="empty-icon">${lfIcon('lock')}</div>
         Firestore-Regel fehlt.<br>
         <small style="color:var(--text-light);font-size:13px;display:block;margin-top:8px">
           Füge in der Firebase Console unter Firestore → Regeln hinzu:<br>
@@ -3403,7 +3531,10 @@ async function renderLeaderboard() {
 
   // Helper: gemeinsamer Row-Renderer
   const renderRow = (rank, u, score, count, isMe, scoreLabel = 'Pkt') => {
-    const medal = rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${rank}</span>`;
+    const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32']; // Maya-Mapping: gold/silber/bronze
+    const medal = rank <= 3
+      ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[rank-1] })
+      : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${rank}</span>`;
     const av = u.photoURL
       ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
       : escapeHtml((u.displayName || '?')[0].toUpperCase());
@@ -3422,7 +3553,7 @@ async function renderLeaderboard() {
     if (!myKlasse) {
       document.getElementById('lbContent').innerHTML = `
         <div class="empty-state">
-          <div class="empty-icon">🏫</div>
+          <div class="empty-icon">${lfIcon('school')}</div>
           Wähle deine Klasse im Profil, um eine klassenspezifische Rangliste zu sehen.
           <div style="margin-top:16px">
             <button class="btn btn-primary btn-sm" onclick="location.hash='#/profil'">Klasse setzen</button>
@@ -3438,7 +3569,7 @@ async function renderLeaderboard() {
       document.getElementById('lbContent').innerHTML = `
         ${meRow}
         <div class="empty-state" style="margin-top:16px">
-          <div class="empty-icon">👋</div>
+          <div class="empty-icon">${lfIcon('hand')}</div>
           Bisher bist du der Einzige in Klasse ${escapeHtml(myKlasse)} — frag deine Mitschüler!
           <div style="margin-top:16px">
             <button class="btn btn-ghost btn-sm" onclick="window.LF.switchLbTab('global')">Zur Globalen Rangliste</button>
@@ -3448,7 +3579,7 @@ async function renderLeaderboard() {
     }
   } else if (!data.length) {
     document.getElementById('lbContent').innerHTML =
-      `<div class="empty-state"><div class="empty-icon">🏆</div>Noch keine Einträge — mach einen Test, um in die Rangliste zu kommen!</div>`;
+      `<div class="empty-state"><div class="empty-icon">${lfIcon('trophy')}</div>Noch keine Einträge — mach einen Test, um in die Rangliste zu kommen!</div>`;
     return;
   }
 
@@ -3479,7 +3610,7 @@ async function renderLeaderboard() {
 
     document.getElementById('lbContent').innerHTML = subjectGridHtml
       ? `<div class="lb-grid">${subjectGridHtml}</div>`
-      : `<div class="empty-state"><div class="empty-icon">📚</div>Noch keine Fach-Daten vorhanden.</div>`;
+      : `<div class="empty-state"><div class="empty-icon">${lfIcon('book-open')}</div>Noch keine Fach-Daten vorhanden.</div>`;
     return;
   }
 
@@ -3490,7 +3621,10 @@ async function renderLeaderboard() {
   const xpSorted = [...users].filter(u => u.xp > 0).sort((a,b) => (b.xp||0)-(a.xp||0)).slice(0,10);
   const xpHtml = xpSorted.length ? xpSorted.map((u,i) => {
     const xi = calcLevel(u.xp || 0);
-    const medal = i < 3 ? ['🥇','🥈','🥉'][i] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`;
+    const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+    const medal = i < 3
+      ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[i] })
+      : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`;
     const av = u.photoURL
       ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
       : escapeHtml((u.displayName||'?')[0].toUpperCase());
@@ -3661,7 +3795,7 @@ async function renderGroups() {
 
   document.getElementById('groupsContent').innerHTML = `
     ${groups.length > 0 ? `<div class="group-list">${groupCards}</div>` : ''}
-    ${groups.length === 0 ? `<div class="empty-state" style="margin-bottom:24px"><div class="empty-icon">👥</div>Du bist noch in keiner Gruppe.</div>` : ''}
+    ${groups.length === 0 ? `<div class="empty-state" style="margin-bottom:24px"><div class="empty-icon">${lfIcon('users')}</div>Du bist noch in keiner Gruppe.</div>` : ''}
 
     <div class="group-actions-grid">
       <div class="card" style="padding:20px">
@@ -3779,15 +3913,18 @@ async function renderGroupDetail(groupId) {
       .filter(u => u.testCount > 0)
       .sort((a, b) => b.total - a.total);
 
-    const medals = ['🥇','🥈','🥉'];
+    const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
     const lbRows = groupLb.map((u, i) => {
       const av = u.photoURL
         ? `<img src="${u.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
         : (u.displayName||'?')[0].toUpperCase();
       const isMe = u.uid === currentUser.uid;
+      const medalCell = i < 3
+        ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[i] })
+        : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`;
       return `
         <div class="lb-row${isMe ? ' lb-me' : ''}">
-          <div class="lb-rank">${i < 3 ? medals[i] : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`}</div>
+          <div class="lb-rank">${medalCell}</div>
           <div class="lb-avatar ${outlineFor(u)}">${av}</div>
           <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
           <div class="lb-meta">${u.testCount} Test${u.testCount!==1?'s':''}</div>
@@ -3825,7 +3962,7 @@ async function renderGroupDetail(groupId) {
             <td><span class="grade-pill" style="background:${avg!=='–'?gradeColor(Math.round(parseFloat(avg))):'var(--border)'}">
               ${avg}
             </span></td>
-            <td>${streak} 🔥</td>
+            <td>${streak} ${lfIcon('flame', {cls:'sx-streak'})}</td>
             <td>${totalTime} min</td>
           </tr>`;
       }).join('');
@@ -3891,7 +4028,7 @@ async function renderAdmin() {
     const t = { ...(s.tools || {}), ...((toolsOverride[s.id]) || {}) };
     return `
       <div class="admin-tool-row">
-        <span class="admin-tool-fach">${s.icon || '📚'} ${s.name}</span>
+        <span class="admin-tool-fach">${getSubjectIcon(s.id)} ${s.name}</span>
         <label class="admin-tool-check">
           <input type="checkbox" data-subject="${s.id}" data-tool="calculator" ${t.calculator ? 'checked' : ''}
             onchange="window.LF.adminToggleTool('${s.id}','calculator',this.checked)">
@@ -3922,10 +4059,14 @@ async function renderAdmin() {
 const BUILDER_SNIPPETS = {
   p:       '<p>Text hier schreiben.</p>',
   h3:      '<h3>Überschrift</h3>',
-  info:    '<div class="lf-box lf-info">💡 Hinweis hier</div>',
-  tip:     '<div class="lf-box lf-tip">✅ Tipp hier</div>',
-  warn:    '<div class="lf-box lf-warn">⚠️ Warnung hier</div>',
-  danger:  '<div class="lf-box lf-danger">🚨 Denkfehler hier</div>',
+  // Mission 8: BUILDER_SNIPPETS sind Roh-HTML, die in die User-meta.json wandern.
+  // Beim Insert-Time durch lfIcon()-Markup ersetzen, damit sie themed im Frontend
+  // rendern. (Inhalt liegt dann auch als Lucide-SVG im JSON — bewusst, kein Emoji
+  // mehr im Roh-Build.) Helper unten ersetzt erst beim Insert.
+  info:    `<div class="lf-box lf-info">${lfIcon('info')} Hinweis hier</div>`,
+  tip:     `<div class="lf-box lf-tip">${lfIcon('circle-check-big')} Tipp hier</div>`,
+  warn:    `<div class="lf-box lf-warn">${lfIcon('triangle-alert')} Warnung hier</div>`,
+  danger:  `<div class="lf-box lf-danger">${lfIcon('octagon-alert')} Denkfehler hier</div>`,
   formula: '<div class="lf-box lf-formula">Formel hier</div>',
   key:     '<div class="lf-key"><div class="lf-key-title">Kernaussage</div><div class="lf-key-body">Inhalt hier — nutze <span class="lf-hl">Hervorhebungen</span> für wichtige Begriffe.</div></div>',
   steps:   '<ol class="lf-steps"><li>Schritt 1</li><li>Schritt 2</li><li>Schritt 3</li></ol>',
@@ -3943,7 +4084,7 @@ function renderBuilder() {
   const steps = ['Info', 'Modus', 'Inhalt', 'Fragen', 'Export'];
   const stepBar = steps.map((s, i) => `
     <div class="builder-step ${i + 1 === step ? 'active' : i + 1 < step ? 'done' : ''}">
-      <div class="builder-step-num">${i + 1 < step ? '✓' : i + 1}</div>
+      <div class="builder-step-num">${i + 1 < step ? lfIcon('check', {cls:'sx-correct'}) : i + 1}</div>
       <div class="builder-step-label">${s}</div>
     </div>`).join('<div class="builder-step-connector"></div>');
 
@@ -3997,7 +4138,7 @@ function renderBuilderStep(step) {
       <p class="sub" style="margin-bottom:28px">Wähle eine Methode — du kannst später zurückgehen und wechseln.</p>
       <div class="builder-mode-grid">
         <div class="builder-mode-card" onclick="window.LF.builderChooseMode('visual')">
-          <div class="mode-icon">🧱</div>
+          <div class="mode-icon">${lfIcon('blocks', {cls:'lf-icon-2xl'})}</div>
           <h3>Visueller Builder</h3>
           <span class="mode-badge">Empfohlen</span>
           <p class="mode-desc">Bausteine per Klick hinzufügen und per Drag &amp; Drop sortieren. Kein Code nötig — so einfach wie eine Website aufbauen.</p>
@@ -4180,13 +4321,13 @@ function renderBuilderQFields(type) {
 
 // ── Visual Builder ─────────────────────────
 const VISUAL_BLOCK_TYPES = {
-  heading:    { icon: 'H2', label: 'Überschrift',  make: () => ({ text: 'Neue Überschrift' }) },
-  paragraph:  { icon: '¶',  label: 'Absatz',        make: () => ({ text: '' }) },
-  infobox:    { icon: '💡', label: 'Info-Box',       make: () => ({ variant: 'info', text: 'Hinweis hier eintragen' }) },
-  keypoint:   { icon: '★',  label: 'Kernaussage',   make: () => ({ title: 'Kernaussage', text: 'Inhalt hier' }) },
-  list:       { icon: '≡',  label: 'Liste',          make: () => ({ ordered: false, items: ['Punkt 1', 'Punkt 2', 'Punkt 3'] }) },
-  definition: { icon: '📖', label: 'Definition',    make: () => ({ term: 'Begriff', text: 'Die Definition des Begriffs.' }) },
-  divider:    { icon: '—',  label: 'Trennlinie',    make: () => ({}) },
+  heading:    { icon: 'H2',                          label: 'Überschrift',  make: () => ({ text: 'Neue Überschrift' }) },
+  paragraph:  { icon: '¶',                           label: 'Absatz',        make: () => ({ text: '' }) },
+  infobox:    { icon: lfIcon('lightbulb'),           label: 'Info-Box',       make: () => ({ variant: 'info', text: 'Hinweis hier eintragen' }) },
+  keypoint:   { icon: lfIcon('star'),                label: 'Kernaussage',   make: () => ({ title: 'Kernaussage', text: 'Inhalt hier' }) },
+  list:       { icon: '≡',                           label: 'Liste',          make: () => ({ ordered: false, items: ['Punkt 1', 'Punkt 2', 'Punkt 3'] }) },
+  definition: { icon: lfIcon('book-open'),           label: 'Definition',    make: () => ({ term: 'Begriff', text: 'Die Definition des Begriffs.' }) },
+  divider:    { icon: '—',                           label: 'Trennlinie',    make: () => ({}) },
 };
 
 function vEsc(s) {
@@ -4231,7 +4372,15 @@ function serializeVisualBlocks() {
       case 'heading':   return `<h3>${vEsc(d.text)}</h3>`;
       case 'paragraph': return `<p>${vEsc(d.text).replace(/\n/g,'<br>')}</p>`;
       case 'infobox': {
-        const icons = { info:'💡 ', tip:'✅ ', warn:'⚠️ ', danger:'🚨 ', formula:'' };
+        // Mission 8: Lucide-Icons in den serialized HTML — bewusst, damit
+        // exportierte meta.json themed rendert (im Frontend laeuft sie durch innerHTML).
+        const icons = {
+          info:    `${lfIcon('lightbulb')} `,
+          tip:     `${lfIcon('circle-check-big')} `,
+          warn:    `${lfIcon('triangle-alert')} `,
+          danger:  `${lfIcon('octagon-alert')} `,
+          formula: ''
+        };
         return `<div class="lf-box lf-${d.variant}">${icons[d.variant]||''}${vEsc(d.text)}</div>`;
       }
       case 'keypoint':
@@ -4253,7 +4402,7 @@ function renderVisualBlock(block, i) {
   const handle = `<div class="vblock-handle" draggable="true"
     ondragstart="window.LF.visualDragStart(event,${i})"
     ondragend="window.LF.visualDragEnd()">⠿</div>`;
-  const del = `<button class="vblock-delete" onclick="window.LF.visualDeleteBlock(${i})" title="Entfernen">🗑</button>`;
+  const del = `<button class="vblock-delete" onclick="window.LF.visualDeleteBlock(${i})" title="Entfernen">${lfIcon('trash-2')}</button>`;
   const d = block.data;
   let body = '';
   switch (block.type) {
@@ -4266,7 +4415,8 @@ function renderVisualBlock(block, i) {
         <textarea class="form-input vb-ta" id="vb_${i}_text" rows="3" placeholder="Text...">${vEsc(d.text)}</textarea>`;
       break;
     case 'infobox': {
-      const variants = { info:'💡 Hinweis', tip:'✅ Tipp', warn:'⚠️ Warnung', danger:'🚨 Fehler', formula:'∑ Formel' };
+      // <option>-Inhalte sind plaintext (kein SVG-Render) — daher Wortlabels statt Icons.
+      const variants = { info:'Hinweis', tip:'Tipp', warn:'Warnung', danger:'Fehler', formula:'Formel' };
       body = `<div class="vblock-type-label">Info-Box</div>
         <div class="vb-row">
           <select class="form-input" id="vb_${i}_variant" style="max-width:140px">
@@ -4414,7 +4564,7 @@ function renderHelp() {
       </div>
 
       <div class="help-section" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
-        <h2 class="help-section-title" style="margin-bottom:8px">🚀 Erste Schritte (nochmal)</h2>
+        <h2 class="help-section-title" style="margin-bottom:8px">${lfIcon('rocket')} Erste Schritte (nochmal)</h2>
         <p style="color:var(--text-muted);margin-bottom:12px">Setup oder Feature-Tour erneut durchgehen.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-secondary btn-sm" onclick="window.LF.openOnboarding(1)">Setup-Wizard nochmal</button>
@@ -4438,7 +4588,7 @@ function renderHelp() {
         ].map(([id, label]) => `<a class="help-toc-item" href="#help-${id}">${label}</a>`).join('')}
       </div>
 
-      ${S('🏠', '<span id="help-dashboard">Dashboard</span>', `
+      ${S(lfIcon('house'), '<span id="help-dashboard">Dashboard</span>', `
         ${row('Fach-Karten', 'Zeigen Fortschritt (% getestete Themen), Anzahl Klassen und Durchschnittsnote. Klick öffnet das Fach.')}
         ${row('Statistik-Bar', 'Schnellübersicht: Fächeranzahl, absolvierte Tests, Durchschnittsnote, SRS-fällige Karten.')}
         ${row('Daily-Challenge-Karte', 'Zeigt ob die heutige Challenge erledigt ist. Klick führt zur Challenge-Seite.')}
@@ -4448,7 +4598,7 @@ function renderHelp() {
         ${row('App installieren', 'Erscheint einmalig wenn der Browser eine PWA-Installation anbietet.')}
       `)}
 
-      ${S('📚', '<span id="help-faecher">Fächer &amp; Themen</span>', `
+      ${S(lfIcon('book-open'), '<span id="help-faecher">Fächer &amp; Themen</span>', `
         ${row('Fach', 'Oberste Ebene. Jedes Fach hat eine Farbe, ein Icon und beliebig viele Klassen.')}
         ${row('Klasse / Jahr', 'Mittlere Ebene (z.B. Klasse 9, Klasse 10). Zeigt alle Themen dieser Klasse.')}
         ${row('Thema', 'Kleinste Einheit mit Lerninhalt, Test, Karteikarten und Wissens-Check.')}
@@ -4458,7 +4608,7 @@ function renderHelp() {
         ${row('Lesezeichen-Button', 'Kleines Bookmark-Symbol auf jeder Themenkarte — speichert das Thema in Lesezeichen.')}
       `)}
 
-      ${S('📝', '<span id="help-tests">Tests</span>', `
+      ${S(lfIcon('pencil'), '<span id="help-tests">Tests</span>', `
         <div class="help-sub-title">Testzeiten &amp; Schwierigkeit</div>
         ${row('5 Min', 'Nur Vokabeln (type: vocabulary). Nicht für MC / Freitext.')}
         ${row('10 Min', 'Fragen mit difficulty: easy.')}
@@ -4481,7 +4631,7 @@ function renderHelp() {
         ${row('Kopieren für KI', '"In Zwischenablage" erzeugt formatierten Text zum Einfügen in ChatGPT / Gemini für detaillierteres Feedback.')}
       `)}
 
-      ${S('🃏', '<span id="help-karten">Karteikarten</span>', `
+      ${S(lfIcon('layers'), '<span id="help-karten">Karteikarten</span>', `
         ${row('Starten', 'Tab "Karten" auf der Themen-Seite → "Session starten".')}
         ${row('Flip', 'Karte anklicken oder "Antwort zeigen" um die Karte umzudrehen (3D-Animation).')}
         ${row('Gewusst / Nicht gewusst', 'Zwei Buttons nach dem Flip. Ergebnis wird am Ende als Score angezeigt.')}
@@ -4489,7 +4639,7 @@ function renderHelp() {
         ${row('Abschluss', 'Nach der letzten Karte erscheinen "Gewusst" und "Nicht gewusst" als Zahlen.')}
       `)}
 
-      ${S('🔁', '<span id="help-srs">SRS — Spaced Repetition</span>', `
+      ${S(lfIcon('repeat'), '<span id="help-srs">SRS — Spaced Repetition</span>', `
         ${row('Algorithmus', 'SM-2: berechnet aus Bewertung (0–5) wann eine Karte das nächste Mal erscheint.')}
         ${row('Fällige Karten', 'Orange Chip im Dashboard zeigt Anzahl heute fälliger Karten.')}
         ${row('Bewertungen', '0 = vergessen · 1 = fast vergessen · 2 = schwer · 3 = gut · 4 = leicht · 5 = sofort')}
@@ -4498,7 +4648,7 @@ function renderHelp() {
         ${row('XP', 'Jede bewertete Karte gibt 3 XP.')}
       `)}
 
-      ${S('✅', '<span id="help-wissenscheck">Wissens-Check</span>', `
+      ${S(lfIcon('circle-check-big'), '<span id="help-wissenscheck">Wissens-Check</span>', `
         ${row('Position', 'Unterhalb des Lerninhalts im Tab "Lernen".')}
         ${row('Multiple Choice', 'Klick auf eine Option — sofortiges farbiges Feedback (grün / rot).')}
         ${row('Freitext', 'Eingabe + Enter oder "Prüfen" — Keyword-basiert ausgewertet.')}
@@ -4506,7 +4656,7 @@ function renderHelp() {
         ${row('Kein Einfluss', 'Wissens-Check zählt nicht als Test und beeinflusst keine Note.')}
       `)}
 
-      ${S('⏱', '<span id="help-pomodoro">Pomodoro-Timer</span>', `
+      ${S(lfIcon('timer'), '<span id="help-pomodoro">Pomodoro-Timer</span>', `
         ${row('Widget', 'Floating Button unten rechts auf allen Themen-Seiten (lila Kreis).')}
         ${row('Arbeitsmodus', 'Standard 25 Minuten. Konfigurierbar über die Eingabefelder im Widget.')}
         ${row('Pause', 'Standard 5 Minuten. Nach jeder Arbeitsphase folgt automatisch Pause.')}
@@ -4515,21 +4665,21 @@ function renderHelp() {
         ${row('Reset', 'Setzt den Timer zurück ohne Lernzeit zu speichern.')}
       `)}
 
-      ${S('📝', '<span id="help-notizen">Notizen</span>', `
+      ${S(lfIcon('pencil'), '<span id="help-notizen">Notizen</span>', `
         ${row('Position', 'Ausklappbares Panel am Ende jeder Themen-Seite.')}
         ${row('Autosave', 'Wird 1 Sekunde nach dem letzten Tastendruck automatisch gespeichert.')}
         ${row('Speicherung', 'users/{uid}.notes.{subjectId}__{yearId}__{topicId}')}
         ${row('Geräteübergreifend', 'Notes sind in Firestore gespeichert — auf allen Geräten verfügbar.')}
       `)}
 
-      ${S('🔖', '<span id="help-lesezeichen">Lesezeichen</span>', `
+      ${S(lfIcon('bookmark'), '<span id="help-lesezeichen">Lesezeichen</span>', `
         ${row('Hinzufügen', 'Bookmark-Symbol auf einer Themenkarte oder Bookmark-Button auf der Themen-Seite.')}
         ${row('Seite', '#/lesezeichen zeigt alle gespeicherten Themen.')}
         ${row('Entfernen', 'Nochmals auf das Bookmark-Symbol klicken.')}
         ${row('Speicherung', 'users/{uid}.bookmarks als Array von Topic-Keys.')}
       `)}
 
-      ${S('📅', '<span id="help-daily">Daily Challenge</span>', `
+      ${S(lfIcon('calendar'), '<span id="help-daily">Daily Challenge</span>', `
         ${row('Ablauf', '6 Multiple-Choice-Fragen aus zufällig gewählten Themen, 5 Minuten Zeit.')}
         ${row('Seed', 'Die Fragen-Auswahl basiert auf dem aktuellen Datum — alle Nutzer sehen heute dieselben Fragen.')}
         ${row('Rangliste', 'Nach Abgabe erscheint eine Tages-Rangliste aller Teilnehmer (nach Note sortiert).')}
@@ -4538,7 +4688,7 @@ function renderHelp() {
         ${row('Route', '#/daily-challenge')}
       `)}
 
-      ${S('📊', '<span id="help-statistiken">Statistiken</span>', `
+      ${S(lfIcon('chart-bar'), '<span id="help-statistiken">Statistiken</span>', `
         ${row('Lernzeit', 'Balkendiagramm der täglichen Lernminuten der letzten Tage (Pomodoro-Daten).')}
         ${row('Schwache Fragen', 'Fragen die du am häufigsten falsch beantwortest — mit Häufigkeitszähler.')}
         ${row('Alle Tests', 'Vollständige Liste aller Tests mit Datum, Punkte und Note.')}
@@ -4546,7 +4696,7 @@ function renderHelp() {
         ${row('Route', '#/statistiken')}
       `)}
 
-      ${S('🏆', '<span id="help-rangliste">Rangliste</span>', `
+      ${S(lfIcon('trophy'), '<span id="help-rangliste">Rangliste</span>', `
         ${row('Testpunkte-Tab', 'Gesamt-Rangliste der Testpunkte (Summe aller besten Runs). Plus Karten nach Fach.')}
         ${row('XP-Tab', 'Rangliste nach Gesamt-XP mit Level und Titel. Nur Nutzer mit XP > 0 erscheinen.')}
         ${row('Fach-Karten', 'Zeigen die Top-5 pro Fach.')}
@@ -4555,7 +4705,7 @@ function renderHelp() {
         ${row('Route', '#/rangliste')}
       `)}
 
-      ${S('👤', '<span id="help-profil">Profil &amp; XP</span>', `
+      ${S(lfIcon('user'), '<span id="help-profil">Profil &amp; XP</span>', `
         ${row('Noten-Übersicht', 'Durchschnittsnote pro Fach mit Farb-Coding.')}
         ${row('XP-Karte', 'Aktuelles Level, Titel, XP-Fortschrittsbalken und Gesamt-XP.')}
         ${row('Level-Formel', 'XP für Level n = (n−1)·100 + 25·(n−1)·(n−2). Level 50 = Legende (max).')}
@@ -4568,11 +4718,11 @@ function renderHelp() {
         ${row('Route', '#/profil')}
       `)}
 
-      ${S('🏅', '<span id="help-achievements">Achievements (F-24)</span>', `
+      ${S(lfIcon('medal'), '<span id="help-achievements">Achievements (F-24)</span>', `
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-top:8px">
           ${ACHIEVEMENTS.map(a => `
             <div style="display:flex;align-items:center;gap:10px;background:var(--bg-input);border-radius:8px;padding:8px 10px">
-              <div style="width:34px;height:34px;border-radius:8px;background:${a.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">${a.code}</div>
+              <div style="width:34px;height:34px;border-radius:8px;background:${a.color};display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;flex-shrink:0">${a.iconName ? lfIcon(a.iconName) : escapeHtml(a.code)}</div>
               <div>
                 <div style="font-size:13px;font-weight:700">${a.title}</div>
                 <div style="font-size:11px;color:var(--text-muted)">${a.desc} · +${a.xp} XP</div>
@@ -4581,7 +4731,7 @@ function renderHelp() {
         </div>
       `)}
 
-      ${S('🔥', '<span id="help-streak">Streak-Kalender (F-27)</span>', `
+      ${S(lfIcon('flame', {cls:'sx-streak'}), '<span id="help-streak">Streak-Kalender (F-27)</span>', `
         ${row('Darstellung', 'GitHub-Contribution-Graph-Stil: 53 Wochen × 7 Tage. Farbe = Lernintensität.')}
         ${row('Intensitäts-Level', '0 = kein Lerntag · 1 = &lt;15 Min · 2 = 15–30 Min · 3 = 30–60 Min · 4 = &gt;60 Min')}
         ${row('Streak-Quellen', 'Pomodoro-Lernzeit + Testabschlüsse (jeweils Datum aus Firestore).')}
@@ -4591,7 +4741,7 @@ function renderHelp() {
         ${row('Freeze-Anzeige', 'Banner erscheint automatisch wenn gestern fehlt und ein Freeze verfügbar ist.')}
       `)}
 
-      ${S('👥', '<span id="help-gruppen">Gruppen</span>', `
+      ${S(lfIcon('users'), '<span id="help-gruppen">Gruppen</span>', `
         ${row('Gruppe erstellen', 'Profilseite oder #/gruppen — Name eingeben, 6-stelliger Code wird generiert.')}
         ${row('Beitreten', '6-stelligen Code eines anderen Nutzers eingeben.')}
         ${row('Mitglieder', 'Admin (Ersteller) kann Mitglieder rauswerfen. Admin verlässt → Gruppe wird gelöscht.')}
@@ -4599,7 +4749,7 @@ function renderHelp() {
         ${row('Route', '#/gruppen · #/gruppen/{groupId}')}
       `)}
 
-      ${S('🔧', '<span id="help-builder">Builder</span>', `
+      ${S(lfIcon('hammer'), '<span id="help-builder">Builder</span>', `
         ${row('Zweck', 'Eigene Lernthemen mit Inhalt und Fragen erstellen.')}
         ${row('Schritt 1', 'Modus wählen: Visuell (Drag &amp; Drop Blöcke) oder Roh (direktes HTML/JSON).')}
         ${row('Schritt 2', 'Fach, Klasse, Thema und Beschreibung eintragen.')}
@@ -4609,7 +4759,7 @@ function renderHelp() {
         ${row('Route', '#/builder')}
       `)}
 
-      ${S('📁', '<span id="help-meine-inhalte">Meine Inhalte</span>', `
+      ${S(lfIcon('library'), '<span id="help-meine-inhalte">Meine Inhalte</span>', `
         ${row('Persönliche Themen', 'Alle eigenen, nicht-Gruppen-Inhalte.')}
         ${row('Gruppen-Themen', 'Pro Gruppe ein Abschnitt mit allen Themen dieser Gruppe.')}
         ${row('Löschen', 'Nur Eigentümer können ein Thema löschen.')}
@@ -4617,14 +4767,14 @@ function renderHelp() {
         ${row('Route', '#/meine-inhalte · #/meine-inhalte/{topicId}')}
       `)}
 
-      ${S('⚙️', '<span id="help-einstellungen">Einstellungen</span>', `
+      ${S(lfIcon('settings'), '<span id="help-einstellungen">Einstellungen</span>', `
         ${row('Fächerfarben', 'Pro Fach ein Farbwähler. "Standard" setzt auf die Farbe aus subjects-config.json zurück.')}
         ${row('Theme', 'Hell / Dunkel — wird in Cookie lf_theme gespeichert. Kein Flackern beim Laden.')}
         ${row('Fach-Icons', 'PNG-Upload (64×64 px) als individuelles Icon. Wird als Base64 in Firestore gespeichert.')}
         ${row('Route', '#/einstellungen')}
       `)}
 
-      ${S('🔢', '<span id="help-tools">Werkzeuge</span>', `
+      ${S(lfIcon('calculator'), '<span id="help-tools">Werkzeuge</span>', `
         <div class="help-sub-title">Taschenrechner (Mathematik)</div>
         ${row('Erscheint', 'Automatisch auf allen Mathematik-Themen-Seiten (unten rechts, lila Widget).')}
         ${row('Operatoren', '+  −  ×  ÷  ^  sqrt()  π  Klammern  Dezimalzahlen')}
@@ -4635,7 +4785,7 @@ function renderHelp() {
         ${row('Suche', 'Echtzeit-Filter über alle Einträge des aktuellen Tabs.')}
       `)}
 
-      ${S('📶', '<span id="help-offline">Offline &amp; PWA</span>', `
+      ${S(lfIcon('wifi-off'), '<span id="help-offline">Offline &amp; PWA</span>', `
         ${row('Service Worker', 'Cacht die App-Shell (HTML, CSS, JS) mit Cache-First-Strategie.')}
         ${row('GitHub-Inhalte', 'Network-First: zuerst aktuell von GitHub laden, bei Offline aus Cache liefern.')}
         ${row('Firestore Offline', 'Firestore-Persistence aktiviert — Noten und Nutzerdata auch offline lesbar.')}
@@ -4644,7 +4794,7 @@ function renderHelp() {
         ${row('Android-App', 'APK via GitHub Releases herunterladen. TWA (Trusted Web Activity) — zeigt dieselbe Web-App nativ.')}
       `)}
 
-      ${S('⌨️', '<span id="help-shortcuts">Tastenkürzel</span>', `
+      ${S(lfIcon('keyboard'), '<span id="help-shortcuts">Tastenkürzel</span>', `
         ${kbRow('?', 'Tastenkürzel-Dialog anzeigen')}
         ${kbRow('Alt + H', 'Dashboard öffnen')}
         ${kbRow('Alt + S', 'Statistiken öffnen')}
@@ -4924,7 +5074,10 @@ async function renderDailyChallenge() {
     try { scores = await getDailyScores(today); } catch(e) {}
     const ranked  = [...scores].sort((a,b)=>(a.grade||9)-(b.grade||9));
     const lbHtml  = ranked.map((u,i) => {
-      const m = i < 3 ? ['🥇','🥈','🥉'][i] : (i+1);
+      const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+      const m = i < 3
+        ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[i] })
+        : (i+1);
       const isMe = u.uid === currentUser?.uid;
       return `
         <div class="lb-row${isMe?' lb-me':''}">
@@ -4956,12 +5109,20 @@ async function renderDailyChallenge() {
     return;
   }
 
-  // Shuffle options for MC
+  // Shuffle options for MC.
+  // Mission 9: client no longer knows q.correct (Cheat #4 — answer-key moved
+  // server-side). We still need to remember each shuffled option's ORIGINAL
+  // index so dcSubmit can tell the Worker which option the user picked
+  // (originalIndex), letting the Worker do the matching.
   questions = questions.map(q => {
     if (q.type === 'multiple_choice' && q.options) {
-      const indexed = q.options.map((opt, i) => ({ opt, correct: i === q.correct }));
+      const indexed = q.options.map((opt, i) => ({ opt, originalIndex: i }));
       indexed.sort(() => Math.random() - 0.5);
-      return { ...q, shuffledOptions: indexed.map(x=>x.opt), shuffledCorrectIndex: indexed.findIndex(x=>x.correct) };
+      return {
+        ...q,
+        shuffledOptions: indexed.map(x => x.opt),
+        shuffledOriginalIndices: indexed.map(x => x.originalIndex),
+      };
     }
     return q;
   });
@@ -5188,7 +5349,7 @@ window.LF = {
     await db().collection('users').doc(currentUser.uid).set({
       settings: { subjectColors: colors }
     }, { merge: true }).catch(console.error);
-    showToast('Farben gespeichert! ✓', 'success');
+    showToast('Farben gespeichert!', 'success');
   },
   resetColor: (subjectId, defaultColor) => {
     const input   = document.getElementById(`color_${subjectId}`);
@@ -5226,7 +5387,7 @@ window.LF = {
     await db().collection('users').doc(currentUser.uid).set({
       settings: { customIcons: icons, customIconUrls: mergedUrls }
     }, { merge: true }).catch(console.error);
-    showToast('Icons gespeichert! ✓', 'success');
+    showToast('Icons gespeichert!', 'success');
   },
 
   resetIcon: (subjectId, defaultIcon) => {
@@ -5402,27 +5563,50 @@ window.LF = {
     if (!dailyChallengeState) return;
     if (dailyChallengeState.timer) { clearInterval(dailyChallengeState.timer); dailyChallengeState.timer = null; }
     const { questions, answers, dateKey } = dailyChallengeState;
-    let pts = 0, max = 0;
-    questions.forEach((q, i) => {
-      const userAns = parseInt(answers[i] ?? '-1');
-      const correct = q.shuffledCorrectIndex ?? q.correct;
-      max += q.points || 2;
-      if (userAns === correct) pts += q.points || 2;
-    });
-    const gi = calcGrade(pts, max);
 
+    // Mission 9: send the user's answers to the Worker. The Worker holds the
+    // (server-side) answer-key, re-evaluates, writes the dailyScores doc,
+    // grants XP/achievements, and returns the verdict. No local-evaluate path.
+    const payloadAnswers = questions.map((q, i) => {
+      const ans = answers[i];
+      if (q.type === 'multiple_choice') {
+        const shuffledIdx = (ans == null || ans === '') ? -1 : parseInt(ans);
+        // De-shuffle: shuffledOriginalIndices maps display-index -> original-index.
+        // -1 (not answered) stays -1 so the Worker can count it as wrong/empty.
+        const originalIdx = (shuffledIdx >= 0 && q.shuffledOriginalIndices)
+          ? (q.shuffledOriginalIndices[shuffledIdx] ?? -1)
+          : -1;
+        return { questionIndex: i, selectedOriginalIndex: originalIdx };
+      }
+      // Future: free-text questions in dailies would land here.
+      return { questionIndex: i, freeText: String(ans ?? '') };
+    });
+
+    let result;
+    try {
+      result = await cf.submitDailyChallenge({ date: dateKey, answers: payloadAnswers });
+    } catch (e) {
+      console.error('[dcSubmit] Worker call failed:', e);
+      showToast('Daily-Challenge konnte nicht abgegeben werden: ' + (e?.message || 'Netzwerkfehler'), 'error');
+      // Keep state intact so user can retry.
+      return;
+    }
+
+    // Worker returns { grade, points, max, xpAwarded, achievementsGranted, perfect, ... }.
+    // Mirror to local userData so the UI updates instantly without a refetch.
+    const grade = result?.grade ?? 6;
+    const pts   = result?.points ?? 0;
+    const max   = result?.max ?? 0;
     userData = userData || {};
     userData.dailyChallenges = userData.dailyChallenges || {};
-    userData.dailyChallenges[dateKey] = { grade: gi.grade, points: pts, maxPoints: max };
+    userData.dailyChallenges[dateKey] = { grade, points: pts, maxPoints: max };
     userData.dailyChallengesCompleted = (userData.dailyChallengesCompleted || 0) + 1;
-    await incrementCounter(currentUser.uid, 'dailyChallengesCompleted').catch(console.error);
-    if (!isClaudeAccount() && !isHackerAccount()) {
-      await saveDailyScore(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, dateKey, gi.grade, pts, max, userRole()).catch(console.error);
+    if (typeof result?.xpAwarded === 'number') {
+      userData.xp = (userData.xp || 0) + result.xpAwarded;
     }
-    await db().collection('users').doc(currentUser.uid).set({ dailyChallenges: { [dateKey]: userData.dailyChallenges[dateKey] } }, { merge: true }).catch(console.error);
-
-    const xpBonus = gi.grade === 1 ? 80 : gi.grade <= 2 ? 50 : 30;
-    grantXPAndAchievements({ xp: xpBonus, dailyPerfect: gi.grade === 1 }).catch(console.error);
+    if (Array.isArray(result?.achievementsGranted) && result.achievementsGranted.length) {
+      userData.achievements = Array.from(new Set([...(userData.achievements || []), ...result.achievementsGranted]));
+    }
 
     dailyChallengeState = null;
     renderDailyChallenge();
@@ -5460,13 +5644,13 @@ window.LF = {
       showToast('Lesezeichen entfernt.', 'info');
     } else {
       userData.bookmarks = [...bm, key];
-      showToast('Lesezeichen gespeichert! 🔖', 'success');
+      showToast('Lesezeichen gespeichert!', 'success');
     }
-    // Update UI immediately
+    // Update UI immediately. innerHTML statt textContent damit lfIcon-SVG rendert.
     const btn = document.getElementById('bookmarkBtn');
     if (btn) {
       btn.className = `bookmark-btn${isBm ? '' : ' active'}`;
-      btn.textContent = isBm ? '🔖 Lesezeichen' : '🔖 Gespeichert';
+      btn.innerHTML = isBm ? `${lfIcon('bookmark')} Lesezeichen` : `${lfIcon('bookmark')} Gespeichert`;
     }
     // Update any bm-icon-btn for this key
     document.querySelectorAll(`.bm-icon-btn`).forEach(b => {
@@ -5486,7 +5670,10 @@ window.LF = {
     body.classList.toggle('open', willOpen);
     body.style.removeProperty('display'); // alten inline-display entfernen
     if (toggle) toggle.classList.toggle('open', willOpen);
-    if (arrow) arrow.textContent = willOpen ? '▲' : '▼';
+    // Mission 8: arrow.lucide-chevron-down ist im default-state (Panel geschlossen)
+    // mit class 'open' rotiert (180deg = Pfeil zeigt nach oben). Beim Aufklappen
+    // wird 'open' entfernt → Chevron zeigt nach unten (offen).
+    if (arrow) arrow.classList.toggle('open', !willOpen);
     if (willOpen) document.getElementById('notesInput')?.focus();
   },
 
@@ -5501,7 +5688,7 @@ window.LF = {
       userData.notes[key] = value;
       await saveNote(currentUser.uid, key, value).catch(console.error);
       const s = document.getElementById('notesStatus');
-      if (s) { s.textContent = '✓ Gespeichert'; setTimeout(() => { if(s) s.textContent=''; }, 2000); }
+      if (s) { s.textContent = 'Gespeichert'; setTimeout(() => { if(s) s.textContent=''; }, 2000); }
     }, 1500);
   },
 
@@ -5596,7 +5783,7 @@ window.LF = {
       pomodoroState.timer = setInterval(pomodoroTick, 1000);
     }
     const btn = document.querySelector('#pomoPanel .btn-primary');
-    if (btn) btn.textContent = pomodoroState.timer ? '⏸ Pause' : '▶ Start';
+    if (btn) btn.innerHTML = pomodoroState.timer ? `${lfIcon('pause')} Pause` : `${lfIcon('play')} Start`;
   },
 
   pomodoroReset: () => {
@@ -5607,7 +5794,7 @@ window.LF = {
     pomodoroState.seconds = pomodoroState.workMins * 60;
     _updatePomodoroDisplay();
     const btn = document.querySelector('#pomoPanel .btn-primary');
-    if (btn) btn.textContent = '▶ Start';
+    if (btn) btn.innerHTML = `${lfIcon('play')} Start`;
   },
 
   pomodoroSetWork: (mins) => {
@@ -5637,7 +5824,14 @@ window.LF = {
     if (chosen)  chosen.classList.add(chosenIdx === correctIdx ? 'wc-correct' : 'wc-wrong');
     if (correct && chosenIdx !== correctIdx) correct.classList.add('wc-correct');
     const fb = document.getElementById(`wcFb_${topicKey}_${qIdx}`);
-    if (fb) { fb.style.display = 'block'; fb.textContent = chosenIdx === correctIdx ? '✓ Richtig!' : '✗ Falsch'; fb.className = `wc-fb ${chosenIdx===correctIdx?'correct':'wrong'}`; }
+    if (fb) {
+      fb.style.display = 'block';
+      // innerHTML statt textContent damit lfIcon-SVG rendert.
+      fb.innerHTML = chosenIdx === correctIdx
+        ? `${lfIcon('check', {cls:'sx-correct'})} Richtig!`
+        : `${lfIcon('x', {cls:'sx-wrong'})} Falsch`;
+      fb.className = `wc-fb ${chosenIdx===correctIdx?'correct':'wrong'}`;
+    }
   },
 
   wissensCheckReveal: (topicKey, qIdx) => {
@@ -6173,15 +6367,15 @@ window.LF.openAchievement = (id) => {
     <div class="lf-modal-card">
       <div class="lf-modal-header">
         <h3>${escapeHtml(a.title)}</h3>
-        <button class="btn-icon" onclick="window.LF.closeAchievement()">✕</button>
+        <button class="btn-icon" onclick="window.LF.closeAchievement()">${lfIcon('x')}</button>
       </div>
       <div class="lf-modal-body" style="text-align:center">
-        <div class="ach-modal-code" style="${unlocked ? `background:${a.color}` : ''}">${a.code}</div>
+        <div class="ach-modal-code" style="${unlocked ? `background:${a.color};color:#fff` : ''}">${a.iconName ? lfIcon(a.iconName) : escapeHtml(a.code)}<span class="ach-code-suffix">${escapeHtml(a.code)}</span></div>
         <div class="ach-modal-xp" style="color:${unlocked ? a.color : 'var(--text-muted)'}">+${a.xp} XP</div>
         <div class="ach-modal-desc">${escapeHtml(a.longDesc || a.desc)}</div>
         ${progressHtml}
         <div class="ach-modal-status">
-          Status: ${unlocked ? '🔓 Freigeschaltet' : '🔒 Noch nicht freigeschaltet'}
+          Status: ${unlocked ? `${lfIcon('lock-open')} Freigeschaltet` : `${lfIcon('lock')} Noch nicht freigeschaltet`}
         </div>
       </div>
       <div class="lf-modal-actions">
@@ -6286,13 +6480,7 @@ window.LF.onboardingPickKlasse = (k) => {
   _onboardingState.klasse = v;
   _renderOnboardingStep();
 };
-window.LF.onboardingPickEmoji = (emoji) => {
-  if (!_onboardingState) return;
-  _collectOnboardingState();
-  _onboardingState.photoURL = emojiToPhotoURL(emoji) || _onboardingState.photoURL;
-  _onboardingState.pickedEmoji = emoji;  // Casey #3.4: track for selected-highlight
-  _renderOnboardingStep();
-};
+// Mission 8 Q1=C: window.LF.onboardingPickEmoji entfernt (Emoji-Picker abgeschafft).
 window.LF.onboardingHandleFile = async (input) => {
   if (!_onboardingState) return;
   const file = input.files?.[0];
@@ -6301,7 +6489,6 @@ window.LF.onboardingHandleFile = async (input) => {
   const dataUrl = await _resizeToDataUrl(file);
   if (dataUrl) {
     _onboardingState.photoURL = dataUrl;
-    _onboardingState.pickedEmoji = null;  // upload clears emoji-selection
     _renderOnboardingStep();
   } else {
     showToast('Bild konnte nicht geladen werden.', 'error');
@@ -6611,26 +6798,19 @@ window.LF.submitTest = async () => {
       };
       userData.grades[key] = gradeEntry;
       await saveGrade(currentUser.uid, subjectId, yearId, topicId, gradeEntry).catch(console.error);
-      // Theme-Drop bei Note 1 oder 2 — auch fuer Test-Accounts und Custom-Topics OK.
+      // Mission 7: Test-Accounts/Custom-Topics gehen NIE durch CF — kein Server-Roll,
+      // kein Doppel-Drop-XP. Daher hier weiter clientseitig wuerfeln (offline-Pfad)
+      // und mit dem alten arrayUnion lokal speichern. Akzeptiert: Test-Accs sind eh
+      // nicht im Leaderboard, kein Cheat-Risiko (siehe Maya's Edge-Cases).
       try {
         const owned = userData.themes || ['default'];
-        const drop = rollThemeDrop(bestInfo.grade, owned);
-        if (drop) {
+        const drop = _clientRollThemeDrop(bestInfo.grade, owned);
+        if (drop && !owned.includes(drop)) {
           userData.themes = [...owned, drop];
-          // Mission 3: Drop in users.themeDrops eintragen, dann CF-unlock fuer Theme.
-          // Bei Test-Accounts/Custom-Topics fallback auf direkten unlockTheme-Write.
-          try {
-            await db().collection('users').doc(currentUser.uid).set({
-              themeDrops: firebase.firestore.FieldValue.arrayUnion(drop)
-            }, { merge: true });
-            await cf.unlockCosmetic('theme', drop);
-          } catch (e) {
-            console.warn('[theme-drop-cf-fallback]', e);
-            await unlockTheme(currentUser.uid, drop).catch(console.error);
-          }
+          await unlockTheme(currentUser.uid, drop).catch(console.error);
           showThemeDropToast(drop);
         }
-      } catch(e) { console.warn('[theme-drop]', e); }
+      } catch(e) { console.warn('[theme-drop-local]', e); }
       // F-25: XP + F-24: Achievements lokal
       const qCount = questions.length;
       userData.totalQuestionsAnswered = (userData.totalQuestionsAnswered || 0) + qCount;
@@ -6691,24 +6871,27 @@ window.LF.submitTest = async () => {
           const fresh = await getUserData(currentUser.uid);
           if (fresh) userData = fresh;
         } catch(e) { console.warn('[cf-userdata-refresh]', e); }
-        // Theme-Drop bei Note 1 oder 2 (clientseitig — CF macht den Drop nicht).
+        // Mission 7 — Drop-Roll-Refactor (Variant B):
+        // Server (Marcus' submitTestResult) wuerfelt den Drop und liefert
+        // ihn in der Response. Frontend STOPPT eigenes Wuerfeln, liest nur.
+        // Mögliche Response-Shapes:
+        //   { themeDrop: { themeId, unlocked: true } }              → Neuer Drop
+        //   { themeDrop: { themeId, alreadyOwned: true, xpGranted } } → Doppel-Drop
+        //   { themeDrop: null, trostpreis: 30 }                      → Alle 11 owned
+        //   { themeDrop: null }                                      → Kein Drop
         try {
-          const owned = userData?.themes || ['default'];
-          const drop = rollThemeDrop(grade.grade, owned);
-          if (drop) {
-            userData.themes = [...owned, drop];
-            try {
-              await db().collection('users').doc(currentUser.uid).set({
-                themeDrops: firebase.firestore.FieldValue.arrayUnion(drop)
-              }, { merge: true });
-              await cf.unlockCosmetic('theme', drop);
-            } catch (e) {
-              console.warn('[theme-drop-cf-fallback]', e);
-              await unlockTheme(currentUser.uid, drop).catch(console.error);
-            }
-            showThemeDropToast(drop);
+          const td = cfResp?.themeDrop;
+          if (td && td.unlocked) {
+            // Neuer Drop — userData wurde via getUserData(...) bereits refresht.
+            showThemeDropToast(td.themeId);
+          } else if (td && td.alreadyOwned) {
+            // Doppel-Drop — Server hat XP gegeben, userData ist refresht.
+            showThemeDropDoubleToast(td.themeId, td.xpGranted || 0);
+          } else if (cfResp?.trostpreis) {
+            // Alle 11 Themes owned — Server gibt +30 XP Trostpreis.
+            showTrostpreisToast(cfResp.trostpreis);
           }
-        } catch(e) { console.warn('[theme-drop]', e); }
+        } catch(e) { console.warn('[theme-drop-resp]', e); }
         // CF-resp may include xpAwarded / achievementsGranted — Toasts triggern.
         if (cfResp && Array.isArray(cfResp.achievementsGranted) && cfResp.achievementsGranted.length) {
           try {
@@ -6757,6 +6940,19 @@ window.LF.submitTest = async () => {
           subjectComplete: checkSubjectComplete(subjectId),
         };
         grantXPAndAchievements(ctx).catch(console.error);
+        // Mission 7 — Offline-Drop-Fallback: CF nicht erreichbar, also clientseitig
+        // wuerfeln. Kein Doppel-Drop-XP-Pfad (kein Server, kein Trust). Bereits
+        // owned → silent skip, kein Toast (entspricht Maya's Edge-Case-Spec).
+        try {
+          const owned = userData?.themes || ['default'];
+          const drop = _clientRollThemeDrop(bestInfo.grade, owned);
+          if (drop && !owned.includes(drop)) {
+            userData.themes = [...owned, drop];
+            await unlockTheme(currentUser.uid, drop).catch(console.error);
+            showThemeDropToast(drop);
+            showToast('Drop offline notiert. XP-Bonus wird beim n\xe4chsten Sync nachgereicht.', 'warn');
+          }
+        } catch(e) { console.warn('[theme-drop-offline]', e); }
       }
     }
   }
@@ -6903,7 +7099,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
 window.LF.copyResults = async () => {
   if (!testState?._copyText) return;
   await navigator.clipboard.writeText(testState._copyText).catch(() => {});
-  showToast('Ergebnis kopiert! ✓', 'success');
+  showToast('Ergebnis kopiert!', 'success');
 };
 
 // ── F-04 Retry-Modus ─────────────────────
@@ -7003,7 +7199,7 @@ function mountCalculator() {
   el.className = 'calc-widget';
   el.innerHTML = `
     <button class="calc-toggle-btn" onclick="window.LF.toggleCalc()">
-      Taschenrechner <span id="calcArrow">▲</span>
+      Taschenrechner <span id="calcArrow" class="notes-arrow open">${lfIcon('chevron-down')}</span>
     </button>
     <div class="calc-panel" id="calcPanel">
       <div class="calc-display">
@@ -7014,7 +7210,7 @@ function mountCalculator() {
         <button class="calc-btn calc-clear" onclick="window.LF.calcClear()">C</button>
         <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('(')">( </button>
         <button class="calc-btn calc-fn"    onclick="window.LF.calcInput(')')"> )</button>
-        <button class="calc-btn calc-op"    onclick="window.LF.calcBack()">⌫</button>
+        <button class="calc-btn calc-op"    onclick="window.LF.calcBack()">${lfIcon('delete')}</button>
         <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('sqrt(')">√x</button>
         <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('π')">π</button>
         <button class="calc-btn calc-fn"    onclick="window.LF.calcInput('^')">xⁿ</button>
@@ -7054,7 +7250,7 @@ function mountTafelwerk() {
   el.className = 'calc-widget tw-widget';
   el.innerHTML = `
     <button class="calc-toggle-btn" onclick="window.LF.toggleTw()">
-      Tafelwerk <span id="twArrow">▲</span>
+      Tafelwerk <span id="twArrow" class="notes-arrow open">${lfIcon('chevron-down')}</span>
     </button>
     <div class="calc-panel tw-panel" id="twPanel">
       <div class="tw-tabs">
@@ -7201,18 +7397,20 @@ window.LF.toggleCalc = () => {
   const panel = document.getElementById('calcPanel');
   const arrow = document.getElementById('calcArrow');
   if (!panel) return;
-  const open = panel.style.display !== 'none';
-  panel.style.display = open ? 'none' : 'block';
-  if (arrow) arrow.textContent = open ? '▲' : '▼';
+  const wasOpen = panel.style.display !== 'none';
+  panel.style.display = wasOpen ? 'none' : 'block';
+  // .notes-arrow.open rotates chevron-down 180deg → pfeil zeigt nach oben (Panel zu).
+  // Wenn Panel jetzt offen ist → 'open' entfernen → chevron zeigt nach unten.
+  if (arrow) arrow.classList.toggle('open', wasOpen);
 };
 
 window.LF.toggleTw = () => {
   const panel = document.getElementById('twPanel');
   const arrow = document.getElementById('twArrow');
   if (!panel) return;
-  const open = panel.style.display !== 'none';
-  panel.style.display = open ? 'none' : 'block';
-  if (arrow) arrow.textContent = open ? '▲' : '▼';
+  const wasOpen = panel.style.display !== 'none';
+  panel.style.display = wasOpen ? 'none' : 'block';
+  if (arrow) arrow.classList.toggle('open', wasOpen);
 };
 
 window.LF.twTab = (btn, sectionId) => {
@@ -7492,7 +7690,10 @@ async function renderFeed() {
   const entriesHtml = entries.length
     ? entries.map(e => {
         const time = e.createdAt?.toDate ? _relTime(e.createdAt.toDate()) : 'gerade eben';
-        const icon = e.type === 'test' ? '📝' : e.type === 'achievement' ? '🏅' : e.type === 'content' ? '📚' : '⚡';
+        const icon = e.type === 'test'        ? lfIcon('pencil')
+                   : e.type === 'achievement' ? lfIcon('medal')
+                   : e.type === 'content'     ? lfIcon('book-open')
+                   :                            lfIcon('zap');
         const name  = escapeHtml(e.payload?.name || '');
         const topic = escapeHtml(e.payload?.topic || '');
         const title = escapeHtml(e.payload?.title || '');
@@ -7686,7 +7887,7 @@ window.LF.loadComments = async () => {
           <div class="comment-text">${safeText}</div>
           <div class="comment-actions">
             <button class="comment-like-btn ${liked ? 'liked' : ''}"
-              onclick="window.LF.likeComment('${c.id}')">♥ ${likeCount || ''}</button>
+              onclick="window.LF.likeComment('${c.id}')">${lfIcon('heart')} ${likeCount || ''}</button>
             ${canDel ? `<button class="comment-delete-btn" onclick="window.LF.deleteCommentBtn('${c.id}')">Löschen</button>` : ''}
           </div>
         </div>
@@ -7971,13 +8172,7 @@ window.LF.profileEditClose = () => {
   if (form) form.style.display = 'none';
 };
 
-window.LF.pickEmoji = (emoji, ev) => {
-  _pendingProfilePhotoURL = emojiToPhotoURL(emoji);
-  const preview = document.getElementById('profileAvatarPreview');
-  if (preview) preview.innerHTML = `<img src="${_pendingProfilePhotoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
-  document.querySelectorAll('.avatar-emoji-btn').forEach(b => b.classList.remove('selected'));
-  ev?.currentTarget?.classList.add('selected');
-};
+// Mission 8 Q1=C: window.LF.pickEmoji entfernt (Emoji-Picker abgeschafft).
 
 window.LF.handleProfileFile = async (input) => {
   const file = input.files?.[0];
@@ -7987,7 +8182,6 @@ window.LF.handleProfileFile = async (input) => {
     _pendingProfilePhotoURL = dataUrl;
     const preview = document.getElementById('profileAvatarPreview');
     if (preview) preview.innerHTML = `<img src="${dataUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`;
-    document.querySelectorAll('.avatar-emoji-btn').forEach(b => b.classList.remove('selected'));
   } catch(e) {
     showToast(e.message, 'error');
   }
@@ -8049,6 +8243,23 @@ function renderInventory() {
     location.hash = '#/profil?tab=inventar';
   }
 }
+
+// Mission 7: Locked-Card Tap-Tooltip. Zeigt den langen Hint via showToast(info).
+// Wird von onclick + onkeydown(Enter/Space) + onfocus auf Locked-Cards gerufen.
+// `el` ist das DOM-Element (<div class="inv-card inv-locked-v2">).
+// Debounce-Schutz fuer Focus-Events: Hint nur einmal pro Karte/3s zeigen.
+let _lastLockedHintAt = 0;
+let _lastLockedHintEl = null;
+window.LF.showLockedHint = (el) => {
+  if (!el) return;
+  const hint = el.getAttribute('data-hint');
+  if (!hint) return;
+  const now = Date.now();
+  if (el === _lastLockedHintEl && (now - _lastLockedHintAt) < 2500) return;
+  _lastLockedHintEl = el;
+  _lastLockedHintAt = now;
+  showToast(hint, 'info');
+};
 
 // Red-Team #5 (defense in depth): jede Outline-/Theme-Auswahl muss vom User
 // auch wirklich besessen sein (oder durch Level freigeschaltet). Verhindert

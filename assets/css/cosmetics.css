@@ -215,13 +215,21 @@
   animation: admin-glow-pulse 2.2s ease-in-out infinite;
 }
 
-/* Stelle sicher dass Outlines auch im Leaderboard sichtbar sind */
+/* Mission 7 Bug-Fix: Legendary Outlines (rainbow/cosmic) und Role-Glows
+   brauchen overflow:visible — sonst werden ::before/::after geclippt.
+   Betrifft .lb-avatar (Leaderboard) und .inv-active-avatar (Profil-Banner).
+   .profile-avatar-large hat schon kein overflow:hidden, ist OK.
+   Das innere <img> hat eigenen border-radius:50% inline — bleibt rund. */
 .lb-avatar.outline-rainbow,
 .lb-avatar.outline-cosmic,
 .lb-avatar.role-glow-admin,
-.lb-avatar.role-glow-tester {
-  /* die ::before/::after brauchen z-index-Stacking-Context */
-  isolation: isolate;
+.lb-avatar.role-glow-tester,
+.inv-active-avatar.outline-rainbow,
+.inv-active-avatar.outline-cosmic,
+.inv-active-avatar.role-glow-admin,
+.inv-active-avatar.role-glow-tester {
+  isolation: isolate;     /* Stacking-Context — wie vorher */
+  overflow: visible;      /* NEU: Pseudo-Elemente nicht clippen */
 }
 
 /* ── Themes (durch 1en/2en freischaltbar) ─────────────────── */
@@ -243,6 +251,29 @@
 [data-app-theme="forest"][data-theme="dark"] {
   --bg: #052e16; --bg-card: #0a3d1f; --bg-input: #14532d;
   --accent: #4ade80; --accent-subtle: #14532d; --border: #166534;
+}
+
+/* Mission 7 Phase 1 — Sand (common, Stub).
+   Maya refint die Farben in Phase 2; das hier ist eine warme Beige-Palette
+   als Platzhalter, damit der Worker den Theme-ID droppen kann. */
+[data-app-theme="sand"] {
+  --accent: #b45309; --accent-hover: #92400e; --accent-subtle: #fef3c7;
+  --bg: #fefce8;
+}
+[data-app-theme="sand"][data-theme="dark"] {
+  --bg: #1c1305; --bg-card: #2a1d09; --bg-input: #3a280f;
+  --accent: #fbbf24; --accent-subtle: #3a280f; --border: #78350f;
+}
+
+/* Mission 7 Phase 1 — Schiefer (common, Stub).
+   Grau-purple Tone als Platzhalter, Phase-2-Refinement durch Maya. */
+[data-app-theme="schiefer"] {
+  --accent: #475569; --accent-hover: #334155; --accent-subtle: #f1f5f9;
+  --bg: #f8fafc;
+}
+[data-app-theme="schiefer"][data-theme="dark"] {
+  --bg: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
+  --accent: #cbd5e1; --accent-subtle: #334155; --border: #475569;
 }
 
 [data-app-theme="sunset"] {
@@ -388,6 +419,87 @@
   cursor: not-allowed;
 }
 .inv-card.locked:hover { transform: none; border-color: var(--border); }
+
+/* ── Locked-Cards V2 (Mission 7) ─────────────────────────
+   Mysterioses Schloss-Layout statt grauer Apathie. Rarity-Stripe oben,
+   ???-Name, Lock-Overlay, Hint-Zeile. Bei epic/legendary laeuft die
+   Animation gedimmt im Hintergrund weiter ("da kommt noch was Geiles"). */
+.inv-card.inv-locked-v2 {
+  /* Override des opacity:0.5 von .locked — V2 nutzt Rarity-Tinting + Lock statt Dimm-Look. */
+  opacity: 1;
+  cursor: default;
+  /* Subtle Rarity-Tint des Card-Backgrounds — fallback fuer Browser ohne color-mix. */
+  background: var(--bg-card);
+}
+@supports (background: color-mix(in srgb, white, black)) {
+  .inv-card.inv-locked-v2.inv-rarity-bg-common    { background: color-mix(in srgb, var(--bg-card) 92%, var(--rarity-common)    8%); }
+  .inv-card.inv-locked-v2.inv-rarity-bg-rare      { background: color-mix(in srgb, var(--bg-card) 92%, var(--rarity-rare)      8%); }
+  .inv-card.inv-locked-v2.inv-rarity-bg-epic      { background: color-mix(in srgb, var(--bg-card) 92%, var(--rarity-epic)      8%); }
+  .inv-card.inv-locked-v2.inv-rarity-bg-legendary { background: color-mix(in srgb, var(--bg-card) 90%, var(--rarity-legendary) 10%); }
+}
+.inv-card.inv-locked-v2:hover {
+  transform: none;          /* kein Hover-Lift fuer locked */
+  border-color: var(--border);
+}
+.inv-card.inv-locked-v2:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Top-Stripe in Rarity-Farbe — 2px hoch, full-width. */
+.inv-rarity-stripe {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--rarity-common);  /* default fallback */
+  pointer-events: none;
+}
+.inv-card.inv-rarity-bg-rare      .inv-rarity-stripe { background: var(--rarity-rare); }
+.inv-card.inv-rarity-bg-epic      .inv-rarity-stripe { background: var(--rarity-epic); }
+.inv-card.inv-rarity-bg-legendary {
+  /* Legendary-Stripe mit Glow */
+}
+.inv-card.inv-rarity-bg-legendary .inv-rarity-stripe {
+  background: var(--rarity-legendary);
+  box-shadow: 0 0 6px var(--rarity-legendary);
+}
+
+/* Lock-Overlay: zentriert ueber dem Preview, mit Text-Shadow fuer Lesbarkeit
+   gegen animierte Hintergruende. Mission 8: Lucide-SVG ersetzt das Emoji. */
+.inv-lock-overlay {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  pointer-events: none;
+  text-shadow: 0 0 4px var(--bg-card), 0 0 8px var(--bg-card);
+  z-index: 2;
+}
+/* Preview braucht relative + Animation laeuft weiter (NICHT pausiert!).
+   Common/Rare: dimmen + grayscale. Epic/Legendary: scaled + leicht blur,
+   damit der User die Animation sieht aber gedaempft. */
+.inv-locked-v2 .inv-preview,
+.inv-locked-v2 .inv-theme-preview {
+  position: relative;
+}
+.inv-locked-v2.inv-rarity-bg-common .inv-preview,
+.inv-locked-v2.inv-rarity-bg-rare   .inv-preview,
+.inv-locked-v2.inv-rarity-bg-common .inv-theme-preview,
+.inv-locked-v2.inv-rarity-bg-rare   .inv-theme-preview {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+}
+.inv-locked-v2.inv-rarity-bg-epic .inv-preview,
+.inv-locked-v2.inv-rarity-bg-legendary .inv-preview {
+  opacity: 0.35;
+  transform: scale(0.85);
+  filter: blur(0.5px);
+}
+.inv-locked-v2.inv-rarity-bg-epic .inv-theme-preview,
+.inv-locked-v2.inv-rarity-bg-legendary .inv-theme-preview {
+  opacity: 0.35;
+  filter: blur(0.5px);
+}
 .inv-preview {
   width: 64px; height: 64px; border-radius: 50%;
   background: var(--accent-subtle);
@@ -437,6 +549,25 @@
 .theme-drop-title { font-size: 14px; opacity: 0.9; }
 .theme-drop-name  { font-size: 28px; font-weight: 800; margin: 8px 0; }
 .theme-drop-sub   { font-size: 12px; opacity: 0.8; }
+
+/* Mission 7: Doppel-Drop / Trostpreis-Toast — XP groß, Theme-Name klein,
+   Akzent-Farbe statt Pink-Gradient (technischer Reward, kein Rarity-Glanz). */
+.theme-drop-toast.theme-drop-toast-double {
+  background: var(--accent);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4),
+              0 0 60px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.theme-drop-toast.theme-drop-toast-double .theme-drop-title {
+  font-size: 32px;       /* XP groß */
+  font-weight: 800;
+  opacity: 1;
+}
+.theme-drop-toast.theme-drop-toast-double .theme-drop-name {
+  font-size: 14px;       /* Theme-Name klein */
+  font-weight: 600;
+  margin: 6px 0 4px;
+  opacity: 0.95;
+}
 @keyframes theme-drop-pop {
   0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   10%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }

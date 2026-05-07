@@ -116,13 +116,16 @@ function buildStructure(tree, subjectsConfig) {
 
     if (!subjects[subjectId]) {
       const cfg = subjectsConfig[subjectId] || {};
+      // Mission 8: Fallback ist book-open (Lucide). iconType='lucide' damit getSubjectIcon
+      // direkt durch lfIcon() rendert — sonst fiele es auf den emoji-string-pfad zurueck.
       subjects[subjectId] = {
-        id:    subjectId,
-        name:  cfg.name  || idToName(subjectId),
-        color: cfg.color || defaultColor(subjectId),
-        icon:  cfg.icon  || '📚',
-        tools: cfg.tools || {},
-        years: {}
+        id:       subjectId,
+        name:     cfg.name  || idToName(subjectId),
+        color:    cfg.color || defaultColor(subjectId),
+        icon:     cfg.icon  || 'book-open',
+        iconType: cfg.iconType || (cfg.icon ? undefined : 'lucide'),
+        tools:    cfg.tools || {},
+        years:    {}
       };
     }
     if (!yearId) continue;

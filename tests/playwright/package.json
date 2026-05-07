@@ -1,0 +1,16 @@
+{
+  "name": "learningforge-playwright",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-only Playwright suite for LearningForge — visual-regression snapshots across the full theme matrix (light/dark x cosmetics).",
+  "scripts": {
+    "start-server": "py -m http.server 8000 --directory ../..",
+    "test": "playwright test",
+    "test:update": "playwright test --update-snapshots",
+    "report": "playwright show-report",
+    "install-browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest"
+  }
+}

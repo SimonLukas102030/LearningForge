@@ -1,5 +1,0 @@
-node_modules/
-.firebase/
-*.log
-.runtimeconfig.json
-package-lock.json

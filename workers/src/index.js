@@ -8,6 +8,7 @@
 //    POST /unlockCosmetic          (auth required)
 //    POST /getParentShareReport    (UNAUTH - public)
 //    POST /markTestAccount         (auth required)
+//    POST /submitDailyChallenge    (auth required)  [Mission 9]
 //
 //  Auth is per-endpoint (each handler calls requireAuth() if it
 //  needs it) - this Worker is unauth-callable for the parent
@@ -21,6 +22,7 @@ import { handleSubmitTestResult }      from './endpoints/submitTestResult.js';
 import { handleUnlockCosmetic }        from './endpoints/unlockCosmetic.js';
 import { handleGetParentShareReport }  from './endpoints/getParentShareReport.js';
 import { handleMarkTestAccount }       from './endpoints/markTestAccount.js';
+import { handleSubmitDailyChallenge }  from './endpoints/submitDailyChallenge.js';
 import { json, cors, errorResponse }   from './lib/http.js';
 
 export default {
@@ -48,6 +50,9 @@ export default {
           break;
         case 'markTestAccount':
           result = await handleMarkTestAccount(request, env);
+          break;
+        case 'submitDailyChallenge':
+          result = await handleSubmitDailyChallenge(request, env);
           break;
         default:
           return cors(errorResponse(404, `unknown endpoint: ${path}`));

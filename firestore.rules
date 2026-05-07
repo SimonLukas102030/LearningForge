@@ -178,29 +178,18 @@ service cloud.firestore {
     // auth.js in the same commit.
 
     // ── dailyScores ───────────────────────────────────────────────────────
-    // Soft-caps (Cheat #4 partial): points <= maxPoints, maxPoints <= 100.
-    // Real fix = server-side validation of the actual challenge length
-    // and answer correctness (Mission 3 Cloud Function).
+    // Cheat #4 FULLY closed (Mission 2 Phase 3, Marcus, 2026-05-07):
+    // Client-side writes are now blocked entirely. The submitDailyChallenge
+    // Cloud Worker writes via Service-Account and bypasses these rules, so
+    // legitimate score submissions still work. Admin write stays open for
+    // manual anomaly correction via admin tooling. Reads remain auth-only
+    // so the leaderboard / daily-Rangleichne UI keeps working.
     match /dailyScores/{date} {
       allow read, list: if isAuth();
     }
     match /dailyScores/{date}/users/{uid} {
       allow read, list: if isAuth();
-      allow create:     if (isOwner(uid)
-                            && request.resource.data.points is number
-                            && request.resource.data.maxPoints is number
-                            && request.resource.data.points >= 0
-                            && request.resource.data.maxPoints <= 100
-                            && request.resource.data.points <= request.resource.data.maxPoints)
-                         || isAdmin();
-      allow update:     if (isOwner(uid)
-                            && request.resource.data.points is number
-                            && request.resource.data.maxPoints is number
-                            && request.resource.data.points >= 0
-                            && request.resource.data.maxPoints <= 100
-                            && request.resource.data.points <= request.resource.data.maxPoints)
-                         || isAdmin();
-      allow delete:     if isOwner(uid) || isAdmin();
+      allow write:      if isAdmin();
     }
 
     // ── feed ──────────────────────────────────────────────────────────────

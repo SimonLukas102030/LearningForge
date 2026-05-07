@@ -43,8 +43,21 @@
   --grade-5: #ef4444;
   --grade-6: #7f1d1d;
 
+  /* Rarity colors (Mission 7 — Locked-Cards-V2 stripes/tints).
+     Absolute Anker: Common=grau, Rare=blau, Epic=lila, Legendary=Gold.
+     Mit-themen sie NICHT — sonst sehen alle Rarities im aktiven Theme gleich aus. */
+  --rarity-common:    #94a3b8;   /* slate-400 — neutral grau */
+  --rarity-rare:      #3b82f6;   /* blue-500 */
+  --rarity-epic:      #a855f7;   /* purple-500 */
+  --rarity-legendary: #f59e0b;   /* amber-500 — Gold-Vibe */
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
+
+  /* Icon-Color (Mission 8 — Lucide-Icons) — fallback to text if not overridden by component.
+     Lucide-SVGs use stroke="currentColor", so .lf-icon { color: var(--icon-color); } picks up
+     the active theme automatically; per-component CSS can override (e.g. --accent for emphasis). */
+  --icon-color: var(--text);
 
   /* Physik-Simulationen — Light Mode */
   --sim-sky:        #dbeafe;
@@ -86,6 +99,15 @@
   --highlight-me: #422006;          /* warmes Dunkelbraun für Dark */
   --highlight-me-border: #f59e0b;
   --modal-overlay: rgba(0,0,0,0.7);
+
+  /* Rarity colors — Dark-Variante: leicht aufgehellt für besseren Kontrast auf dunklem BG */
+  --rarity-common:    #64748b;   /* slate-500 */
+  --rarity-rare:      #60a5fa;   /* blue-400 */
+  --rarity-epic:      #c084fc;   /* purple-400 */
+  --rarity-legendary: #fbbf24;   /* amber-400 */
+
+  /* Icon-Color (Mission 8) — same fallback pattern as :root, but resolves to dark-theme --text. */
+  --icon-color: var(--text);
 
   /* Physik-Simulationen — Dark Mode */
   --sim-sky:        #1a2540;
@@ -129,6 +151,58 @@ a { color: inherit; text-decoration: none; }
 img { max-width: 100%; }
 button { cursor: pointer; font-family: var(--font); }
 input, textarea, select { font-family: var(--font); }
+
+/* ── 2b. Lucide Icons (Mission 8) ──────────
+   Inline-SVGs from assets/js/icons.js. Default size = 1em (inherits font-size),
+   color via --icon-color (which falls back to --text). Components that want
+   accent-tinting just set `color: var(--accent)` on the parent. */
+.lf-icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  color: var(--icon-color);
+  flex-shrink: 0;
+}
+.lf-icon-sm { width: 16px; height: 16px; }
+.lf-icon-md { width: 20px; height: 20px; }
+.lf-icon-lg { width: 24px; height: 24px; }
+.lf-icon-xl { width: 32px; height: 32px; }
+.lf-icon-2xl { width: 48px; height: 48px; }
+
+/* ── Mission 8 finale: semantic-icon tints ─
+   Hardcoded — bewusst, das sind Brand-/Status-Farben (richtig=gruen, falsch=rot,
+   streak=warm-orange) die in JEDEM Theme dieselbe Bedeutung tragen.
+   currentColor an .lf-icon erbt diese Farbe automatisch. */
+.sx-correct { color: #16a34a; }
+.sx-wrong   { color: #dc2626; }
+.sx-streak  { color: #f59e0b; }
+
+/* ── Mission 8 finale: country-flag icons ─
+   lfFlag(code) rendered SVGs. 4:3 Aspect-Ratio, hardcoded Farben, kein
+   theme-tint. Standardgroesse fuer Inline-Use neben Text. */
+.lf-flag {
+  width: 1.4em;
+  height: 1em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Subject-icon-Variante als Flagge — bisschen groesser fuer Hub-Cards. */
+.subject-icon--flag {
+  width: 1.4em;
+  height: 1em;
+}
+
+/* ── Notizen-/Calc-Toggle-Arrow rotates via CSS-class instead of textContent */
+.notes-arrow {
+  display: inline-block;
+  transition: transform 0.18s ease;
+}
+.notes-arrow.open {
+  transform: rotate(180deg);
+}
 
 /* ── 3. Splash / Loading ────────────────── */
 .splash {
@@ -374,6 +448,9 @@ input, textarea, select { font-family: var(--font); }
 }
 .subject-card .s-icon {
   font-size: 32px; margin-bottom: 12px;
+  /* Mission 8: Lucide-Icons inherit color via currentColor. Tint with the
+     subject's brand-color (set via inline --subject-color on the card). */
+  color: var(--subject-color, var(--icon-color));
 }
 .subject-card .s-name {
   font-size: 17px; font-weight: 700; margin-bottom: 4px;
@@ -3089,9 +3166,28 @@ input, textarea, select { font-family: var(--font); }
   width: 40px; height: 40px; border-radius: 10px;
   background: var(--border); color: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 800; letter-spacing: -.3px;
+  font-size: 22px; /* drives .lf-icon size (1em) for the achievement-icon */
   flex-shrink: 0;
+  position: relative;
 }
+/* Mission 8: 3-char-code (e.g. "10T") shown as small suffix-badge bottom-right
+   of the icon, preserving Maya's "Numerik-Hierarchie" use case. */
+.ach-code .ach-code-suffix {
+  position: absolute; right: -3px; bottom: -3px;
+  background: var(--bg-card); color: var(--text);
+  border: 1.5px solid var(--border);
+  font-size: 9px; font-weight: 800; letter-spacing: -.3px;
+  padding: 1px 4px; border-radius: 6px; line-height: 1;
+  min-width: 14px; text-align: center;
+}
+.ach-modal-code .ach-code-suffix {
+  position: absolute; right: -8px; bottom: -8px;
+  background: var(--bg-card); color: var(--text);
+  border: 2px solid var(--border);
+  font-size: 11px; font-weight: 800;
+  padding: 2px 6px; border-radius: 8px; line-height: 1;
+}
+.ach-modal-code { position: relative; }
 .ach-title {
   font-size: 11px; font-weight: 700; color: var(--text);
   line-height: 1.3; word-break: break-word;

@@ -101,8 +101,10 @@ export async function evaluateAnswers(questions, answers, timeMinutes) {
         points:    correct ? (q.points || 2) : 0,
         maxPoints: q.points || 2,
         correct,
+        // Mission 8: Markup statt Plain-Text — wird via innerHTML gerendert,
+        // lfIcon-SVG nutzt currentColor und themed automatisch.
         feedback:  correct
-          ? 'Richtig! ✓'
+          ? '<span class="sx-correct" style="font-weight:600">Richtig!</span>'
           : `Falsch. Richtige Antwort: „${q.shuffledOptions?.[q.shuffledCorrectIndex]}"`
       });
     } else {

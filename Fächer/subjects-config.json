@@ -1,72 +1,88 @@
 {
-  "_comment": "Farben und Icons für jedes Fach. Ordnername = Key. Neue Fächer hier eintragen.",
+  "_comment": "Farben und Icons für jedes Fach. Ordnername = Key. Neue Fächer hier eintragen. Mission 8 (2026-05-07): icon-Werte sind ab jetzt Lucide-Icon-Namen (siehe assets/js/icons.js). iconType:'lucide' lässt den Renderer lfIcon() benutzen statt das Feld als Emoji zu rendern. User-Custom-Icons in userData.settings.customIcons bleiben weiterhin Emoji.",
 
   "Mathematik": {
     "name":  "Mathematik",
     "color": "#3b82f6",
-    "icon":  "📐",
+    "icon":  "sigma",
+    "iconType": "lucide",
     "tools": { "calculator": true }
   },
   "Deutsch": {
     "name":  "Deutsch",
     "color": "#ef4444",
-    "icon":  "📖"
+    "icon":  "book-open-text",
+    "iconType": "lucide"
   },
+  "_comment_englisch": "Mission 8 Q2-Override: Schueler erkennt UK-Flagge schneller als Globe. Flag-Icon ueber lipis/flag-icons (MIT), gerendert via lfFlag(). Hardcoded Farben (red/white/blue) — Theme-Tinting bewusst NICHT, sonst keine Flagge mehr.",
   "Englisch": {
     "name": "Englisch",
     "color": "#f7bc0a",
-    "icon": "🇬🇧"
+    "icon": "gb",
+    "iconType": "flag"
   },
   "Geschichte": {
     "name":  "Geschichte",
     "color": "#f59e0b",
-    "icon":  "🏛️"
+    "icon":  "landmark",
+    "iconType": "lucide"
   },
   "Biologie": {
     "name":  "Biologie",
     "color": "#10b981",
-    "icon":  "🌿"
+    "icon":  "leaf",
+    "iconType": "lucide"
   },
   "Latein": {
+    "_note": "Mission 8 bug-fix per Adrian Q3: Latein hatte vorher dasselbe Icon+Color wie Biologie. Jetzt scroll-text + Lila (a78bfa). Maya kann Farbe overriden falls gewünscht.",
     "name":  "Latein",
-    "color": "#10b981",
-    "icon":  "🌿"
+    "color": "#a78bfa",
+    "icon":  "scroll-text",
+    "iconType": "lucide"
   },
   "Chemie": {
     "name":  "Chemie",
     "color": "#14b8a6",
-    "icon":  "⚗️",
+    "icon":  "flask-conical",
+    "iconType": "lucide",
     "tools": { "tafelwerk": true }
   },
   "Physik": {
     "name":  "Physik",
     "color": "#6366f1",
-    "icon":  "⚛️",
+    "icon":  "atom",
+    "iconType": "lucide",
     "tools": { "tafelwerk": true }
   },
   "Geographie": {
     "name":  "Geographie",
     "color": "#84cc16",
-    "icon":  "🗺️"
+    "icon":  "map",
+    "iconType": "lucide"
   },
   "Informatik": {
+    "_note": "Maya's spec hatte 'code-2' aber Lucide hat das umbenannt zu 'code'. Verified via raw.githubusercontent.com (2026-05-07).",
     "name":  "Informatik",
     "color": "#06b6d4",
-    "icon":  "💻"
+    "icon":  "code",
+    "iconType": "lucide"
   },
   "Musik": {
     "name":  "Musik",
     "color": "#ec4899",
-    "icon":  "🎵"
+    "icon":  "music",
+    "iconType": "lucide"
   },
   "Kunst": {
     "name":  "Kunst",
     "color": "#f97316",
-    "icon":  "🎨"
+    "icon":  "palette",
+    "iconType": "lucide"
   },
   "Sport": {
     "name":  "Sport",
     "color": "#eab308",
-    "icon":  "⚽"
+    "icon":  "dumbbell",
+    "iconType": "lucide"
   }
 }

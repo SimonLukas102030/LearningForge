@@ -6,6 +6,11 @@
 //  Closes Red-Team Cycle-1 cheats #2 (XP), #3 (leaderboard),
 //  #6 (achievements), #7 (test forging).
 //
+//  Mission 7 (Variant B): theme drop-roll moved server-side. The
+//  endpoint rolls a drop on Note 1/2 (real test, non-test-account),
+//  applies the result atomically, and returns a `themeDrop` shape
+//  for Ethan's frontend to toast.
+//
 //  Flow:
 //    1. Verify Firebase ID token (Authorization: Bearer ...)
 //    2. Parse + validate body
@@ -14,11 +19,14 @@
 //       per Hard Rule 6) OR build synthetic for custom
 //    5. evaluateServerSide -> grade + per-question points
 //    6. Re-derive achievements against PROJECTED user state
-//    7. Build a single :commit payload with N writes:
-//         - users/{uid}            (grades + xp + counters)
+//    7. Mission 7: roll theme drop (only Note 1/2, real, non-tester).
+//       Outcomes: trostpreis (+30 XP) | new theme (arrayUnion) |
+//       double-drop (+RARITY_XP) | no-drop.
+//    8. Build a single :commit payload with N writes:
+//         - users/{uid}            (grades + xp + counters + theme)
 //         - leaderboard/{uid}      (skipped for custom/test-account)
 //         - feed/{auto}            (skipped for custom/test-account)
-//    8. Return {grade, points, max, xpAwarded, ...}
+//    9. Return {grade, points, max, xpAwarded, themeDrop, trostpreis, ...}
 // =============================================================
 
 import { requireAuth }                 from '../lib/auth.js';
@@ -33,6 +41,16 @@ import {
 } from '../lib/firestore.js';
 import { evaluateServerSide, calcXPForTest } from '../lib/evaluation.js';
 import { deriveNewAchievements }             from '../lib/achievements.js';
+import {
+  rollThemeDrop,
+  themeById,
+  RARITY_XP,
+  ALL_THEME_IDS
+} from '../lib/cosmetics.js';
+
+// Mission 7 (Maya's Q4): user with all 11 themes owned -> +30 XP
+// per Note-1/2 test as a "trostpreis" (consolation prize).
+const TROSTPREIS_XP = 30;
 
 function _levelFromXp(xp) {
   let l = 1;
@@ -177,14 +195,89 @@ export async function handleSubmitTestResult(request, env) {
   };
 
   const { newlyUnlocked, bonusXP } = deriveNewAchievements(projectedUser, ctx);
-  const totalXpDelta = xpAwarded + bonusXP;
+
+  // -----------------------------------------------------------
+  //  Mission 7: Server-side drop-roll (Variant B)
+  // -----------------------------------------------------------
+  //  Rolls a theme drop iff grade is 1 or 2. Three outcomes:
+  //    a) all 11 themes owned -> trostpreis: +30 XP, themeDrop=null
+  //    b) drop rolled, theme NOT owned -> arrayUnion + unlocked:true
+  //    c) drop rolled, theme already owned -> +RARITY_XP, alreadyOwned:true
+  //    d) no roll (rng landed in no-drop slice) -> themeDrop=null, no XP
+  //  Test-account: skip the drop entirely (no leaderboard, no themeDrops
+  //  for testers — matches existing behaviour for tester accounts).
+  // -----------------------------------------------------------
+  let themeDropResult = null;   // shape: {themeId, rarity, alreadyOwned, xpGranted}
+  let trostpreisXp    = 0;
+  let themeDropXp     = 0;
+  const ownedThemes   = Array.isArray(userData.themes) ? userData.themes : ['default'];
+  const allThemesOwned = ALL_THEME_IDS.every(t => ownedThemes.includes(t));
+
+  // Drop-gate: real test (not custom), not a test-account, and Note 1/2.
+  // Custom-topic drops would be trivially farmable (user authors the
+  // questions and answers them perfectly) - Cheat #8-class issue.
+  //
+  // Gate A (anti-grind, min-effort): max < 20 Punkte = trivialer Test
+  // (z.B. 1-3-Fragen-Custom-Topic der nicht ueber den isCustomTopic-Flag
+  // erfasst wurde, oder ein winziges offizielles Topic). Solche Tests
+  // zaehlen nicht als "echtes Grinden" - kein Drop-Roll.
+  //
+  // Gate B (anti-grind, per-topic cooldown): dasselbe Topic darf max.
+  // einmal pro 24h einen Drop-Roll ausloesen. Verhindert Stumpf-Wiederholung
+  // des leichtesten Tests. Der Cooldown-Stempel wird gesetzt sobald ein
+  // Drop tatsaechlich gerollt wurde (Unlock ODER Doppel-Drop) - wer in den
+  // No-Drop-Slice rollt, bleibt eligible fuer den naechsten Versuch.
+  const MIN_DROP_MAX_POINTS = 20;
+  const TOPIC_COOLDOWN_MS   = 24 * 60 * 60 * 1000;
+  const topicCooldownKey    = `${subjectId}__${yearId}__${topicId}`;
+  const lastTopicDropTs     = userData.topicDropCooldowns?.[topicCooldownKey] || 0;
+  const topicOnCooldown     = lastTopicDropTs > 0
+                              && (Date.now() - lastTopicDropTs) < TOPIC_COOLDOWN_MS;
+  const meetsMinEffort      = max >= MIN_DROP_MAX_POINTS;
+
+  if (!isCustomTopic && !isTestAccount && (grade === 1 || grade === 2)
+      && meetsMinEffort && !topicOnCooldown) {
+    if (allThemesOwned) {
+      // (a) Trostpreis
+      trostpreisXp = TROSTPREIS_XP;
+    } else {
+      const rolled = rollThemeDrop(grade);
+      if (rolled) {
+        const t = themeById(rolled);
+        const rarity = t?.rarity || 'common';
+        if (ownedThemes.includes(rolled)) {
+          // (c) Already owned -> XP grant
+          themeDropXp = RARITY_XP[rarity] || 0;
+          themeDropResult = {
+            themeId:      rolled,
+            rarity,
+            alreadyOwned: true,
+            xpGranted:    themeDropXp,
+            unlocked:     false
+          };
+        } else {
+          // (b) New drop -> arrayUnion in the batch below
+          themeDropResult = {
+            themeId:      rolled,
+            rarity,
+            alreadyOwned: false,
+            xpGranted:    0,
+            unlocked:     true
+          };
+        }
+      }
+      // (d) rolled === null -> no themeDropResult, nothing to do
+    }
+  }
+
+  const totalXpDelta = xpAwarded + bonusXP + trostpreisXp + themeDropXp;
 
   // -----------------------------------------------------------
   //  Build the batched :commit payload
   // -----------------------------------------------------------
   const writes = [];
 
-  // 1) users/{uid} - grade + xp + counter + (maybe) achievements.
+  // 1) users/{uid} - grade + xp + counter + (maybe) achievements + theme drop.
   //    We use dot-paths in the updateMask so existing grades.* keys
   //    aren't wiped (Hard Rule 4 - no full-doc overwrite).
   const userSet = {
@@ -195,6 +288,29 @@ export async function handleSubmitTestResult(request, env) {
   };
   if (newlyUnlocked.length > 0) {
     userSet.achievements = arrayUnion(newlyUnlocked);
+  }
+  if (themeDropResult && themeDropResult.unlocked) {
+    // New theme drop: add to themes AND themeDrops (legacy field, still
+    // useful for unlockCosmetic-fallback path on offline flush).
+    userSet.themes     = arrayUnion([themeDropResult.themeId]);
+    userSet.themeDrops = arrayUnion([themeDropResult.themeId]);
+  }
+  if (themeDropResult && themeDropResult.alreadyOwned) {
+    // Cooldown timestamp so a follow-up unlockCosmetic call can't
+    // double-grant (defense-in-depth even though we grant inline here).
+    userSet[`themeDropCooldowns.${themeDropResult.themeId}`] = Date.now();
+  }
+  // Gate B (anti-grind, per-topic): wenn ueberhaupt ein Drop gerollt wurde
+  // (unlock ODER already-owned doppel-drop), Topic-Cooldown setzen. No-drop
+  // (rolled === null) bleibt eligible fuer den naechsten Versuch - sonst
+  // koennte ein einziger schlechter Roll das Topic 24h sperren.
+  // Numerischer Date.now()-ms (KEIN serverTimestamp-Transform): nested map
+  // fields koennen via :commit-updateTransforms keinen Sentinel aufnehmen
+  // (siehe Kommentar oben bei grades.<key>.date), und das Vergleichs-
+  // arithmetic Date.now() - cooldownTs braucht eh ms. Gleiche Konvention
+  // wie themeDropCooldowns.{themeId}.
+  if (themeDropResult) {
+    userSet[`topicDropCooldowns.${topicCooldownKey}`] = Date.now();
   }
   writes.push(buildWriteFor(env, `users/${uid}`, userSet));
 
@@ -214,7 +330,9 @@ export async function handleSubmitTestResult(request, env) {
       klasse:                 userData.klasse != null ? String(userData.klasse) : null,
       activeOutline:          userData.activeOutline || null,
       activeTheme:            userData.activeTheme   || null,
-      xp:                     projectedXp,
+      // Use the FINAL xp after drop/trostpreis/achievements. projectedXp
+      // only carried xpAwarded — totalXpDelta is the authoritative delta.
+      xp:                     (userData.xp || 0) + totalXpDelta,
       role:                   userData.role || null,
       streak:                 userData.streakCount || 0,
       studyMins:              studyMinsTotal,
@@ -253,7 +371,14 @@ export async function handleSubmitTestResult(request, env) {
     xpAwarded:           totalXpDelta,
     achievementsGranted: newlyUnlocked,
     leaderboardUpdated,
-    dailyUpdated:        false  // not currently written here; client owns dailyScores
+    dailyUpdated:        false,  // not currently written here; client owns dailyScores
+    // Mission 7 — drop-roll moved server-side (Variant B).
+    // themeDrop is null when no drop occurred (grade !=1/2, no-drop roll,
+    // or test-account). When present, frontend reads .unlocked vs
+    // .alreadyOwned to pick the right toast.
+    themeDrop:           themeDropResult,
+    // Trostpreis (Q4): all 11 themes owned -> +30 XP per Note-1/2 test.
+    trostpreis:          trostpreisXp || 0
   };
 }
 
