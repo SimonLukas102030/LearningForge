@@ -38,6 +38,29 @@
 
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
+
+  /* Physik-Simulationen — Light Mode */
+  --sim-sky:        #dbeafe;
+  --sim-ground:     #f8fafc;
+  --sim-soil:       #cbd5e1;
+  --sim-water:      #bae6fd;
+  --sim-water-line: #7dd3fc;
+  --sim-grass:      #86efac;
+  --sim-trajectory: #93c5fd;
+  --sim-ball:       #3b82f6;
+  --sim-ball-2:     #ef4444;
+  --sim-grid:       #94a3b8;
+  --sim-text:       #1e293b;
+  --sim-text-muted: #64748b;
+  --sim-vec-x:      #0ea5e9;
+  --sim-vec-y:      #f97316;
+  --sim-vec-up:     #10b981;
+  --sim-vec-down:   #ef4444;
+  --sim-success:    #10b981;
+  --sim-tip-bg:     #fef3c7;
+  --sim-tip-bg2:    #fde68a;
+  --sim-tip-bar:    #f59e0b;
+  --sim-tip-text:   #78350f;
 }
 
 [data-theme="dark"] {
@@ -53,6 +76,29 @@
   --shadow: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 10px 30px rgba(0,0,0,0.6);
   --accent-subtle: #1e1b4b;
+
+  /* Physik-Simulationen — Dark Mode */
+  --sim-sky:        #1a2540;
+  --sim-ground:     #1e2535;
+  --sim-soil:       #0e1424;
+  --sim-water:      #1e3a5f;
+  --sim-water-line: #2563eb;
+  --sim-grass:      #166534;
+  --sim-trajectory: #818cf8;
+  --sim-ball:       #60a5fa;
+  --sim-ball-2:     #f87171;
+  --sim-grid:       #475569;
+  --sim-text:       #e2e8f0;
+  --sim-text-muted: #94a3b8;
+  --sim-vec-x:      #38bdf8;
+  --sim-vec-y:      #fb923c;
+  --sim-vec-up:     #34d399;
+  --sim-vec-down:   #f87171;
+  --sim-success:    #34d399;
+  --sim-tip-bg:     #422006;
+  --sim-tip-bg2:    #78350f;
+  --sim-tip-bar:    #f59e0b;
+  --sim-tip-text:   #fde68a;
 }
 
 /* ── 2. Reset & Base ────────────────────── */
@@ -869,7 +915,7 @@ input, textarea, select { font-family: var(--font); }
   max-width: 100%;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: #fef3c7;
+  background: var(--sim-sky);
 }
 .sim-controls {
   display: flex;
@@ -987,13 +1033,13 @@ input, textarea, select { font-family: var(--font); }
 
 /* Sim-Tipp-Bubble */
 .sim-tip {
-  margin-top: 10px;
+  margin: 10px 0;
   padding: 10px 12px;
-  background: linear-gradient(90deg, #fef3c7 0%, #fde68a 100%);
-  border-left: 3px solid #f59e0b;
+  background: linear-gradient(90deg, var(--sim-tip-bg) 0%, var(--sim-tip-bg2) 100%);
+  border-left: 3px solid var(--sim-tip-bar);
   border-radius: var(--radius-sm);
   font-size: 13px;
-  color: #78350f;
+  color: var(--sim-tip-text);
 }
 
 /* Setup banner */

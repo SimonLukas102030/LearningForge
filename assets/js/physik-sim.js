@@ -5,6 +5,25 @@
 
 const G = 9.81; // Erdbeschleunigung m/s²
 
+// Theme-Farben aus CSS-Variablen lesen ────────────────────
+function theme(varName) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--sim-' + varName).trim();
+  return v || '#888';
+}
+
+// Globaler Theme-Observer: bei [data-theme]-Wechsel alle Sims neuzeichnen
+let _themeObserverSetup = false;
+function ensureThemeObserver() {
+  if (_themeObserverSetup) return;
+  _themeObserverSetup = true;
+  const obs = new MutationObserver(() => {
+    document.querySelectorAll('[data-sim]').forEach(el => {
+      if (typeof el._lfRedraw === 'function') el._lfRedraw();
+    });
+  });
+  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
 // Hilfsfunktionen ─────────────────────────────────────────
 function el(tag, cls, html) {
   const e = document.createElement(tag);
@@ -88,32 +107,31 @@ function initSchwimmer(host) {
   function redraw() {
     ctx.clearRect(0, 0, w, h);
     // Hintergrund: Flussufer
-    ctx.fillStyle = '#dbeafe'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#a7c7e7'; ctx.fillRect(0, 60, w, h - 120);
-    ctx.fillStyle = '#86a3c4';
+    ctx.fillStyle = theme('grass'); ctx.fillRect(0, 0, w, 60);
+    ctx.fillRect(0, h - 60, w, 60);
+    ctx.fillStyle = theme('water'); ctx.fillRect(0, 60, w, h - 120);
+    ctx.fillStyle = theme('water-line');
     for (let i = 0; i < 6; i++) {
       const yy = 60 + (h - 120) * (i + 0.3) / 6;
       ctx.fillRect(0, yy, w, 2);
     }
-    ctx.fillStyle = '#10b981'; ctx.fillRect(0, 0, w, 60);
-    ctx.fillRect(0, h - 60, w, 60);
 
     // Pfeile in Mitte
     const cx = 100, cy = h / 2;
     const scale = 30; // px pro m/s
 
-    // v_Schwimmer (quer, nach unten)
-    drawArrow(ctx, cx, cy, cx, cy + vSchwimmer * scale, '#0ea5e9', 3);
-    ctx.fillStyle = '#0369a1'; ctx.font = '12px sans-serif';
+    // v_Schwimmer (quer)
+    drawArrow(ctx, cx, cy, cx, cy + vSchwimmer * scale, theme('vec-x'), 3);
+    ctx.fillStyle = theme('text'); ctx.font = '12px sans-serif';
     ctx.fillText(`v_S = ${vSchwimmer.toFixed(1)} m/s`, cx + 8, cy + vSchwimmer * scale / 2);
 
     // v_Fluss (längs)
-    drawArrow(ctx, cx, cy, cx + vFluss * scale, cy, '#f97316', 3);
-    ctx.fillStyle = '#9a3412';
+    drawArrow(ctx, cx, cy, cx + vFluss * scale, cy, theme('vec-y'), 3);
+    ctx.fillStyle = theme('text');
     ctx.fillText(`v_F = ${vFluss.toFixed(1)} m/s`, cx + vFluss * scale / 2 - 30, cy - 10);
 
     // Resultierende
-    drawArrow(ctx, cx, cy, cx + vFluss * scale, cy + vSchwimmer * scale, '#10b981', 4);
+    drawArrow(ctx, cx, cy, cx + vFluss * scale, cy + vSchwimmer * scale, theme('success'), 4);
 
     // Tatsächliche Bahn vom linken Ufer
     const t = flussBreite / vSchwimmer;
@@ -123,14 +141,14 @@ function initSchwimmer(host) {
     const endY   = h - 60;
     if (endX < w - 30) {
       ctx.beginPath();
-      ctx.strokeStyle = '#10b981';
+      ctx.strokeStyle = theme('success');
       ctx.setLineDash([5, 4]);
       ctx.lineWidth = 2;
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = theme('success');
       ctx.beginPath(); ctx.arc(endX, endY, 6, 0, Math.PI * 2); ctx.fill();
     }
 
@@ -142,6 +160,7 @@ function initSchwimmer(host) {
     ro3.set(`${versatz.toFixed(1)} m (bei ${flussBreite} m Flussbreite)`);
   }
 
+  host._lfRedraw = redraw;
   redraw();
   window.addEventListener('resize', () => {
     fitCanvas(canvas, host.clientWidth || w, h);
@@ -186,15 +205,15 @@ function initGalileo(host) {
   function draw() {
     ctx.clearRect(0, 0, w, h);
     // Boden + Achse
-    ctx.fillStyle = '#a7c7e7'; ctx.fillRect(0, 0, w, top);
-    ctx.fillStyle = '#fef3c7'; ctx.fillRect(0, top, w, ground - top);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(0, ground, w, h - ground);
+    ctx.fillStyle = theme('sky');    ctx.fillRect(0, 0, w, top);
+    ctx.fillStyle = theme('ground'); ctx.fillRect(0, top, w, ground - top);
+    ctx.fillStyle = theme('soil');   ctx.fillRect(0, ground, w, h - ground);
 
     // Höhen-Markierung
-    ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = theme('grid'); ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.moveTo(padX, top); ctx.lineTo(padX, ground); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#475569'; ctx.font = '11px sans-serif';
+    ctx.fillStyle = theme('text-muted'); ctx.font = '11px sans-serif';
     ctx.fillText(`${hoehe} m`, 5, (top + ground) / 2);
 
     const tF = Math.sqrt(2 * hoehe / G);
@@ -202,15 +221,15 @@ function initGalileo(host) {
 
     // Kugel 1: freier Fall (links)
     const y1 = top + 0.5 * G * tt * tt * pxPerM_y();
-    drawBall(ctx, padX, y1, '#ef4444', 'A: Fällt');
+    drawBall(ctx, padX, y1, theme('ball-2'), 'A: Fällt');
 
     // Kugel 2: waagerechter Wurf (von links nach rechts)
     const x2 = padX + v0 * tt * pxPerM_x();
     const y2 = top + 0.5 * G * tt * tt * pxPerM_y();
-    drawBall(ctx, x2, y2, '#3b82f6', 'B: Wurf');
+    drawBall(ctx, x2, y2, theme('ball'), 'B: Wurf');
 
     // Bahnspur Kugel B
-    ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 2;
+    ctx.strokeStyle = theme('trajectory'); ctx.lineWidth = 2;
     ctx.beginPath();
     for (let s = 0; s <= tt; s += tF / 50) {
       const xx = padX + v0 * s * pxPerM_x();
@@ -220,10 +239,10 @@ function initGalileo(host) {
     ctx.stroke();
 
     // Status
-    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = theme('text'); ctx.font = 'bold 13px sans-serif';
     ctx.fillText(`t = ${tt.toFixed(2)} s`, w - 100, 22);
     if (tt >= tF) {
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = theme('success');
       ctx.fillText('✓ Beide gleichzeitig!', w - 175, 42);
     }
   }
@@ -246,6 +265,7 @@ function initGalileo(host) {
     draw();
   }
 
+  host._lfRedraw = draw;
   reset();
 }
 
@@ -285,9 +305,9 @@ function initWaagerecht(host) {
 
   function draw() {
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#a7c7e7'; ctx.fillRect(0, 0, w, top);
-    ctx.fillStyle = '#fef3c7'; ctx.fillRect(0, top, w, ground - top);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(0, ground, w, h - ground);
+    ctx.fillStyle = theme('sky');    ctx.fillRect(0, 0, w, top);
+    ctx.fillStyle = theme('ground'); ctx.fillRect(0, top, w, ground - top);
+    ctx.fillStyle = theme('soil');   ctx.fillRect(0, ground, w, h - ground);
 
     const tF = Math.sqrt(2 * hoehe / G);
     const wWeite = v0 * tF;
@@ -295,7 +315,7 @@ function initWaagerecht(host) {
     const pxY = (ground - top) / hoehe;
 
     // Bahnspur (komplett)
-    ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = theme('trajectory'); ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
     ctx.beginPath();
     for (let s = 0; s <= tF; s += tF / 80) {
       const xx = padX + v0 * s * pxX;
@@ -309,19 +329,19 @@ function initWaagerecht(host) {
     const tt = Math.min(t, tF);
     const x  = padX + v0 * tt * pxX;
     const y  = top  + 0.5 * G * tt * tt * pxY;
-    drawBall(ctx, x, y, '#3b82f6', '');
+    drawBall(ctx, x, y, theme('ball'), '');
 
     // Geschwindigkeitsvektoren
     if (tt > 0.1 && tt < tF - 0.05) {
-      drawArrow(ctx, x, y, x + v0 * 4, y, '#0ea5e9', 2);
-      drawArrow(ctx, x, y, x, y + G * tt * 4, '#f97316', 2);
+      drawArrow(ctx, x, y, x + v0 * 4, y, theme('vec-x'), 2);
+      drawArrow(ctx, x, y, x, y + G * tt * 4, theme('vec-y'), 2);
     }
 
     // Höhenmaß
-    ctx.strokeStyle = '#94a3b8'; ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = theme('grid'); ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.moveTo(padX, top); ctx.lineTo(padX, ground); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#475569'; ctx.font = '11px sans-serif';
+    ctx.fillStyle = theme('text-muted'); ctx.font = '11px sans-serif';
     ctx.fillText(`${hoehe} m`, 5, (top + ground) / 2);
     ctx.fillText(`${wWeite.toFixed(1)} m`, padX + (w - 2 * padX) / 2 - 20, ground + 18);
   }
@@ -350,6 +370,7 @@ function initWaagerecht(host) {
   }
 
   function reset() { t = 0; running = false; lastTs = 0; update(); draw(); }
+  host._lfRedraw = draw;
   reset();
 }
 
@@ -389,9 +410,9 @@ function initSenkrechtHoch(host) {
 
   function draw() {
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#a7c7e7'; ctx.fillRect(0, 0, w, top);
-    ctx.fillStyle = '#fef3c7'; ctx.fillRect(0, top, w, ground - top);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(0, ground, w, h - ground);
+    ctx.fillStyle = theme('sky');    ctx.fillRect(0, 0, w, top);
+    ctx.fillStyle = theme('ground'); ctx.fillRect(0, top, w, ground - top);
+    ctx.fillStyle = theme('soil');   ctx.fillRect(0, ground, w, h - ground);
 
     const hMax = v0 * v0 / (2 * G);
     const tS   = v0 / G;
@@ -399,26 +420,26 @@ function initSenkrechtHoch(host) {
     const pxY  = (ground - top - 30) / Math.max(hMax, 1);
 
     // Höhen-Linie
-    ctx.strokeStyle = '#cbd5e1'; ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = theme('grid'); ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, ground); ctx.stroke();
     const hMaxY = ground - hMax * pxY;
     ctx.beginPath(); ctx.moveTo(cx - 50, hMaxY); ctx.lineTo(cx + 50, hMaxY); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#64748b'; ctx.font = '11px sans-serif';
+    ctx.fillStyle = theme('text-muted'); ctx.font = '11px sans-serif';
     ctx.fillText(`h_max ≈ ${hMax.toFixed(1)} m`, cx + 55, hMaxY + 4);
 
     const tt = Math.min(t, tG);
     const yMeter = v0 * tt - 0.5 * G * tt * tt;
     const yPos   = ground - yMeter * pxY;
-    drawBall(ctx, cx, yPos, '#3b82f6', '');
+    drawBall(ctx, cx, yPos, theme('ball'), '');
 
     // Geschwindigkeit aktuell
     const vNow = v0 - G * tt;
     if (Math.abs(vNow) > 0.1) {
-      drawArrow(ctx, cx, yPos, cx, yPos - vNow * 5, vNow > 0 ? '#10b981' : '#ef4444', 2);
+      drawArrow(ctx, cx, yPos, cx, yPos - vNow * 5, vNow > 0 ? theme('vec-up') : theme('vec-down'), 2);
     }
 
-    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = theme('text'); ctx.font = 'bold 13px sans-serif';
     ctx.fillText(`t = ${tt.toFixed(2)} s`, w - 100, 22);
   }
 
@@ -444,6 +465,7 @@ function initSenkrechtHoch(host) {
   }
 
   function reset() { t = 0; running = false; lastTs = 0; update(); roVnow.set(`${v0.toFixed(2)} m/s ↑`); draw(); }
+  host._lfRedraw = draw;
   reset();
 }
 
@@ -485,9 +507,9 @@ function initWurfNachUnten(host) {
 
   function draw() {
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#a7c7e7'; ctx.fillRect(0, 0, w, top);
-    ctx.fillStyle = '#fef3c7'; ctx.fillRect(0, top, w, ground - top);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(0, ground, w, h - ground);
+    ctx.fillStyle = theme('sky');    ctx.fillRect(0, 0, w, top);
+    ctx.fillStyle = theme('ground'); ctx.fillRect(0, top, w, ground - top);
+    ctx.fillStyle = theme('soil');   ctx.fillRect(0, ground, w, h - ground);
 
     const tFw  = (-v0 + Math.sqrt(v0*v0 + 2*G*hoehe)) / G;       // Wurf
     const tFr  = Math.sqrt(2 * hoehe / G);                       // Frei
@@ -495,7 +517,7 @@ function initWurfNachUnten(host) {
     const pxY  = (ground - top) / hoehe;
 
     // Säulen-Anzeigen
-    ctx.fillStyle = '#1e293b'; ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = theme('text'); ctx.font = 'bold 12px sans-serif';
     ctx.fillText('Wurf nach unten', cxA - 50, top - 8);
     ctx.fillText('Freier Fall', cxB - 35, top - 8);
 
@@ -503,24 +525,24 @@ function initWurfNachUnten(host) {
     // Wurf-Ball
     const sW = Math.min(v0 * tt + 0.5 * G * tt * tt, hoehe);
     const yW = top + sW * pxY;
-    drawBall(ctx, cxA, yW, '#3b82f6', '');
+    drawBall(ctx, cxA, yW, theme('ball'), '');
 
     // Frei-Ball
     const sF = Math.min(0.5 * G * tt * tt, hoehe);
     const yF = top + sF * pxY;
-    drawBall(ctx, cxB, yF, '#ef4444', '');
+    drawBall(ctx, cxB, yF, theme('ball-2'), '');
 
     // Beschriftung
-    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = theme('text'); ctx.font = 'bold 13px sans-serif';
     ctx.fillText(`t = ${tt.toFixed(2)} s`, w / 2 - 35, h - 14);
 
     // Markierung wer zuerst landet
     if (tt >= tFw && tt < tFw + 0.3) {
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = theme('success');
       ctx.fillText('✓ Wurf landet', cxA - 35, ground + 22);
     }
     if (tt >= tFr && tt < tFr + 0.3) {
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = theme('success');
       ctx.fillText('✓ Frei landet', cxB - 30, ground + 22);
     }
   }
@@ -548,6 +570,7 @@ function initWurfNachUnten(host) {
   }
 
   function reset() { t = 0; running = false; lastTs = 0; update(); draw(); }
+  host._lfRedraw = draw;
   reset();
 }
 
@@ -587,9 +610,9 @@ function initSchief(host) {
 
   function draw() {
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#a7c7e7'; ctx.fillRect(0, 0, w, top);
-    ctx.fillStyle = '#fef3c7'; ctx.fillRect(0, top, w, ground - top);
-    ctx.fillStyle = '#92400e'; ctx.fillRect(0, ground, w, h - ground);
+    ctx.fillStyle = theme('sky');    ctx.fillRect(0, 0, w, top);
+    ctx.fillStyle = theme('ground'); ctx.fillRect(0, top, w, ground - top);
+    ctx.fillStyle = theme('soil');   ctx.fillRect(0, ground, w, h - ground);
 
     const aRad = alpha * Math.PI / 180;
     const vx   = v0 * Math.cos(aRad);
@@ -606,7 +629,7 @@ function initSchief(host) {
     const scale  = Math.min(scaleX, scaleY) * 0.9;
 
     // Bahnspur
-    ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = theme('trajectory'); ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
     ctx.beginPath();
     for (let s = 0; s <= tG; s += tG / 100) {
       const xx = padX + vx * s * scale;
@@ -620,25 +643,25 @@ function initSchief(host) {
     const tt = Math.min(t, tG);
     const x  = padX + vx * tt * scale;
     const y  = ground - (vy0 * tt - 0.5 * G * tt * tt) * scale;
-    drawBall(ctx, x, y, '#3b82f6', '');
+    drawBall(ctx, x, y, theme('ball'), '');
 
     // Geschwindigkeitspfeile
     if (tt > 0.05 && tt < tG - 0.05) {
       const vyNow = vy0 - G * tt;
-      drawArrow(ctx, x, y, x + vx * 1.5, y, '#0ea5e9', 2);
-      drawArrow(ctx, x, y, x, y - vyNow * 1.5, vyNow >= 0 ? '#10b981' : '#ef4444', 2);
+      drawArrow(ctx, x, y, x + vx * 1.5, y, theme('vec-x'), 2);
+      drawArrow(ctx, x, y, x, y - vyNow * 1.5, vyNow >= 0 ? theme('vec-up') : theme('vec-down'), 2);
     }
 
     // Beschriftung
-    ctx.fillStyle = '#475569'; ctx.font = '11px sans-serif';
+    ctx.fillStyle = theme('text-muted'); ctx.font = '11px sans-serif';
     ctx.fillText(`Weite: ${wWeite.toFixed(1)} m`, padX, ground + 16);
     ctx.fillText(`H: ${hMax.toFixed(1)} m`, padX, top + 12);
-    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = theme('text'); ctx.font = 'bold 13px sans-serif';
     ctx.fillText(`t = ${tt.toFixed(2)} s`, w - 90, 18);
 
     // Hinweis bei 45°
     if (Math.abs(alpha - 45) < 0.5) {
-      ctx.fillStyle = '#10b981';
+      ctx.fillStyle = theme('success');
       ctx.font = 'bold 12px sans-serif';
       ctx.fillText('✓ Maximale Wurfweite!', w - 180, ground + 16);
     }
@@ -668,6 +691,7 @@ function initSchief(host) {
   }
 
   function reset() { t = 0; running = false; lastTs = 0; update(); draw(); }
+  host._lfRedraw = draw;
   reset();
 }
 
@@ -675,7 +699,8 @@ function initSchief(host) {
 function drawBall(ctx, x, y, color, label) {
   ctx.fillStyle = color;
   ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#fff';
+  // Highlight (subtil — gleiche Farbe wie Ball, leicht aufgehellt)
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.beginPath(); ctx.arc(x - 2, y - 2, 2, 0, Math.PI * 2); ctx.fill();
   if (label) {
     ctx.fillStyle = color;
@@ -708,6 +733,7 @@ const SIMS = {
 
 export function initPhysikSimulations(container) {
   if (!container) return;
+  ensureThemeObserver();
   container.querySelectorAll('[data-sim]').forEach(el => {
     if (el.dataset._initialized) return;
     el.dataset._initialized = '1';
