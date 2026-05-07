@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, submitTopicForReview, voteCustomTopic, getPendingTopics, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, unlockedOutlines, themeById, rollThemeDrop, resolveOutlineClass, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -20,7 +20,8 @@ import {
 const ADMIN_EMAIL = 'simonkoper27@gmail.com';
 
 // ── Rollen-Helper ─────────────────────────
-function isAdmin() { return userData?.role === 'admin' || isAdmin(); }
+function isAdmin() { return userData?.role === 'admin' || currentUser?.email === ADMIN_EMAIL; }
+function isClaudeAccount() { return !!userData?.isClaude; }
 function userRole(u) {
   // u kann ein User-Doc oder undefined sein. Bei undefined → eigener User.
   if (u !== undefined) return u?.role || null;
@@ -203,6 +204,18 @@ export function startApp() {
         route();
         return;
       }
+      // Claude-Test-Account: localStorage-Email matched → idempotent markieren.
+      // Faengt auch den Fall ab dass der erste Login lief bevor markAsClaude durch war.
+      try {
+        const raw = localStorage.getItem('lf_claude_creds');
+        if (raw) {
+          const cc = JSON.parse(raw);
+          if (cc?.email === user.email && !userData?.isClaude) {
+            await markAsClaude(user.uid);
+            userData = { ...(userData || {}), isClaude: true, role: 'admin', name: userData?.name || 'Claude (Test)' };
+          }
+        }
+      } catch(e) { console.warn('[claude-mark]', e); }
       // Auto-Sync Rolle anhand Email-Whitelist (admin/tester)
       try {
         await syncUserRole(user.uid, user.email);
@@ -408,6 +421,7 @@ function renderNav(breadcrumbs = []) {
 
 // ── Login-Seite ──────────────────────────
 function renderLogin() {
+  const hasClaudeCreds = !!localStorage.getItem('lf_claude_creds');
   document.getElementById('app').innerHTML = `
     <div class="login-wrap">
       <div class="login-card">
@@ -444,15 +458,62 @@ function renderLogin() {
             <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
             Mit Google anmelden
           </button>
+          ${hasClaudeCreds ? `
+            <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="window.LF.claudeLogin()">
+              &#129302; Als Claude einloggen (Test-Account)
+            </button>` : ''}
           <div class="toggle-auth">
             <span id="toggleText">Noch kein Konto?</span>
             <button onclick="window.LF.toggleAuthMode()">Registrieren</button>
+          </div>
+          <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text-muted)">
+            <a onclick="window.LF.openClaudeSetup()" style="cursor:pointer;text-decoration:underline">
+              ${hasClaudeCreds ? 'Claude-Test-Account verwalten' : 'Claude-Test-Account einrichten'}
+            </a>
           </div>
         </div>
       </div>
     </div>`;
   document.getElementById('authEmail').addEventListener('keydown', e => { if(e.key==='Enter') window.LF.submitAuth(); });
   document.getElementById('authPass').addEventListener('keydown',  e => { if(e.key==='Enter') window.LF.submitAuth(); });
+}
+
+// ── Claude-Setup-Modal ───────────────────
+// Speichert Email+Passwort fuer den Claude-Test-Account ausschliesslich
+// in localStorage des aktuellen Browsers. Geht nicht ueber GitHub/Firestore.
+function renderClaudeSetupModal() {
+  let creds = {};
+  try { creds = JSON.parse(localStorage.getItem('lf_claude_creds') || '{}'); } catch {}
+  const overlay = document.createElement('div');
+  overlay.className = 'kb-overlay';
+  overlay.id = 'claudeSetupOverlay';
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) overlay.remove(); });
+  overlay.innerHTML = `
+    <div class="kb-dialog" style="max-width:440px">
+      <h3>&#129302; Claude-Test-Account</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        Logindaten werden <strong>nur in diesem Browser</strong> (localStorage) gespeichert &mdash;
+        nichts davon liegt im Repo oder in Firestore. Der Account bekommt Admin-Rechte
+        und wird in Rangliste + Freundessuche ausgeblendet.
+      </p>
+      <div class="form-group">
+        <label class="form-label">E-Mail (frei waehlbar)</label>
+        <input class="form-input" id="claudeSetupEmail" type="email"
+               value="${creds.email || 'claude@learning-forge.local'}" placeholder="claude@...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Passwort (mind. 6 Zeichen)</label>
+        <input class="form-input" id="claudeSetupPass" type="text"
+               value="${creds.password || ''}" placeholder="Passwort">
+      </div>
+      <div id="claudeSetupErr" style="color:#ef4444;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+        ${creds.email ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.clearClaudeCreds()">Logindaten loeschen</button>` : ''}
+        <button class="btn btn-secondary btn-sm" onclick="this.closest('.kb-overlay').remove()">Schliessen</button>
+        <button class="btn btn-primary btn-sm" onclick="window.LF.saveClaudeCreds()">Speichern</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 // ── Keyboard Shortcuts (F-08) ────────────
@@ -647,7 +708,7 @@ function renderDashboard() {
           <span class="stat-val">${getSRSDueCount()}</span><span class="stat-lbl">SRS fällig</span>
         </div>` : ''}
       </div>
-      ${!userData?.klasse ? `
+      ${!userData?.klasse && !isClaudeAccount() ? `
         <div class="klasse-prompt" onclick="location.hash='#/profil'">
           <span class="klasse-prompt-icon">&#9888;&#65039;</span>
           <div class="klasse-prompt-text">
@@ -656,6 +717,7 @@ function renderDashboard() {
           </div>
           <span class="klasse-prompt-arrow">&rsaquo;</span>
         </div>` : ''}
+      ${isClaudeAccount() ? `<div id="claudeBugList"></div>` : ''}
       ${renderDailyChallengeCard()}
       ${attentionHtml}
       ${recommendations.length ? `
@@ -688,14 +750,81 @@ function renderDashboard() {
       <div class="subjects-grid">${subjectCards}</div>
       ${renderChangelogSection()}
       ${recentHtml}
+      <div id="bugReportSection"></div>
     </div>`;
+  // Bug-Report-Sektion asynchron nachladen (Firestore-Reads).
+  loadBugReportSection();
+  if (isClaudeAccount()) loadClaudeBugList();
+}
+
+// ── Bug-Reports auf dem Dashboard ─────────
+async function loadBugReportSection() {
+  const host = document.getElementById('bugReportSection');
+  if (!host || !currentUser) return;
+  let mine = [];
+  try { mine = await getMyBugReports(currentUser.uid); } catch(e) { console.warn('[bugReports]', e); }
+  const open  = mine.filter(b => !b.resolved);
+  const closed = mine.filter(b =>  b.resolved).slice(0, 3);
+  const row = (b) => `
+    <div class="recent-item" style="--subject-color:${b.resolved ? '#16a34a' : '#f59e0b'}">
+      <span class="recent-icon">${b.resolved ? '&#9989;' : '&#128027;'}</span>
+      <div class="recent-info">
+        <div class="recent-name" style="white-space:normal">${escapeHtml(b.text)}</div>
+        <div class="recent-sub">${b.resolved ? 'Erledigt' : 'Offen'}${b.resolvedNote ? ' &mdash; ' + escapeHtml(b.resolvedNote) : ''}</div>
+      </div>
+      ${(b.uid === currentUser.uid || isAdmin()) ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.deleteBugReport('${b.id}')">&times;</button>` : ''}
+    </div>`;
+  host.innerHTML = `
+    <div class="section-title" style="margin-top:32px;display:flex;align-items:center;justify-content:space-between">
+      <span>&#128027; Probleme melden</span>
+      <button class="btn btn-primary btn-sm" onclick="window.LF.openBugReport()">Neue Meldung</button>
+    </div>
+    <div class="recent-list">
+      ${open.length ? open.map(row).join('') : '<div class="empty-state" style="padding:16px">Keine offenen Meldungen.</div>'}
+      ${closed.length ? '<div style="font-size:12px;color:var(--text-muted);margin-top:8px">Zuletzt erledigt:</div>' + closed.map(row).join('') : ''}
+    </div>`;
+}
+
+async function loadClaudeBugList() {
+  const host = document.getElementById('claudeBugList');
+  if (!host) return;
+  let open = [];
+  try { open = await getOpenBugReports(); } catch(e) { console.warn('[bugReports/open]', e); }
+  if (!open.length) {
+    host.innerHTML = `
+      <div class="install-card" style="margin-bottom:16px;border-left:3px solid #16a34a">
+        <div class="install-card-icon">&#9989;</div>
+        <div class="install-card-info">
+          <div class="install-card-title">Keine offenen Bug-Reports</div>
+          <div class="install-card-sub">Alles sauber &mdash; weiter mit normalem Testen.</div>
+        </div>
+      </div>`;
+    return;
+  }
+  const fmt = (b) => `
+    <div class="attention-item" style="--subject-color:#f59e0b;align-items:flex-start">
+      <span class="att-icon">&#128027;</span>
+      <div class="att-info">
+        <div class="att-name" style="white-space:normal">${escapeHtml(b.text)}</div>
+        <div class="att-sub">${escapeHtml(b.name || 'Nutzer')}${b.createdAt?.toDate ? ' &middot; ' + b.createdAt.toDate().toLocaleString('de-DE') : ''}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-primary btn-sm" onclick="window.LF.resolveBugReport('${b.id}')">Erledigt</button>
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.deleteBugReport('${b.id}')">&times;</button>
+      </div>
+    </div>`;
+  host.innerHTML = `
+    <div class="section-title" style="margin-top:0;color:#f59e0b">
+      &#128736;&#65039; ${open.length} offene${open.length === 1 ? 'r' : ''} Bug-Report${open.length === 1 ? '' : 's'} zum Pruefen
+    </div>
+    <div class="attention-list">${open.map(fmt).join('')}</div>`;
 }
 
 // ── Was ist neu? — Changelog-Sektion ───────
 function renderChangelogSection() {
   if (!changelog || changelog.length === 0) return '';
   const TYPE_LABEL = { added: 'Neu', expanded: 'Erweitert', fixed: 'Korrigiert' };
-  const items = changelog.slice(0, 8).map(e => {
+  const items = changelog.slice(0, 5).map(e => {
     const dateStr      = formatRelativeDate(e.date);
     const hasSubject   = !!e.subject;
     const subjectColor = hasSubject ? getSubjectColor(e.subject) : 'var(--accent)';
@@ -3816,6 +3945,38 @@ window.LF = {
     try { await loginWithGoogle(); }
     catch(e) { console.error(e); }
   },
+  openClaudeSetup: () => {
+    if (document.getElementById('claudeSetupOverlay')) return;
+    renderClaudeSetupModal();
+  },
+  saveClaudeCreds: () => {
+    const email = document.getElementById('claudeSetupEmail')?.value.trim();
+    const pass  = document.getElementById('claudeSetupPass')?.value;
+    const err   = document.getElementById('claudeSetupErr');
+    if (!email || !pass) { err.textContent = 'Email und Passwort noetig.'; return; }
+    if (pass.length < 6) { err.textContent = 'Passwort braucht mind. 6 Zeichen.'; return; }
+    localStorage.setItem('lf_claude_creds', JSON.stringify({ email, password: pass }));
+    document.getElementById('claudeSetupOverlay')?.remove();
+    showToast('Claude-Login lokal gespeichert.', 'success');
+    renderLogin();
+  },
+  clearClaudeCreds: () => {
+    if (!confirm('Claude-Login aus diesem Browser loeschen?')) return;
+    localStorage.removeItem('lf_claude_creds');
+    document.getElementById('claudeSetupOverlay')?.remove();
+    showToast('Claude-Login geloescht.', 'info');
+    renderLogin();
+  },
+  claudeLogin: async () => {
+    const errEl = document.getElementById('authError');
+    if (errEl) errEl.innerHTML = '';
+    try { await loginAsClaude(); }
+    catch(e) {
+      const msg = e.code ? translateFirebaseError(e.code) : e.message;
+      if (errEl) errEl.innerHTML = `<div class="error-msg">${msg}</div>`;
+      else showToast(msg, 'error');
+    }
+  },
   saveColors: async () => {
     const subjects = Object.values(structure || {});
     const colors = {};
@@ -4057,7 +4218,9 @@ window.LF = {
     userData.dailyChallenges[dateKey] = { grade: gi.grade, points: pts, maxPoints: max };
     userData.dailyChallengesCompleted = (userData.dailyChallengesCompleted || 0) + 1;
     await incrementCounter(currentUser.uid, 'dailyChallengesCompleted').catch(console.error);
-    await saveDailyScore(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, dateKey, gi.grade, pts, max, userRole()).catch(console.error);
+    if (!isClaudeAccount()) {
+      await saveDailyScore(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, dateKey, gi.grade, pts, max, userRole()).catch(console.error);
+    }
     await db().collection('users').doc(currentUser.uid).set({ dailyChallenges: { [dateKey]: userData.dailyChallenges[dateKey] } }, { merge: true }).catch(console.error);
 
     const xpBonus = gi.grade === 1 ? 80 : gi.grade <= 2 ? 50 : 30;
@@ -4884,14 +5047,17 @@ window.LF.submitTest = async () => {
         showThemeDropToast(drop);
       }
     } catch(e) { console.warn('[theme-drop]', e); }
-    writeFeedEntry(currentUser.uid, 'test', {
-      name: currentUser.displayName || 'Nutzer',
-      subject: subjectId, topic: topicId, grade: bestInfo.grade
-    }).catch(() => {});
-    await updateLeaderboard(
-      currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
-      subjectId, yearId, topicId, bestInfo.grade, bestRun.points
-    ).catch(console.error);
+    // Claude-Test-Account: nichts in Rangliste/Feed schreiben.
+    if (!isClaudeAccount()) {
+      writeFeedEntry(currentUser.uid, 'test', {
+        name: currentUser.displayName || 'Nutzer',
+        subject: subjectId, topic: topicId, grade: bestInfo.grade
+      }).catch(() => {});
+      await updateLeaderboard(
+        currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL,
+        subjectId, yearId, topicId, bestInfo.grade, bestRun.points
+      ).catch(console.error);
+    }
 
     // F-25: XP + F-24: Achievements
     const qCount = questions.length;
@@ -6361,5 +6527,71 @@ window.LF.adminToggleBan = async (uid, ban) => {
     showToast(ban ? 'Gesperrt' : 'Entsperrt', 'info');
     const q = document.getElementById('adminUserSearch')?.value;
     if (q) window.LF.adminSearchUsers(q);
+  } catch(e) { showToast(e.message, 'error'); }
+};
+
+// ── Bug-Reports ─────────────────────────────────────────
+window.LF.openBugReport = () => {
+  if (document.getElementById('bugReportOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'kb-overlay';
+  overlay.id = 'bugReportOverlay';
+  overlay.addEventListener('click', ev => { if (ev.target === overlay) overlay.remove(); });
+  overlay.innerHTML = `
+    <div class="kb-dialog" style="max-width:480px">
+      <h3>&#128027; Problem melden</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+        Beschreibe was schiefgelaufen ist &mdash; Claude geht die Liste beim n&auml;chsten Test-Login durch.
+      </p>
+      <div class="form-group">
+        <textarea class="form-input" id="bugReportText" rows="5"
+          placeholder="z.B. 'Auf der Rangliste-Seite ist der XP-Tab abgeschnitten...'"></textarea>
+      </div>
+      <div id="bugReportErr" style="color:#ef4444;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-secondary btn-sm" onclick="this.closest('.kb-overlay').remove()">Abbrechen</button>
+        <button class="btn btn-primary btn-sm" onclick="window.LF.sendBugReport()">Absenden</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('bugReportText')?.focus(), 50);
+};
+
+window.LF.sendBugReport = async () => {
+  const text = document.getElementById('bugReportText')?.value;
+  const err  = document.getElementById('bugReportErr');
+  if (!text?.trim()) { err.textContent = 'Bitte Beschreibung eingeben.'; return; }
+  try {
+    await submitBugReport(currentUser.uid,
+      userData?.name || currentUser.displayName || 'Nutzer',
+      userData?.photoURL || currentUser.photoURL || null,
+      text);
+    document.getElementById('bugReportOverlay')?.remove();
+    showToast('Danke! Bug-Report abgesendet.', 'success');
+    loadBugReportSection();
+    if (isClaudeAccount()) loadClaudeBugList();
+  } catch(e) {
+    err.textContent = e.message || 'Konnte nicht abgesendet werden.';
+  }
+};
+
+window.LF.resolveBugReport = async (id) => {
+  const note = prompt('Optional: kurze Notiz zur L&ouml;sung (wird im Log gespeichert):', '');
+  if (note === null) return;
+  try {
+    await resolveBugReport(id, note || null);
+    showToast('Als erledigt markiert.', 'success');
+    loadBugReportSection();
+    if (isClaudeAccount()) loadClaudeBugList();
+  } catch(e) { showToast(e.message, 'error'); }
+};
+
+window.LF.deleteBugReport = async (id) => {
+  if (!confirm('Bug-Report wirklich l&ouml;schen?')) return;
+  try {
+    await deleteBugReport(id);
+    showToast('Geloescht.', 'info');
+    loadBugReportSection();
+    if (isClaudeAccount()) loadClaudeBugList();
   } catch(e) { showToast(e.message, 'error'); }
 };

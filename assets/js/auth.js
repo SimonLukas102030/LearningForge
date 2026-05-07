@@ -100,6 +100,48 @@ export async function syncUserRole(uid, email) {
   await _db.collection('users').doc(uid).set({ role: target }, { merge: true });
 }
 
+// ── Claude-Test-Account ─────────────────────
+// Markiert das eigene User-Doc als Claude-Test-Account: bekommt Admin-Rolle,
+// wird in Suche/Rangliste/Feed ausgeblendet. Login-Daten leben nur in localStorage
+// auf Simons PC (key 'lf_claude_creds') — nichts davon liegt im Repo.
+export async function markAsClaude(uid) {
+  if (!uid) return;
+  await _db.collection('users').doc(uid).set({
+    isClaude: true,
+    role: 'admin',
+    name: 'Claude (Test)'
+  }, { merge: true });
+}
+
+export async function loginAsClaude() {
+  const raw = localStorage.getItem('lf_claude_creds');
+  if (!raw) throw new Error('Keine Claude-Credentials im localStorage gespeichert.');
+  let creds;
+  try { creds = JSON.parse(raw); } catch { throw new Error('Claude-Credentials defekt.'); }
+  if (!creds.email || !creds.password) throw new Error('Email oder Passwort fehlt.');
+  const hashed = await hashPassword(creds.password);
+  let cred;
+  try {
+    cred = await _auth.signInWithEmailAndPassword(creds.email, hashed);
+  } catch (e) {
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+      // Account existiert noch nicht — anlegen.
+      cred = await _auth.createUserWithEmailAndPassword(creds.email, hashed);
+      await cred.user.updateProfile({ displayName: 'Claude (Test)' });
+      await _db.collection('users').doc(cred.user.uid).set({
+        name: 'Claude (Test)',
+        email: creds.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        grades: {}
+      });
+    } else {
+      throw e;
+    }
+  }
+  await markAsClaude(cred.user.uid);
+  return cred;
+}
+
 export async function setUserRole(uid, role) {
   // role: 'admin' | 'tester' | null (=remove)
   if (role === null) {
@@ -177,7 +219,8 @@ export async function getLeaderboard() {
   const snap = await _db.collection('leaderboard').get({ source: 'server' });
   return snap.docs
     .map(d => ({ uid: d.id, ...d.data() }))
-    .filter(e => Object.keys(e.scores || {}).length > 0);
+    .filter(e => Object.keys(e.scores || {}).length > 0)
+    .filter(e => !e.isClaude); // Claude-Test-Account ausblenden
 }
 
 export async function getAllUsers() {
@@ -422,7 +465,9 @@ export async function searchUsers(query, currentUid) {
   const snap = await _db.collection('users').limit(300).get();
   const q = query.toLowerCase().trim();
   return snap.docs
-    .filter(d => d.id !== currentUid && (d.data().name || '').toLowerCase().includes(q))
+    .filter(d => d.id !== currentUid
+              && !d.data().isClaude // Claude-Test-Account aus Friend-Suche raushalten
+              && (d.data().name || '').toLowerCase().includes(q))
     .slice(0, 10)
     .map(d => ({ uid: d.id, name: d.data().name, photo: d.data().photoURL || null, role: d.data().role || null }));
 }
@@ -536,4 +581,57 @@ export async function getMultipleUserData(uids) {
   if (!uids?.length) return [];
   const docs = await Promise.all(uids.map(id => _db.collection('users').doc(id).get()));
   return docs.filter(d => d.exists).map(d => ({ uid: d.id, ...d.data() }));
+}
+
+// ── Bug-Reports ──────────────────────────
+export async function submitBugReport(uid, name, photoURL, text) {
+  if (!text?.trim()) throw new Error('Text leer.');
+  const ref = _db.collection('bugReports').doc();
+  await ref.set({
+    uid, name: name || 'Nutzer', photoURL: photoURL || null,
+    text: text.trim().slice(0, 2000),
+    resolved: false,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  return ref.id;
+}
+
+// where + orderBy auf unterschiedlichen Feldern braucht einen Composite-Index in Firestore.
+// Vermeiden wir, indem wir ohne orderBy queryen und clientseitig sortieren.
+function _sortByCreatedDesc(arr) {
+  return arr.sort((a, b) => {
+    const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+    const tb = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+    return tb - ta;
+  });
+}
+
+export async function getOpenBugReports() {
+  const snap = await _db.collection('bugReports')
+    .where('resolved', '==', false)
+    .limit(200)
+    .get({ source: 'server' });
+  const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return _sortByCreatedDesc(arr).slice(0, 100);
+}
+
+export async function getMyBugReports(uid) {
+  const snap = await _db.collection('bugReports')
+    .where('uid', '==', uid)
+    .limit(50)
+    .get({ source: 'server' });
+  const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return _sortByCreatedDesc(arr).slice(0, 20);
+}
+
+export async function resolveBugReport(id, note) {
+  await _db.collection('bugReports').doc(id).set({
+    resolved: true,
+    resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    resolvedNote: note || null
+  }, { merge: true });
+}
+
+export async function deleteBugReport(id) {
+  await _db.collection('bugReports').doc(id).delete();
 }
