@@ -19,3 +19,16 @@ GITHUB_RAW_BASE = "https://raw.githubusercontent.com/SimonLukas102030/LearningFo
 #                            Wave-1 fix 2026-05-08 (B-M03 / CHEAT-B-M03):
 #                            without this secret, only simonkoper27@gmail.com
 #                            is allowed and Test-Accounts can't self-mark.
+#
+# Mission 12 (2026-05-08) - AI-Provider-Proxy /aiCall:
+#   GROQ_API_KEY         -> Groq API key (primary AI provider, llama-3.3-70b)
+#   GEMINI_API_KEY       -> Google Gemini API key (fallback, gemini-2.0-flash)
+#
+# NEVER commit actual values here. After every push that touches the
+# Worker, Simon manually runs (from the workers/ folder):
+#   npx wrangler secret put GROQ_API_KEY
+#   npx wrangler secret put GEMINI_API_KEY
+# Wrangler prompts for the value (stdin) and stores it encrypted in
+# the CF dashboard - the secret is never echoed back, never logged,
+# and never written to disk. If both secrets are missing the endpoint
+# returns 503 "AI providers unavailable".

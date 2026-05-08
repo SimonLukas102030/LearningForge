@@ -26,18 +26,24 @@ export const CONFIG = {
     measurementId: "G-YDH9P8MXMW"
   },
 
-  // ── Groq KI (primär, kostenlos) ────────
-  // Kostenloser API-Key: https://console.groq.com
-  // 14.400 Anfragen/Tag, 30/Min — deutlich mehr als Gemini
+  // ── Groq KI (Worker-Proxy) ──────────────
+  // Mission-12 (2026-05-08): Key NICHT mehr im Frontend — liegt als
+  // Wrangler-Secret GROQ_API_KEY im Cloudflare Worker. Frontend ruft
+  // /aiCall via cf.aiCall() auf, Worker macht den Groq-Request.
+  // Leerer String hier damit `CONFIG.groq?.apiKey`-Reads in Legacy-
+  // Code (z.B. test-engine.js) nicht crashen — sie liefern dann
+  // einfach falsy. Migration-Pfad: alle direct-fetch Stellen auf
+  // cf.aiCall() umstellen, dann diese Felder ganz raus.
   groq: {
-    apiKey: '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'
+    apiKey: ''
   },
 
-  // ── Gemini KI (Fallback) ────────────────
-  // Kostenloser API-Key: https://aistudio.google.com/app/apikey
-  // Wird nur genutzt wenn kein Groq-Key eingetragen ist
+  // ── Gemini KI (Worker-Proxy) ────────────
+  // Mission-12 (2026-05-08): Key NICHT mehr im Frontend — liegt als
+  // Wrangler-Secret GEMINI_API_KEY im Cloudflare Worker (Fallback,
+  // wenn Groq down ist). Siehe groq-Block oben.
   gemini: {
-    apiKey: 'AIzaSyAmnyA7I1S86WqotKt-r_3b3SMri0N6cMM'
+    apiKey: ''
   }
 
 };

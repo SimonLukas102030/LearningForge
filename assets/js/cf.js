@@ -194,3 +194,20 @@ export async function approveTopicForPublic(topicId, action, rejectionNote = '')
   if (action === 'reject') body.rejectionNote = rejectionNote;
   return await _call('approveTopicForPublic', body);
 }
+
+// -----------------------------------------------------------
+//  aiCall - Mission-12 (Ethan, 2026-05-08)
+//  Worker-Proxy fuer Groq+Gemini. Frontend hat KEINE API-Keys
+//  mehr — die liegen als Worker-Secrets (GROQ_API_KEY,
+//  GEMINI_API_KEY). Worker macht Groq zuerst, Gemini-Fallback,
+//  503 wenn beide tot.
+//
+//  payload:
+//    { mode: 'completion', prompt: '...', maxTokens?, temperature?, model? }
+//    { mode: 'chat',       messages: [...], maxTokens?, temperature?, model? }
+//  returns: { text, provider: 'groq'|'gemini', model: '...' }
+//  throws: auf 401 (auth-fail), 503 (kein Provider), andere HTTP-Errors
+// -----------------------------------------------------------
+export async function aiCall(payload) {
+  return await _call('aiCall', payload);
+}

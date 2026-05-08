@@ -11,6 +11,7 @@
 //    POST /submitDailyChallenge     (auth required)  [Mission 9]
 //    POST /submitTopicForApproval   (auth required)  [Phase 3c]
 //    POST /approveTopicForPublic    (auth required, admin only) [Phase 3c]
+//    POST /aiCall                   (auth required)  [Mission 12]
 //
 //  Auth is per-endpoint (each handler calls requireAuth() if it
 //  needs it) - this Worker is unauth-callable for the parent
@@ -27,6 +28,7 @@ import { handleMarkTestAccount }        from './endpoints/markTestAccount.js';
 import { handleSubmitDailyChallenge }   from './endpoints/submitDailyChallenge.js';
 import { handleSubmitTopicForApproval } from './endpoints/submitTopicForApproval.js';
 import { handleApproveTopicForPublic }  from './endpoints/approveTopicForPublic.js';
+import { handleAiCall }                 from './endpoints/aiCall.js';
 import { json, cors, errorResponse }    from './lib/http.js';
 
 export default {
@@ -63,6 +65,9 @@ export default {
           break;
         case 'approveTopicForPublic':
           result = await handleApproveTopicForPublic(request, env);
+          break;
+        case 'aiCall':
+          result = await handleAiCall(request, env);
           break;
         default:
           return cors(errorResponse(404, `unknown endpoint: ${path}`));

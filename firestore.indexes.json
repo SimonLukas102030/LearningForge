@@ -1,0 +1,21 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "customTopics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "approvedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pendingApprovals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

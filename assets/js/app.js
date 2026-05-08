@@ -2065,84 +2065,53 @@ function getNextTopic(subjectId, yearId, topicId) {
 }
 
 // ── F-37/38: KI-Zusammenfassung & Tutor ──
+// Mission-12 (Ethan, 2026-05-08): direkte Groq+Gemini-Aufrufe raus,
+// jetzt durch Cloudflare Worker /aiCall (cf.js). Worker haelt die
+// Keys als Secrets — Frontend hat keine mehr. Same throw-contract
+// wie vorher, damit alle Caller (KI-Tutor, AI-Erklaer-Falsch, KI-
+// Zusammenfassung, Test-Korrektur) ihre existing try/catch-Faelle
+// unveraendert behalten.
 async function callAI(prompt, maxTokens = 600) {
-  if (CONFIG.groq?.apiKey) {
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
-        body:    JSON.stringify({
-          model:       'llama-3.3-70b-versatile',
-          messages:    [{ role: 'user', content: prompt }],
-          max_tokens:  maxTokens,
-          temperature: 0.7
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content?.trim();
-        if (text) return text;
-      }
-    } catch {}
+  try {
+    const result = await cf.aiCall({
+      mode:        'completion',
+      prompt,
+      maxTokens,
+      temperature: 0.7
+    });
+    const text = result?.text?.trim();
+    if (!text) throw new Error('Leere AI-Antwort');
+    return text;
+  } catch (e) {
+    // Auth-Fail (nicht eingeloggt): silent re-throw — Caller-Catch
+    // zeigt seinen eigenen Fallback.
+    if (/Nicht eingeloggt/i.test(e.message || '')) throw e;
+    // 503 = beide Provider tot. Toast plus re-throw.
+    if (/503|kein.*provider|provider.*verf/i.test(e.message || '')) {
+      try { showToast('KI gerade nicht verf\xfcgbar — versuch es sp\xe4ter.', 'error'); } catch {}
+    }
+    throw e;
   }
-  if (CONFIG.gemini?.apiKey) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) return text;
-      }
-    } catch {}
-  }
-  throw new Error('Kein KI-Provider verf\xfcgbar');
 }
 
 async function callAIChat(messages, maxTokens = 400) {
-  if (CONFIG.groq?.apiKey) {
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
-        body:    JSON.stringify({
-          model:       'llama-3.3-70b-versatile',
-          messages,
-          max_tokens:  maxTokens,
-          temperature: 0.7
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content?.trim();
-        if (text) return text;
-      }
-    } catch {}
+  try {
+    const result = await cf.aiCall({
+      mode:        'chat',
+      messages,
+      maxTokens,
+      temperature: 0.7
+    });
+    const text = result?.text?.trim();
+    if (!text) throw new Error('Leere AI-Antwort');
+    return text;
+  } catch (e) {
+    if (/Nicht eingeloggt/i.test(e.message || '')) throw e;
+    if (/503|kein.*provider|provider.*verf/i.test(e.message || '')) {
+      try { showToast('KI gerade nicht verf\xfcgbar — versuch es sp\xe4ter.', 'error'); } catch {}
+    }
+    throw e;
   }
-  // Gemini-Fallback: messages → flacher Prompt (Gemini hat kein system/role)
-  if (CONFIG.gemini?.apiKey) {
-    try {
-      const flat = messages.map(m =>
-        m.role === 'system' ? `[Anleitung] ${m.content}`
-        : m.role === 'user' ? `Sch\xfcler: ${m.content}`
-        : `Tutor: ${m.content}`
-      ).join('\n\n');
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: flat }] }] }) }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) return text;
-      }
-    } catch {}
-  }
-  throw new Error('Kein KI-Provider verf\xfcgbar');
 }
 
 function unmountTutor() {

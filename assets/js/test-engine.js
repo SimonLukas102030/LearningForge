@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════
 
 import { CONFIG } from './config.js';
+import * as cf      from './cf.js';
 
 // ── Zeitkonfiguration ───────────────────
 export const TIME_OPTIONS = [5, 10, 15, 30, 90];
@@ -109,14 +110,11 @@ export async function evaluateAnswers(questions, answers, timeMinutes) {
       });
     } else {
       const maxPts = q.maxPoints || Math.round(4 * cfg.pointFactor);
-      let result;
-      if (CONFIG.groq?.apiKey) {
-        result = await evaluateWithGroq(q, answer, maxPts, cfg.textExpectation);
-      } else if (CONFIG.gemini?.apiKey) {
-        result = await evaluateWithGemini(q, answer, maxPts, cfg.textExpectation);
-      } else {
-        result = evaluateWithKeywords(q, answer, maxPts);
-      }
+      // Mission-12 (2026-05-08): direkte Groq+Gemini-Aufrufe raus,
+      // jetzt durch Cloudflare Worker /aiCall (cf.js). Worker macht
+      // intern Groq-zuerst-Gemini-Fallback. Bei Worker-Fail (503,
+      // Auth, Netz) → keyword-Fallback wie bisher.
+      const result = await evaluateWithAI(q, answer, maxPts, cfg.textExpectation);
       results.push({ ...result, maxPoints: maxPts });
     }
   }
@@ -124,66 +122,16 @@ export async function evaluateAnswers(questions, answers, timeMinutes) {
   return results;
 }
 
-// ── Groq KI-Auswertung (primär) ─────────
-async function evaluateWithGroq(question, answer, maxPoints, textExpectation) {
-  const prompt =
-`Du bist ein sachlicher Schullehrer. Bewerte diese Schülerantwort fair und objektiv.
-
-FRAGE: ${question.question}
-MAXIMALE PUNKTZAHL: ${maxPoints}
-ANFORDERUNG: ${textExpectation}
-${question.sampleAnswer ? `MUSTERANTWORT: ${question.sampleAnswer}` : ''}
-
-SCHÜLERANTWORT: "${answer?.trim() || '(keine Antwort)'}"
-
-Antworte mit JSON: {"points": <Zahl 0 bis ${maxPoints}>, "feedback": "<1-2 Sätze Feedback auf Deutsch>"}`;
-
-  try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
-      body:    JSON.stringify({
-        model:           'llama-3.3-70b-versatile',
-        messages:        [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-        max_tokens:      200,
-        temperature:     0.1
-      })
-    });
-
-    if (res.status === 429) {
-      console.warn('[LF] Groq 429 — Fallback zu Gemini');
-      return CONFIG.gemini?.apiKey
-        ? evaluateWithGemini(question, answer, maxPoints, textExpectation)
-        : evaluateWithKeywords(question, answer, maxPoints);
-    }
-
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      // Sophie P0-Fix (2026-05-08): Bei JEDEM Groq-Fehler (401/403/4xx/5xx)
-      // erst Gemini versuchen, bevor auf Keyword-Fallback zurueckgefallen wird.
-      // Vorher: nur 429 triggerte Gemini-Fallback. Folge: bei revoked/abgelaufenem
-      // Groq-Key (401) lief jede Test-Korrektur stillschweigend auf Keywords.
-      // Parallel zum aelteren callAIChat-Fix in app.js (Cycle-1 Audit, 95eb9d2).
-      console.warn('[LF] Groq Fehler:', res.status, data.error?.message);
-      return CONFIG.gemini?.apiKey
-        ? evaluateWithGemini(question, answer, maxPoints, textExpectation)
-        : evaluateWithKeywords(question, answer, maxPoints);
-    }
-
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
-    return {
-      points:   Math.min(Math.max(0, Math.round(parsed.points ?? 0)), maxPoints),
-      feedback: parsed.feedback || 'Keine Rückmeldung verfügbar.'
-    };
-  } catch (err) {
-    console.warn('[LF] Groq Exception:', err);
-    return evaluateWithKeywords(question, answer, maxPoints);
-  }
-}
-
-// ── Gemini KI-Auswertung (Fallback) ─────
-async function evaluateWithGemini(question, answer, maxPoints, textExpectation, attempt = 0) {
+// ── KI-Auswertung via Worker-Proxy ──────
+// Mission-12 (2026-05-08, Ethan): vorher zwei Funktionen
+// (evaluateWithGroq + evaluateWithGemini) mit handgeschriebener
+// Fallback-Chain. Beide Pfade benutzten direkt CONFIG.groq.apiKey
+// bzw. CONFIG.gemini.apiKey — nach dem Key-Strip aus dem Frontend
+// ergaben das silent fails. Jetzt EIN Aufruf gegen cf.aiCall, der
+// Worker macht intern Groq→Gemini-Fallback. Auf Worker-Fehler
+// (503 = beide Provider tot, Auth-Fail, Netz-Exception) graceful
+// auf evaluateWithKeywords zurueckfallen.
+async function evaluateWithAI(question, answer, maxPoints, textExpectation) {
   const prompt =
 `Du bist ein sachlicher Schullehrer. Bewerte diese Schülerantwort fair und objektiv.
 
@@ -198,35 +146,20 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Format, ohne weitere Zeichen:
 {"points": <Zahl 0 bis ${maxPoints}>, "feedback": "<1-2 Sätze Feedback auf Deutsch>"}`;
 
   try {
-    const res  = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
-      {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      }
-    );
-
-    // Rate limit → wait and retry (up to 3×, 3s / 6s / 10s)
-    if (res.status === 429 && attempt < 3) {
-      const wait = [3000, 6000, 10000][attempt];
-      console.warn(`[LF] Gemini 429 — warte ${wait/1000}s, Versuch ${attempt + 2}/4`);
-      await new Promise(r => setTimeout(r, wait));
-      return evaluateWithGemini(question, answer, maxPoints, textExpectation, attempt + 1);
-    }
-
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      console.warn('[LF] Gemini Fehler:', res.status, data.error?.message);
-      return evaluateWithKeywords(question, answer, maxPoints);
-    }
-
-    const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const result = await cf.aiCall({
+      mode:        'chat',
+      messages:    [{ role: 'user', content: prompt }],
+      maxTokens:   200,
+      temperature: 0.1
+    });
+    const raw = (result?.text || '').trim();
     if (!raw) {
-      console.warn('[LF] Gemini leere Antwort — Keyword-Fallback');
+      console.warn('[LF] aiCall leere Antwort — Keyword-Fallback');
       return evaluateWithKeywords(question, answer, maxPoints);
     }
+    // Worker liefert text als string — Groq antwortet meist sauberes
+    // JSON, Gemini wrapped manchmal in ```json fences; beide Pfade
+    // hier robust handlen.
     const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
     const jsonStr = cleaned.startsWith('{') ? cleaned : cleaned.slice(cleaned.indexOf('{'));
     const parsed  = JSON.parse(jsonStr);
@@ -234,8 +167,8 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Format, ohne weitere Zeichen:
       points:   Math.min(Math.max(0, Math.round(parsed.points ?? 0)), maxPoints),
       feedback: parsed.feedback || 'Keine Rückmeldung verfügbar.'
     };
-  } catch(err) {
-    console.warn('[LF] Gemini Exception:', err);
+  } catch (err) {
+    console.warn('[LF] aiCall Exception:', err?.message || err);
     return evaluateWithKeywords(question, answer, maxPoints);
   }
 }
@@ -393,9 +326,10 @@ function shuffleArr(arr) {
 }
 
 export async function generateQuestionsWithGemini(htmlContent, timeMinutes) {
-  const hasGroq   = !!CONFIG.groq?.apiKey;
-  const hasGemini = !!CONFIG.gemini?.apiKey;
-  if (!hasGroq && !hasGemini || !htmlContent) return [];
+  // Mission-12 (2026-05-08, Ethan): Frontend hat keine Keys mehr —
+  // Provider-Verfuegbarkeit checked der Worker. Wir versuchen den
+  // Call und fangen 503/Auth/Netz-Errors als „keine Fragen" ab.
+  if (!htmlContent) return [];
 
   const cfg        = TIME_CONFIG[timeMinutes] || TIME_CONFIG[15];
   const totalCount = cfg.maxQuestions === Infinity ? 20 : Math.min(cfg.maxQuestions, 20);
@@ -420,13 +354,18 @@ export async function generateQuestionsWithGemini(htmlContent, timeMinutes) {
     textCount > 0 ? `  {"type":"free_text","difficulty":"medium","question":"...","maxPoints":4,"sampleAnswer":"..."}` : ''
   ].filter(Boolean).join(',\n');
 
-  // Groq erwartet ein JSON-Objekt (kein Array), deshalb {"questions":[...]}
+  // Mission-12 (2026-05-08, Ethan): vorher zwei separate Pfade
+  // (Groq mit JSON-Objekt-Wrapper + Gemini mit reinem Array). Jetzt
+  // EIN Prompt gegen den Worker; Worker macht intern Groq-zuerst-
+  // Gemini-Fallback. Wir verlangen ein Array — beide Provider liefern
+  // das (Groq via {"questions":[...]} oder direkt, Gemini direkt) —
+  // der Parse unten ist robust gegen beides + ```json-Fences.
   // B5 (2026-05-08, Ramsey): MC-Längen-Balance-Regel — LLMs schreiben die
   // korrekte Antwort ausführlicher als die Distraktoren, was eine
   // „längste Antwort = richtig"-Heuristik mit ~85% Trefferquote ergibt.
   // Prompt-Hardening reduziert das (defense in depth zusammen mit dem
   // post-process Length-Balancer in _processGeneratedQuestions).
-  const groqPrompt =
+  const prompt =
 `Du bist ein Lehrer. Erstelle abwechslungsreiche Testfragen zum folgenden Lerninhalt.
 Generiere jedes Mal andere Fragen — variiere Formulierungen, Zahlenwerte und Beispiele.
 
@@ -441,47 +380,43 @@ ${typeLines}
 - Bei Mathe/Physik: Zahlenwerte bei jeder Generierung leicht variieren
 - WICHTIG: Bei Multiple-Choice-Fragen müssen ALLE 4 Optionen ungefähr gleich lang sein (max. 20% Längendifferenz in Wortanzahl). Die korrekte Antwort darf nicht durch Länge oder Detailgrad herausstechen — Distraktoren müssen genauso ausführlich und plausibel formuliert sein wie die richtige Antwort, nicht nur Stichworte.
 
-Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt:
+Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt, ohne weitere Zeichen:
 {"questions": [
 ${exampleLines}
 ]}`;
 
-  const geminiPrompt = groqPrompt
-    .replace('Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt:\n{"questions": [', 'Antworte AUSSCHLIESSLICH mit diesem JSON-Array, ohne weitere Zeichen:\n[')
-    .replace('\n]}', '\n]');
-
-  if (hasGroq) {
-    try {
-      const res  = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CONFIG.groq.apiKey}` },
-        body:    JSON.stringify({
-          model:           'llama-3.3-70b-versatile',
-          messages:        [{ role: 'user', content: groqPrompt }],
-          response_format: { type: 'json_object' },
-          max_tokens:      2000,
-          temperature:     0.7
-        })
-      });
-      const data = await res.json();
-      const arr  = JSON.parse(data.choices?.[0]?.message?.content || '{}').questions;
-      if (Array.isArray(arr) && arr.length > 0) return _processGeneratedQuestions(arr, cfg);
-    } catch { /* fall through to Gemini */ }
-  }
-
-  if (hasGemini) {
-    try {
-      const res     = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${CONFIG.gemini.apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: geminiPrompt }] }] }) }
-      );
-      const data    = await res.json();
-      const raw     = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-      const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
-      const jsonStr = cleaned.startsWith('[') ? cleaned : cleaned.slice(cleaned.indexOf('['));
-      const arr     = JSON.parse(jsonStr);
-      if (Array.isArray(arr) && arr.length > 0) return _processGeneratedQuestions(arr, cfg);
-    } catch { /* ignore */ }
+  try {
+    const result = await cf.aiCall({
+      mode:        'chat',
+      messages:    [{ role: 'user', content: prompt }],
+      maxTokens:   2000,
+      temperature: 0.7
+    });
+    const raw = (result?.text || '').trim();
+    if (!raw) return [];
+    // Strip optional ```json fences und parse — versuche erst Objekt
+    // ({"questions":[...]}), dann blanken Array-Form.
+    const cleaned = raw.replace(/```(?:json)?\n?|\n?```/g, '').trim();
+    let arr = null;
+    if (cleaned.startsWith('{')) {
+      const obj = JSON.parse(cleaned.slice(cleaned.indexOf('{')));
+      arr = obj.questions;
+    } else if (cleaned.startsWith('[')) {
+      arr = JSON.parse(cleaned.slice(cleaned.indexOf('[')));
+    } else {
+      // Mischfall: irgendwo im Text steckt das JSON — heuristisch suchen.
+      const objStart = cleaned.indexOf('{');
+      const arrStart = cleaned.indexOf('[');
+      if (objStart >= 0 && (arrStart < 0 || objStart < arrStart)) {
+        const obj = JSON.parse(cleaned.slice(objStart));
+        arr = obj.questions;
+      } else if (arrStart >= 0) {
+        arr = JSON.parse(cleaned.slice(arrStart));
+      }
+    }
+    if (Array.isArray(arr) && arr.length > 0) return _processGeneratedQuestions(arr, cfg);
+  } catch (err) {
+    console.warn('[LF] aiCall Fragen-Generierung fehlgeschlagen:', err?.message || err);
   }
 
   return [];
