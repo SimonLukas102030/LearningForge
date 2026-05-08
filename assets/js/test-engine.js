@@ -160,8 +160,15 @@ Antworte mit JSON: {"points": <Zahl 0 bis ${maxPoints}>, "feedback": "<1-2 Sätz
 
     const data = await res.json();
     if (!res.ok || data.error) {
-      console.warn('[LF] Groq Fehler:', data.error?.message);
-      return evaluateWithKeywords(question, answer, maxPoints);
+      // Sophie P0-Fix (2026-05-08): Bei JEDEM Groq-Fehler (401/403/4xx/5xx)
+      // erst Gemini versuchen, bevor auf Keyword-Fallback zurueckgefallen wird.
+      // Vorher: nur 429 triggerte Gemini-Fallback. Folge: bei revoked/abgelaufenem
+      // Groq-Key (401) lief jede Test-Korrektur stillschweigend auf Keywords.
+      // Parallel zum aelteren callAIChat-Fix in app.js (Cycle-1 Audit, 95eb9d2).
+      console.warn('[LF] Groq Fehler:', res.status, data.error?.message);
+      return CONFIG.gemini?.apiKey
+        ? evaluateWithGemini(question, answer, maxPoints, textExpectation)
+        : evaluateWithKeywords(question, answer, maxPoints);
     }
 
     const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
