@@ -52,12 +52,14 @@ import {
 // per Note-1/2 test as a "trostpreis" (consolation prize).
 const TROSTPREIS_XP = 30;
 
-// B6 fix (2026-05-08): cap raised from 50 → 200, mirrors achievements.js
-// _levelNum. _xpForLevel(200) ≈ 10M XP - effectively unlimited. Bounded
-// at 200 instead of Infinity to keep the loop safe against corrupted xp.
+// B8 fix (2026-05-08, Marcus, P0 bug-cycle-3): inline copy of _levelNum
+// MUST match workers/src/lib/achievements.js byte-for-byte — they read the
+// same field (users.xp) and any divergence reproduces the very Level-Display
+// vs Achievement-Trigger drift Robinator just bug-reported. New flat-power
+// curve: _xpForLevel(n) = (n - 1)^2 * 8.
 function _levelFromXp(xp) {
   let l = 1;
-  const xpForLvl = n => n <= 1 ? 0 : (n - 1) * 100 + 25 * (n - 1) * (n - 2);
+  const xpForLvl = n => n <= 1 ? 0 : (n - 1) * (n - 1) * 8;
   while (l < 200 && xpForLvl(l + 1) <= (xp || 0)) l++;
   return l;
 }

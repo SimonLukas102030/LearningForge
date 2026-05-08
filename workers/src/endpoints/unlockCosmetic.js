@@ -41,10 +41,16 @@ import {
 // the request is treated as a replay attempt and returns xpGranted:0.
 const DOUBLE_DROP_COOLDOWN_MS = 60 * 1000;
 
+// B8 fix (2026-05-08, Marcus, P0 bug-cycle-3): formula + cap synced with
+// workers/src/lib/achievements.js. Previously this kept the OLD curve AND
+// the OLD 50-cap — outline-tier-gates (line 71 below) would have rejected
+// users at the new flat curve who legitimately reached the required level
+// per the dashboard, OR the cap mismatch would let unlimited high-tier
+// outlines through. New curve: _xpForLevel(n) = (n - 1)^2 * 8.
 function _levelFromXp(xp) {
   let l = 1;
-  const xpForLvl = n => n <= 1 ? 0 : (n - 1) * 100 + 25 * (n - 1) * (n - 2);
-  while (l < 50 && xpForLvl(l + 1) <= (xp || 0)) l++;
+  const xpForLvl = n => n <= 1 ? 0 : (n - 1) * (n - 1) * 8;
+  while (l < 200 && xpForLvl(l + 1) <= (xp || 0)) l++;
   return l;
 }
 

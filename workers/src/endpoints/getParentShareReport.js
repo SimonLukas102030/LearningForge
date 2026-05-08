@@ -13,10 +13,14 @@
 import { readJsonBody, httpError } from '../lib/http.js';
 import { firestoreGet }            from '../lib/firestore.js';
 
+// B8 fix (2026-05-08, Marcus, P0 bug-cycle-3): formula + cap synced with
+// workers/src/lib/achievements.js. Parent share-report would have shown a
+// drift'd level number vs the kid's actual dashboard otherwise. New curve:
+// _xpForLevel(n) = (n - 1)^2 * 8 (capped at 200).
 function _levelFromXp(xp) {
   let l = 1;
-  const xpForLvl = n => n <= 1 ? 0 : (n - 1) * 100 + 25 * (n - 1) * (n - 2);
-  while (l < 50 && xpForLvl(l + 1) <= (xp || 0)) l++;
+  const xpForLvl = n => n <= 1 ? 0 : (n - 1) * (n - 1) * 8;
+  while (l < 200 && xpForLvl(l + 1) <= (xp || 0)) l++;
   return l;
 }
 

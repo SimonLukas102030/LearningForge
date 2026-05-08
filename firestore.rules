@@ -91,10 +91,28 @@ service cloud.firestore {
           || request.resource.data.klasse in ['5','6','7','8','9','10','11','12','13'];
     }
 
-    // Outlines / themes / achievements: bound growth at +2 per write.
+    // Outlines / themes / achievements: bound growth per write.
     // Real fix = server-side validation that the user actually earned
     // the new entries (Mission 3). Inlined per-field below because
     // Firestore-rules helpers cannot index maps by a variable name.
+    //
+    // B8 fix (2026-05-08, Marcus, P0 bug-cycle-3): achievements cap
+    // raised 2 → 8 after Robinator's "man kann gar keine Erfolge mehr
+    // bekommen" report. A fresh user finishing their first good test
+    // legitimately unlocks several at once via grantXPAndAchievements()
+    // in app.js (line 5601 saveAchievements arrayUnion):
+    //   first_test, first_one, perfect_score, level_5, daily_first,
+    //   time_60, srs_10, ... — easily 3-5 in a single write. The
+    //   2-cap silently rejected the entire arrayUnion (rule denies
+    //   the WHOLE doc-write, not just the achievements field), and
+    //   because saveAchievements has a silent .catch upstream the
+    //   user just sees no toast and no badge. Cap of 8 covers the
+    //   realistic mass-unlock scenario without opening a wide cheat
+    //   vector — a malicious client would still need to NAME real
+    //   achievement IDs and the server-side worker re-derives the
+    //   authoritative list anyway via deriveNewAchievements().
+    // outlines/themes stay at 2 — those don't have the same mass-grant
+    // pattern (max 1 outline per level-tier-cross, 1 theme per drop-roll).
     function outlinesGrowthOk() {
       return !('outlines' in request.resource.data.diff(resource.data).affectedKeys())
           || (request.resource.data.outlines.size() - resource.data.get('outlines', []).size() <= 2);
@@ -105,7 +123,7 @@ service cloud.firestore {
     }
     function achievementsGrowthOk() {
       return !('achievements' in request.resource.data.diff(resource.data).affectedKeys())
-          || (request.resource.data.achievements.size() - resource.data.get('achievements', []).size() <= 2);
+          || (request.resource.data.achievements.size() - resource.data.get('achievements', []).size() <= 8);
     }
 
     // V-25 (Ramsey Cycle-2 audit, P2 MED, 2026-05-08): studyTime is a

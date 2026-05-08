@@ -7,11 +7,35 @@
 function _totalTests(u) { return Object.keys(u.grades || {}).length; }
 function _gradeCount(u, g) { return Object.values(u.grades || {}).filter(gr => (gr.grade || 9) <= g).length; }
 function _studyMins(u)  { return Object.values(u.studyTime || {}).reduce((a, b) => a + b, 0); }
-// B6 fix (2026-05-08): cap raised from 50 → 200. _xpForLevel(200) ≈ 10M XP,
-// so effectively unlimited for any realistic player. Hardcoded 200 instead
-// of `Infinity` to keep the loop bounded if `xp` ever ends up corrupted/NaN.
+// B8 fix (2026-05-08, Marcus, P0 bug-cycle-3): Robinator reported "50 000 XP
+// = Level 44 statt erwartet ~Level 80". Root cause: B6 raised the cap 50→200
+// but the underlying _xpForLevel curve (quadratic with 25*(n-1)*(n-2) base)
+// was still calibrated for an old 50-cap world — Level 75 needed ~142 450 XP,
+// Level 100 needed ~247 450 XP. Effectively unreachable, so level_75 /
+// level_100 NEVER triggered (Bug Report #3) and the displayed level felt
+// stuck (Bug Report #1).
+//
+// New curve: _xpForLevel(n) = (n - 1)^2 * 8
+//   L1     = 0 XP
+//   L5     = 128 XP
+//   L10    = 648 XP
+//   L25    = 4 608 XP
+//   L50    = 19 208 XP
+//   L75    = 43 808 XP
+//   L80    = 49 928 XP   (matches Robinator's "50 000 XP = ~L80" expectation)
+//   L100   = 78 408 XP
+//   L200   = 316 808 XP
+// Inverse: level ≈ floor(sqrt(xp/8)) + 1.
+//
+// Migration: NO data migration needed. Existing users keep their `xp` value;
+// the new formula re-derives a higher level automatically (no level loss —
+// new curve dominates old curve at every n >= 2). Achievements that were
+// "stuck" (level_25, level_50, level_75, level_100 for users with enough
+// XP under the new curve) re-trigger naturally on next worker call —
+// deriveNewAchievements re-runs every check() against the projected user
+// state and arrayUnion-merges any newly-true ones into users/{uid}.achievements.
 function _levelNum(xp)  { let l = 1; while (l < 200 && _xpForLevel(l + 1) <= xp) l++; return l; }
-function _xpForLevel(n) { if (n <= 1) return 0; return (n - 1) * 100 + 25 * (n - 1) * (n - 2); }
+function _xpForLevel(n) { if (n <= 1) return 0; return (n - 1) * (n - 1) * 8; }
 
 // ── Achievement-Definitionen ─────────────────
 // code: max 3 Zeichen für Badge-Anzeige (kein Emoji wegen CLAUDE.md-Policy)

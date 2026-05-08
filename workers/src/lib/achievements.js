@@ -7,10 +7,16 @@
 function _totalTests(u) { return Object.keys(u.grades || {}).length; }
 function _gradeCount(u, g) { return Object.values(u.grades || {}).filter(gr => (gr.grade || 9) <= g).length; }
 function _studyMins(u)  { return Object.values(u.studyTime || {}).reduce((a, b) => a + b, 0); }
-function _xpForLevel(n) { if (n <= 1) return 0; return (n - 1) * 100 + 25 * (n - 1) * (n - 2); }
-// B6 fix (2026-05-08): cap raised from 50 → 200, mirrors achievements.js
-// frontend. Server-side check on level achievements must agree with client
-// or level_75/level_100 (added below) would never grant from the worker.
+// B8 fix (2026-05-08, Marcus, P0 bug-cycle-3): synchronised with frontend
+// achievements.js _xpForLevel — flat-er power curve so 50 000 XP ≈ Level 80
+// (Robinator's expectation). Old 25*(n-1)*(n-2) curve was unreachable past
+// ~Level 50. See assets/js/achievements.js for the full derivation comment.
+// Server- and frontend-formula MUST stay byte-for-byte equivalent — the
+// worker's deriveNewAchievements grants level_X iff _levelNum(u.xp) >= X,
+// the frontend's nav-XP-bar and the calcLevel() title use the same _levelNum,
+// any drift = display says L80 but achievement triggers say L44 (or vice
+// versa) and the user gets a stuck-level bug like Robinator just hit.
+function _xpForLevel(n) { if (n <= 1) return 0; return (n - 1) * (n - 1) * 8; }
 function _levelNum(xp)  { let l = 1; while (l < 200 && _xpForLevel(l + 1) <= xp) l++; return l; }
 
 export function calcLevel(totalXP) {
