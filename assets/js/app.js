@@ -2658,6 +2658,10 @@ function _tourKeydown(e) {
 function _tourBanCleanup() { _endTour('banned'); }
 
 // Toast fuer Bestands-User: bietet Tour an, ohne sie zu erzwingen.
+// iPad-Bug-Fix (2026-05-08): inline onclick="" String wurde auf iOS-Safari
+// nicht zuverlassig getriggert (Hover-State zeigte sich, click feuerte aber
+// kein JS aus). Workaround: echte addEventListener-Bindings + Auto-Dismiss
+// pause-on-touch + interaction (touchstart/click) statt nur click.
 function _showTourToast() {
   if (!currentUser || _tourState) return;
   if (document.getElementById('lfTourToast')) return;
@@ -2669,18 +2673,26 @@ function _showTourToast() {
       Neue App-Tour verfügbar — willst du sehen, was sich geändert hat?
     </div>
     <div class="lf-tour-toast-actions">
-      <button class="btn btn-ghost btn-sm" onclick="window.LF.tourToastDismiss()">Nicht jetzt</button>
-      <button class="btn btn-primary btn-sm" onclick="window.LF.tourToastAccept()">Tour starten</button>
+      <button class="btn btn-ghost btn-sm" data-action="dismiss" type="button">Nicht jetzt</button>
+      <button class="btn btn-primary btn-sm" data-action="accept" type="button">Tour starten</button>
     </div>
   `;
   document.body.appendChild(t);
-  // Auto-dismiss nach 8s
-  setTimeout(() => {
+
+  let dismissTimer = setTimeout(() => {
     if (document.getElementById('lfTourToast')) window.LF.tourToastDismiss();
-  }, 8000);
+  }, 15000);
+  const cancelTimer = () => { if (dismissTimer) { clearTimeout(dismissTimer); dismissTimer = null; } };
+  t.addEventListener('mouseenter', cancelTimer);
+  t.addEventListener('touchstart', cancelTimer, { passive: true });
+
+  const dismissBtn = t.querySelector('button[data-action="dismiss"]');
+  const acceptBtn  = t.querySelector('button[data-action="accept"]');
+  dismissBtn?.addEventListener('click', () => { cancelTimer(); window.LF.tourToastDismiss(); });
+  acceptBtn?.addEventListener('click',  () => { cancelTimer(); window.LF.tourToastAccept(); });
 }
 
-window.LF.tourToastDismiss = async () => {
+window.LF.tourToastDismiss = () => {
   document.getElementById('lfTourToast')?.remove();
   // Nicht permanent skippen — User soll's vielleicht spaeter machen.
   // tourPromptedAt steht bereits → Toast kommt beim naechsten Login wieder.

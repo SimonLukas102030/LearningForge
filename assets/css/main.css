@@ -4358,7 +4358,12 @@ input, textarea, select { font-family: var(--font); }
 .wizard-close:hover { color: var(--text); background: var(--bg-input); }
 .wizard-card { position: relative; }
 
-/* Tour-Toast fuer Bestands-User */
+/* Tour-Toast fuer Bestands-User
+   z-index 9500 = ueber lf-modal-overlay/wizard (9999/10000 sind Modals die
+   parallel offen sein koennen, aber unter Tour-Tooltips waere falsch da Tour
+   erst nach Toast-Klick startet). 9500 reicht um WeeklySummary nicht zu
+   ueberdecken (deren 10000 ist hoeher) — Toast bleibt klickbar weil keine
+   ueberlappende Position. */
 .lf-tour-toast {
   position: fixed;
   left: 50%;
@@ -4370,7 +4375,7 @@ input, textarea, select { font-family: var(--font); }
   border-radius: var(--radius);
   padding: 12px 16px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-  z-index: 1900;
+  z-index: 9500;
   max-width: 92vw;
   width: min(440px, 92vw);
   display: flex;
@@ -4382,6 +4387,10 @@ input, textarea, select { font-family: var(--font); }
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+/* iPad/iOS: touch-action verhindert 300ms Click-Delay + Ghost-Click. */
+.lf-tour-toast button {
+  touch-action: manipulation;
 }
 
 /* Avatar-Picker active-state (Casey #3.4 — Onboarding-Highlight) */
