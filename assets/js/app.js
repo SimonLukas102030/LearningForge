@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, getPublicLibraryTopics, getPendingApprovals, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, loginAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveGradeConfidence, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, getPublicLibraryTopics, getPendingApprovals, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, loginAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -327,7 +327,13 @@ export function startApp() {
       // Wave-5b HIGH-3: Bestand-User-Migration numeric -> string klasse.
       // Marcus's klasseOk() Rule akzeptiert temporaer beide Typen — Migration
       // schreibt legacy-numeric auf String, danach kann die numerische Branch
-      // der Rule in 30 Tagen weg. Idempotent + fire-and-forget.
+      // der Rule weg. Idempotent + fire-and-forget.
+      //
+      // TODO(2026-06-08, paired with klasseOk() in firestore.rules): remove
+      // this whole `typeof === 'number'` block. By 2026-06-08 every user that
+      // has logged in at least once since 2026-05-08 has been migrated by
+      // this code path, so the rule's numeric branch can be dropped in the
+      // same commit. See firestore.rules:~170 for the full cleanup checklist.
       if (typeof userData?.klasse === 'number') {
         userData.klasse = String(userData.klasse);
         db().collection('users').doc(user.uid)
@@ -406,6 +412,9 @@ export function startApp() {
         document.body.classList.toggle('subject-themes-off',
           userData?.settings?.subjectThemesOff === true);
       } catch(e) {}
+      // Cycle-3 Settings: Apply font-size, reduced-motion, theme-mode (system).
+      // Lives in renderSettings module above; safe no-op when settings missing.
+      try { applySettingsOnBoot(); } catch(e) { console.warn('[applySettingsOnBoot]', e); }
       structure = await getStructure();
       getChangelog().then(entries => {
         changelog = entries;
@@ -576,8 +585,15 @@ function route() {
   // Tokens via CSS, der Router muss hier nichts extra prüfen.
   if (parts[0] === 'fach' && parts[1]) {
     document.body.dataset.subject = parts[1];
+    // Cycle-3: Layer-4 User-Subject-Color-Override. Wenn der User in den
+    // Settings eine Farbe gewaehlt hat, schreiben wir den Slug auf body —
+    // subject-tokens.css greift via [data-user-subject-color="<slug>"].
+    const slug = userData?.settings?.subjectColors?.[parts[1]];
+    if (slug) document.body.dataset.userSubjectColor = slug;
+    else      delete document.body.dataset.userSubjectColor;
   } else {
     delete document.body.dataset.subject;
+    delete document.body.dataset.userSubjectColor;
   }
 
   if (parts[0] === 'bericht' && parts[1]) {
@@ -599,7 +615,8 @@ function route() {
     // Profil hat ?tab=… als Query-Param am Hash. Parse hier raus, parts[0] kann
     // 'profil' oder 'profil?tab=erfolge' sein.
     renderProfile();
-  } else if (parts[0] === 'einstellungen') {
+  } else if (parts[0]?.startsWith('einstellungen')) {
+    // Cycle-3: ?tab=darstellung|lernen|anpassung|konto-Hash-Param.
     renderSettings();
   } else if (parts[0] === 'statistiken') {
     // Mission 1: Statistiken-Route bleibt für Bookmarks, redirected aber
@@ -1152,6 +1169,7 @@ function renderDashboard() {
           <span class="klasse-prompt-arrow">&rsaquo;</span>
         </div>` : ''}
       ${isClaudeAccount() ? `<div id="claudeBugList"></div>` : ''}
+      ${renderKlausurReadinessWidgets()}
       ${renderDailyChallengeCard()}
       ${attentionHtml}
       ${recommendations.length ? `
@@ -1221,15 +1239,45 @@ function escapeAttr(s) {
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+// Cycle-2-Ramsey P2-1: JS-String-Escape fuer Werte, die als Argumente in
+// inline `onclick="…('${x}')"` landen. escapeAttr macht NUR HTML-attr-Safety
+// (Quote-Breakout aus dem Attribut), aber lässt Backslashes + Newlines roh —
+// das kann den JS-String trotzdem aufbrechen sobald Werte aus User-Land kommen
+// (Custom-Topics-Future). Fuer neue Patterns lieber data-* + addEventListener
+// (siehe attachActionCardListeners). Helper hier als Defense-in-Depth fuer die
+// Stellen wo wir noch inline-onclick haben.
+function escapeJs(s) {
+  return String(s ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
+}
+// Cycle-2-Ramsey P2-2: HTML-Entity-Decoder fuer Stellen wo wir Content
+// (entity-encoded per Hard-Rule #3) brauchen, der NICHT durch innerHTML laeuft
+// — z.B. img alt-Attribut. Ohne Decode wird "&bdquo;X&ldquo;" via escapeAttr
+// doppelt-encoded und Screenreader liest "ampersand b-d-quo".
+function decodeHtmlEntities(s) {
+  if (!s) return '';
+  const ta = document.createElement('textarea');
+  ta.innerHTML = String(s);
+  return ta.value;
+}
 // Wave-3 (Maya/Bereich-2): Zentrale Empty-State-Helper. Vorher 7+ verschiedene
 // Empty-State-Block-Inlines mit unterschiedlicher Padding/Sub-Styling und
 // keinerlei CTA — User sah nur "leer" ohne klaren naechsten Schritt. Helper
 // gibt einheitlichen HTML-String zurueck (Icon-Tile + Title + Sub + optional
 // Primary-CTA-Button). Alle Felder werden defensive escaped.
-function renderEmptyState({ icon, title, sub, ctaLabel, ctaAction }) {
+function renderEmptyState({ icon, title, sub, ctaLabel, ctaAction, secondaryLabel, secondaryAction }) {
   const iconHtml = icon ? `<div class="empty-state-icon">${lfIcon(icon)}</div>` : '';
   const ctaHtml = (ctaLabel && ctaAction)
     ? `<button class="btn btn-primary empty-state-cta" onclick="${escapeAttr(ctaAction)}">${escapeHtml(ctaLabel)}</button>`
+    : '';
+  // F-04 (Casey): optional secondary CTA. "Bug melden" / "Anderes Thema waehlen"
+  // gibt dem User mit leerem Topic eine Aktion statt nur einer Sackgasse.
+  const secHtml = (secondaryLabel && secondaryAction)
+    ? `<button class="btn btn-ghost empty-state-cta-secondary" onclick="${escapeAttr(secondaryAction)}">${escapeHtml(secondaryLabel)}</button>`
     : '';
   return `
     <div class="empty-state">
@@ -1237,7 +1285,25 @@ function renderEmptyState({ icon, title, sub, ctaLabel, ctaAction }) {
       <h3 class="empty-state-title">${escapeHtml(title || '')}</h3>
       <p class="empty-state-sub">${escapeHtml(sub || '')}</p>
       ${ctaHtml}
+      ${secHtml}
     </div>`;
+}
+
+// F-04 (Casey): Helper fuer "kein Lerninhalt"-Empty-State im Topic-View.
+// Wird in zwei Stellen aufgerufen (renderTopic line ~1534 + renderSubtopicGrid
+// fallback) — vorher dupliziert, jetzt zentral. Primary-CTA = "Anderes Thema",
+// Secondary = "Bug melden".
+function _emptyTopicContent(subjectId, yearId) {
+  const fallbackHash = (subjectId && yearId) ? `#/fach/${subjectId}/${yearId}` : '#/';
+  return renderEmptyState({
+    icon: 'book-open',
+    title: 'Kein Lerninhalt verfügbar',
+    sub: 'Für dieses Thema wurde noch kein Inhalt eingepflegt. Schau bald wieder vorbei.',
+    ctaLabel: 'Anderes Thema wählen',
+    ctaAction: `location.hash='${fallbackHash}'`,
+    secondaryLabel: 'Bug melden',
+    secondaryAction: 'window.LF.openBugReport()'
+  });
 }
 // Wave-1-Ramsey CHEAT-21: Mini-Sanitizer fuer Custom-Topic-HTML-Content.
 // Whitelisted Tags only; alle Attribute werden gestrippt (kein onclick,
@@ -1494,7 +1560,8 @@ async function renderTopic(subjectId, yearId, topicId) {
   const subjectTools = getSubjectTools(subjectId);
   if (subjectTools.calculator) mountCalculator();
   if (subjectTools.tafelwerk)  mountTafelwerk();
-  mountPomodoro();
+  // Sophie P2-4 (Cycle 7): topicKey threading fuer topic-aware Klausur-Aggregation.
+  mountPomodoro(`${subjectId}__${yearId}__${topicId}`);
 
   document.getElementById('app').innerHTML = `
     ${renderNav([
@@ -1530,8 +1597,8 @@ async function renderTopic(subjectId, yearId, topicId) {
     : null;
 
   const lernenTab = normalizedSubtopics.length > 0
-    ? renderSubtopicGrid(meta)
-    : `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
+    ? renderSubtopicGrid(meta, subjectId, yearId)
+    : _emptyTopicContent(subjectId, yearId);
 
   const uebenTab = questions.length > 0
     ? renderUebenStart(questions, subjectId, yearId, topicId)
@@ -1602,6 +1669,15 @@ async function renderTopic(subjectId, yearId, topicId) {
   // F-18: Notizen
   const savedNote = userData?.notes?.[topicKey] || '';
 
+  // Sophie P2-5 (Cycle 7): TTS-Fallback-Toast wurde frueher in toggleAudioMode
+  // gefiered — der Button wird aber nur gerendert WENN _audioModeAvailable()
+  // true ist, also war der Code dort tot. Hier feuern: User auf Topic mit
+  // Lese-Inhalt, aber Browser-API fehlt. _audioWarnUnavailableOnce() hat
+  // selbst LocalStorage-Spam-Schutz.
+  if ((meta.content || meta.subtopics?.length) && !_audioModeAvailable()) {
+    _audioWarnUnavailableOnce();
+  }
+
   document.getElementById('topicBody').innerHTML = `
     ${missedPrereqs.length ? `
       <div class="prereq-banner">
@@ -1614,6 +1690,9 @@ async function renderTopic(subjectId, yearId, topicId) {
         ${isBookmarked ? `${lfIcon('bookmark')} Gespeichert` : `${lfIcon('bookmark')} Lesezeichen`}
       </button>
       ${meta.content ? `<button class="btn btn-ghost btn-sm tutor-toggle-btn" onclick="window.LF.tutorToggle()">${lfIcon('bot')} KI-Tutor</button>` : ''}
+      ${(_audioModeAvailable() && (meta.content || meta.subtopics?.length))
+        ? `<button class="btn btn-ghost btn-sm audio-toolbar-btn" id="audioToolbarBtn" onclick="window.LF.toggleAudioMode()">${_audioHeadphonesIcon()} Vorlesen</button>`
+        : ''}
     </div>
     <div class="topic-tabs" style="--subject-color:${color}">
       <button class="tab-btn active" id="tabBtnLernen"  onclick="window.LF.switchTab('Lernen')">Lernen</button>
@@ -1658,6 +1737,9 @@ async function renderTopic(subjectId, yearId, topicId) {
   if (subjectId === 'Physik' && meta.content) {
     initPhysikSimulations(document.querySelector('.content-body'));
   }
+  // Sophie P1-1 (Cycle 7): Resume-Prompt wenn beim letzten Wegnavigieren
+  // Audio mitten im Topic war und User innerhalb von 1h zurueckkommt.
+  _audioMaybeShowResumePrompt();
 }
 
 // ── Phase-1 Subtopic-Schema (ADR 0002 / Marcus + Maya) ─────
@@ -1711,6 +1793,224 @@ const _LF_WIDGET_WHITELIST = new Set([
 ]);
 const _LF_WIDGET_TOAST_FIRED = new Set();
 
+// Cycle 8 — Predict-Reveal-Widget (MVP-1).
+// Map: slotId -> { config, lockedWrong: Set<number>, revealed: boolean,
+//                  selectedIndex: number|null, wrapper: HTMLElement|null }
+// Scoped per Wrapper-DOM-Node, kein globaler Leak (Spec-Edge "mehrere Widgets").
+const _LF_PR_STATE = new Map();
+let _LF_PR_SLOT_SEQ = 0;
+
+function _lfPrNextSlotId() {
+  _LF_PR_SLOT_SEQ += 1;
+  return `lf-pr-${Date.now().toString(36)}-${_LF_PR_SLOT_SEQ}`;
+}
+
+// Defensiv: validiert+normalisiert config. Erste correct:true gewinnt; restliche
+// correct werden auf false gesetzt. Gibt null zurueck wenn unbrauchbar (keine
+// Optionen, keine Korrekt-Antwort).
+function _lfPrNormalizeConfig(rawConfig) {
+  if (!rawConfig || typeof rawConfig !== 'object') return null;
+  const opts = Array.isArray(rawConfig.options) ? rawConfig.options : [];
+  if (opts.length === 0) return null;
+  let correctSeen = false;
+  const normOpts = opts.map(o => {
+    const isCorrect = !!(o && o.correct) && !correctSeen;
+    if (isCorrect) correctSeen = true;
+    if (o && o.correct && correctSeen && !isCorrect) {
+      try { console.warn('[predict-reveal] more than one option marked correct — only the first counts.', o); } catch(e) {}
+    }
+    return {
+      label:       (o && typeof o.label === 'string') ? o.label : '',
+      correct:     isCorrect,
+      explanation: (o && typeof o.explanation === 'string') ? o.explanation : ''
+    };
+  });
+  if (!correctSeen) return null;
+  return {
+    setup:    typeof rawConfig.setup === 'string'    ? rawConfig.setup    : '',
+    question: typeof rawConfig.question === 'string' ? rawConfig.question : '',
+    options:  normOpts,
+    reveal:   typeof rawConfig.reveal === 'string'   ? rawConfig.reveal   : ''
+  };
+}
+
+// Render-Function fuer das Widget. Liefert vollstaendiges HTML (State 1, Predict).
+// State-Updates passieren spaeter im DOM via _lfPrApplyState.
+function _renderPredictReveal(config, slotId) {
+  const norm = _lfPrNormalizeConfig(config);
+  if (!norm) {
+    return `<div class="lf-widget-predict-reveal lf-pr-empty" data-pr-slot="${escapeAttr(slotId)}">`
+         + `Diese Aufgabe ist noch nicht fertig konfiguriert.</div>`;
+  }
+  // State im Module-Map verankern. Kein Wrapper-Ref hier — wird beim ersten
+  // Click via document.getElementById nachgeholt.
+  _LF_PR_STATE.set(slotId, {
+    config: norm,
+    lockedWrong: new Set(),
+    revealed: false,
+    selectedIndex: null
+  });
+
+  // Hard-Rule #3: setup/reveal/explanation/label sind HTML-entity-encoded und
+  // gehen 1:1 ins innerHTML — konsistent zu text-block (Zeile ~2030). KEIN
+  // doppeltes escapeHtml auf label, sonst wuerde "M&uuml;nchen" zu
+  // "M&amp;uuml;nchen" und der User saehe die Entitaet roh. Custom-Topics-
+  // Future = separate Sanitisier-Stufe beim Upload, nicht hier am Rendering.
+  const setupHtml = norm.setup
+    ? `<div class="lf-pr-setup">${norm.setup}</div>`
+    : '';
+
+  const optsHtml = norm.options.map((o, i) => {
+    const explHtml = o.explanation
+      ? `<div class="lf-pr-option-explanation" id="${escapeAttr(slotId)}-expl-${i}" hidden>${o.explanation}</div>`
+      : '';
+    return `<li class="lf-pr-option-item">`
+         + `<button type="button" class="lf-pr-option" `
+         +   `data-pr-action="select" `
+         +   `data-pr-slot="${escapeAttr(slotId)}" `
+         +   `data-pr-index="${i}">`
+         +   `<span class="lf-pr-option-label">${o.label}</span>`
+         + `</button>`
+         + explHtml
+         + `</li>`;
+  }).join('');
+
+  const revealHtml = norm.reveal
+    ? `<div class="lf-pr-reveal" id="${escapeAttr(slotId)}-reveal" hidden>`
+    +    `<div class="lf-pr-reveal-heading">Erkl&auml;rung</div>`
+    +    `<div class="lf-pr-reveal-body">${norm.reveal}</div>`
+    + `</div>`
+    : '';
+
+  const retryHtml = `<button type="button" class="lf-pr-retry" `
+    + `data-pr-action="retry" `
+    + `data-pr-slot="${escapeAttr(slotId)}" hidden>Nochmal versuchen</button>`;
+
+  const hintHtml = `<div class="lf-pr-hint">Tippe deinen Tipp &mdash; falsch raten ist Teil des Lernens.</div>`;
+
+  const questionHtml = norm.question
+    ? `<h4 class="lf-pr-question">${norm.question}</h4>`
+    : '';
+
+  return `<div class="lf-widget-predict-reveal lf-pr-state-predict" `
+       +   `id="${escapeAttr(slotId)}" data-pr-slot="${escapeAttr(slotId)}">`
+       +   setupHtml
+       +   questionHtml
+       +   `<ul class="lf-pr-options" role="radiogroup">${optsHtml}</ul>`
+       +   hintHtml
+       +   revealHtml
+       +   retryHtml
+       + `</div>`;
+}
+
+// Wendet aktuellen State auf den DOM des Widget-Wrappers an. Idempotent.
+function _lfPrApplyState(slotId) {
+  const state = _LF_PR_STATE.get(slotId);
+  if (!state) return;
+  const root = document.getElementById(slotId);
+  if (!root) return;
+
+  const optionBtns = root.querySelectorAll('.lf-pr-option');
+  const correctIdx = state.config.options.findIndex(o => o.correct);
+
+  optionBtns.forEach((btn, i) => {
+    // Reset modifier-classes + state
+    btn.classList.remove('lf-pr-correct', 'lf-pr-wrong', 'lf-pr-wrong-locked');
+    btn.removeAttribute('aria-label');
+    btn.disabled = false;
+
+    // Locked-wrong (nach Retry): bleibt visuell falsch + nicht klickbar
+    if (state.lockedWrong.has(i)) {
+      btn.classList.add('lf-pr-wrong-locked');
+      btn.disabled = true;
+      btn.setAttribute('aria-label', 'Bereits ausgeschlossen');
+    }
+
+    // Explanation-Sichtbarkeit
+    const expl = root.querySelector(`#${CSS.escape(slotId)}-expl-${i}`);
+    if (expl) expl.hidden = !state.revealed;
+
+    if (state.revealed) {
+      // In Revealed-State: alle disabled
+      btn.disabled = true;
+      if (i === correctIdx) {
+        btn.classList.add('lf-pr-correct');
+        btn.setAttribute('aria-label', 'Richtige Antwort');
+      } else if (i === state.selectedIndex && i !== correctIdx) {
+        btn.classList.add('lf-pr-wrong');
+        btn.setAttribute('aria-label', 'Falsche Antwort');
+      }
+    }
+  });
+
+  // Wrapper-State-Class
+  root.classList.toggle('lf-pr-state-predict',  !state.revealed);
+  root.classList.toggle('lf-pr-state-revealed',  state.revealed);
+
+  // Reveal-Box: nur sichtbar wenn richtig geklickt (Spec: bleibt versteckt
+  // bis zur richtigen Antwort).
+  const revealBox = root.querySelector(`#${CSS.escape(slotId)}-reveal`);
+  if (revealBox) {
+    const showReveal = state.revealed && state.selectedIndex === correctIdx;
+    revealBox.hidden = !showReveal;
+  }
+
+  // Retry-Button: nur sichtbar wenn falsch geklickt
+  const retryBtn = root.querySelector('.lf-pr-retry');
+  if (retryBtn) {
+    const showRetry = state.revealed && state.selectedIndex !== correctIdx;
+    retryBtn.hidden = !showRetry;
+  }
+}
+
+// Click-Handler: Option select.
+function _lfPrSelect(slotId, index) {
+  const state = _LF_PR_STATE.get(slotId);
+  if (!state) return;
+  if (state.revealed) return;             // schon ausgewertet
+  if (state.lockedWrong.has(index)) return; // gesperrt nach Retry
+  const opts = state.config.options;
+  if (index < 0 || index >= opts.length) return;
+  state.selectedIndex = index;
+  state.revealed = true;
+  _lfPrApplyState(slotId);
+}
+
+// Click-Handler: Retry. Sperrt die zuletzt gewaehlte falsche Option,
+// resettet State auf Predict.
+function _lfPrRetry(slotId) {
+  const state = _LF_PR_STATE.get(slotId);
+  if (!state) return;
+  const correctIdx = state.config.options.findIndex(o => o.correct);
+  if (state.selectedIndex !== null && state.selectedIndex !== correctIdx) {
+    state.lockedWrong.add(state.selectedIndex);
+  }
+  state.selectedIndex = null;
+  state.revealed = false;
+  _lfPrApplyState(slotId);
+}
+
+// Globale Click-Delegation. Einmalig auf document — funktioniert auch wenn
+// Widgets via innerHTML asynchron eingehaengt werden. Kein inline-onclick (Spec).
+if (typeof document !== 'undefined' && !document.__lfPredictRevealBound) {
+  document.__lfPredictRevealBound = true;
+  document.addEventListener('click', (ev) => {
+    const target = ev.target;
+    if (!target || !target.closest) return;
+    const btn = target.closest('[data-pr-action]');
+    if (!btn) return;
+    const slotId = btn.getAttribute('data-pr-slot');
+    if (!slotId) return;
+    const action = btn.getAttribute('data-pr-action');
+    if (action === 'select') {
+      const idx = parseInt(btn.getAttribute('data-pr-index'), 10);
+      if (!Number.isNaN(idx)) _lfPrSelect(slotId, idx);
+    } else if (action === 'retry') {
+      _lfPrRetry(slotId);
+    }
+  });
+}
+
 // Block-Renderer. Switch auf block.type. Phase-1: text + formula-pending +
 // image + code (kein Highlight) + widget-pending. Hard-Rule #3: text/code-
 // content ist HTML-entity-encoded und geht 1:1 ins innerHTML — kein
@@ -1733,8 +2033,22 @@ function renderBlock(block) {
   }
 
   if (type === 'image') {
-    const src     = escapeAttr(block.src || '');
-    const alt     = escapeAttr(block.alt || '');
+    const src = escapeAttr(block.src || '');
+    // F-07 (Casey): Wenn alt leer, aber caption vorhanden → caption als alt
+    // verwenden. Dezenter Authoring-Hinweis in der Console wenn beides fehlt.
+    // Cycle-2-Ramsey P2-2: caption ist per Hard-Rule #3 HTML-entity-encoded
+    // ("&bdquo;X&ldquo;"). Als figcaption-innerHTML ist das korrekt, aber als
+    // alt-Attribut wuerde escapeAttr die Entities doppelt-encoden und
+    // Screenreader laesen "ampersand b-d-quo". Daher: caption-Fallback
+    // einmal entity-decoden (alt darf umlauts/Smart-Quotes natively halten).
+    let altText = block.alt || '';
+    if (!altText && block.caption) {
+      altText = decodeHtmlEntities(block.caption);
+    }
+    if (!block.alt && !block.caption) {
+      try { console.warn('[LF/image-block] image without alt+caption — please supply at least one for accessibility.', block); } catch(e) {}
+    }
+    const alt = escapeAttr(altText);
     const caption = block.caption
       ? `<figcaption>${escapeHtml(block.caption)}</figcaption>`
       : '';
@@ -1750,13 +2064,20 @@ function renderBlock(block) {
 
   if (type === 'widget') {
     const wt = block.widgetType || 'unknown';
+    // Cycle 8: predict-reveal ist jetzt echt implementiert — kein Pending mehr.
+    if (wt === 'predict-reveal') {
+      return _renderPredictReveal(block.config || {}, _lfPrNextSlotId());
+    }
     if (_LF_WIDGET_WHITELIST.has(wt) && !_LF_WIDGET_TOAST_FIRED.has(wt)) {
       _LF_WIDGET_TOAST_FIRED.add(wt);
       // showToast existiert ist erst spaeter im File definiert — defer auf
       // naechsten Tick, sonst feuert das vor App-Bootstrap.
       try { setTimeout(() => showToast(`Coming soon: ${wt}`, 'info'), 0); } catch(e) {}
     }
-    return `<div class="lf-widget-pending">Widget-Slot: ${escapeHtml(wt)} (Phase 2)</div>`;
+    // F-05 (Casey): Vorher technisch ("Widget-Slot: predict-reveal (Phase 2)")
+    // — User-unfreundlich. Jetzt sprechende Copy. wt bleibt als data-Attribut
+    // fuer evtl. Debugging/QA, aber nicht im Sichtbaren.
+    return `<div class="lf-widget-pending" data-widget="${escapeAttr(wt)}">Diese interaktive Aufgabe folgt im n\xe4chsten Update — schau bald wieder vorbei!</div>`;
   }
 
   console.warn('[renderBlock] Unknown block type — skipped:', type, block);
@@ -1776,14 +2097,27 @@ function renderBlocks(blocks) {
 // Aufgabe: bei einem einzelnen Legacy-Wrap-Subtopic (id 'main') gleich expanded
 // rendern (Grid-Wrap waere visuell unsinnig fuer 1 Card). Bei einem Subtopics-
 // Array > 1 das gewohnte Index-Card-Grid.
-function renderSubtopicGrid(input) {
+//   Cycle-2-Ramsey P2-3: subjectId/yearId werden optional durchgereicht, damit
+//   der Empty-State-Fallback (kein Lerninhalt) die korrekte CTA-Hash auf die
+//   Year-Liste setzt statt '#/'. Heute Dead-Path (Caller in renderTopic prueft
+//   .length > 0 selbst und ruft _emptyTopicContent direkt), aber Future-Proof
+//   fuer Custom-Topics + isolierte Aufrufer.
+function renderSubtopicGrid(input, subjectId, yearId) {
   // Tolerant: alter Aufrufer hat raw-array uebergeben.
   const subtopics = Array.isArray(input)
     ? getSubtopics({ subtopics: input })
     : getSubtopics(input);
 
+  // Falls subjectId/yearId nicht uebergeben wurden, aber im meta-Objekt liegen
+  // (Custom-Topics setzen die Felder direkt am meta), von dort lesen.
+  const sid = subjectId || (input && !Array.isArray(input) ? input.subjectId : undefined);
+  const yid = yearId    || (input && !Array.isArray(input) ? input.yearId    : undefined);
+
   if (subtopics.length === 0) {
-    return `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
+    // F-04 (Casey): Empty-State Helper — selber Look wie der Caller in
+    // renderTopic. CTA-Hash zur Year-Liste falls subjectId/yearId vorhanden,
+    // sonst Fallback auf '#/' (siehe _emptyTopicContent).
+    return _emptyTopicContent(sid, yid);
   }
 
   // Legacy-Wrap (single subtopic, id='main', kein name): direkt expanded —
@@ -1977,7 +2311,14 @@ function getRecentTests() {
 }
 
 // ── F-36: KI-Empfehlungen (lokal) ────────
-function getRecommendations() {
+// opts: { subjectFilter?: string, excludeKey?: string }
+//   subjectFilter — nur Topics dieses Fachs (Casey/Cycle-3: Action-Card-2
+//     soll fach-aware sein, sonst zeigt ein Mathe-Test-Result Englisch-Topics)
+//   excludeKey    — `${subjectId}__${yearId}__${topicId}` der NICHT erscheinen
+//     soll (typisch: das gerade absolvierte Topic)
+// Backward-compat: ohne args = global wie vorher.
+function getRecommendations(opts) {
+  const { subjectFilter = null, excludeKey = null } = opts || {};
   const grades = userData?.grades || {};
   // V2 (Casey/Wave-2): Topics aus getNeedsAttention() ausschliessen — die
   // erscheinen schon als eigene "Brauchen Aufmerksamkeit"-Karte. Sonst kommen
@@ -1990,10 +2331,12 @@ function getRecommendations() {
   } catch { attentionKeys = new Set(); }
   const all = [];
   Object.values(structure || {}).forEach(subject => {
+    if (subjectFilter && subject.id !== subjectFilter) return;
     Object.values(subject.years || {}).forEach(year => {
       Object.values(year.topics || {}).forEach(topic => {
         const key = `${subject.id}__${year.id}__${topic.id}`;
         if (attentionKeys.has(key)) return;
+        if (excludeKey && key === excludeKey) return;
         const g   = grades[key];
         if (!g) {
           all.push({ subjectId: subject.id, yearId: year.id, topicId: topic.id,
@@ -2354,110 +2697,611 @@ function _resizeProfileImage(file, maxPx = 512) {
   });
 }
 
-// ── Einstellungen-Seite ──────────────────
+// ── Einstellungen-Seite (Cycle-3 Refactor — 4 Tabs) ──────
+// Maya-Spec: .claude/company/specs/settings-page-refactor-implementation.md
+// 4 Tabs: darstellung · lernen · anpassung · konto. URL-Hash-Param ?tab=...
+// Defaults via `?? <default>` — Bestand-User-Migration nicht noetig.
+
+// Whitelist 12 Subject-Color-Slugs (Maya v2 Color-Palette).
+// Layer-4 in subject-tokens.css setzt --user-subject-accent / -soft daraus.
+// Slug-Wertebereich + DE-Label + Display-Hex (nur fuer das Picker-Swatch
+// im Settings-UI — die echten Token-Werte stehen in subject-tokens.css als
+// oklch). Hex hier = visueller Anker; UI-Komponente, nicht Theme-Tokens.
+const USER_SUBJECT_COLOR_PALETTE = [
+  { slug: 'royal-blue',         name: 'Königsblau',    hex: '#3b58c4' },
+  { slug: 'electric-cyan',      name: 'Strom-Cyan',         hex: '#1e7fb8' },
+  { slug: 'terminal-green',     name: 'Terminal-Grün', hex: '#1f8f5a' },
+  { slug: 'emerald-leaf',       name: 'Smaragd',            hex: '#1f9b58' },
+  { slug: 'teal-globe',         name: 'Türkis',        hex: '#15868c' },
+  { slug: 'sepia-bronze',       name: 'Sepia-Bronze',       hex: '#998534' },
+  { slug: 'crimson-classical',  name: 'Klassik-Rot',        hex: '#bd3a2a' },
+  { slug: 'coral-pop',          name: 'Koralle',            hex: '#e06846' },
+  { slug: 'amber-warm',         name: 'Bernstein',          hex: '#d8902c' },
+  { slug: 'violet-chem',        name: 'Violett',            hex: '#8a3fbd' },
+  { slug: 'mauve-soft',         name: 'Mauve',              hex: '#aa6b94' },
+  { slug: 'slate-pro',          name: 'Schiefer',           hex: '#5a6376' }
+];
+const USER_SUBJECT_COLOR_SLUGS = USER_SUBJECT_COLOR_PALETTE.map(p => p.slug);
+
+const _SETTINGS_TABS = [
+  { slug: 'darstellung', label: 'Darstellung', icon: 'palette' },
+  { slug: 'lernen',      label: 'Lernen',      icon: 'graduation-cap' },
+  { slug: 'anpassung',   label: 'Anpassung',   icon: 'user' },
+  { slug: 'konto',       label: 'Konto',       icon: 'lock' }
+];
+
+// Defaults-Bag fuer settings.* — Bestand-User lesen mit `?? default`.
+function _settingsRead() {
+  const s = userData?.settings || {};
+  return {
+    themeMode:           s.themeMode           ?? (document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'),
+    cosmeticTheme:       s.cosmeticTheme       ?? userData?.activeTheme ?? 'default',
+    fontSize:            s.fontSize            ?? 'normal',
+    reducedMotion:       s.reducedMotion       ?? false,
+    dailyReminderTime:   s.dailyReminderTime   ?? '',
+    streakWarnThreshold: s.streakWarnThreshold ?? 18,
+    defaultKlasseFilter: s.defaultKlasseFilter ?? 'auto',
+    subjectThemesOff:    s.subjectThemesOff    ?? false,
+    subjectColors:       s.subjectColors       ?? {},
+    customIcons:         s.customIcons         ?? {},
+    customIconUrls:      s.customIconUrls      ?? {},
+    defaultOutline:      s.defaultOutline      ?? '',
+    lbHidden:            userData?.lbHidden    ?? false
+  };
+}
+
 function renderSettings() {
-  const subjects = Object.values(structure || {});
+  const tab = _hashParam('tab') || 'darstellung';
+  const valid = _SETTINGS_TABS.find(t => t.slug === tab) ? tab : 'darstellung';
 
-  const colorRows = subjects.map(s => {
-    const current = getSubjectColor(s.id);
-    return `
-      <div class="settings-color-row">
-        <div class="settings-subject-info">
-          <span class="settings-icon">${getSubjectIcon(s.id)}</span>
-          <span class="settings-name">${s.name}</span>
-        </div>
-        <div class="settings-color-right">
-          <span class="settings-color-preview" id="preview_${s.id}"
-                style="background:${current}"></span>
-          <input type="color" class="color-picker" id="color_${s.id}"
-                 value="${current}"
-                 oninput="document.getElementById('preview_${s.id}').style.background=this.value">
-          <button class="btn btn-ghost btn-sm" onclick="window.LF.resetColor('${s.id}','${s.color}')">
-            Zurücksetzen
-          </button>
-        </div>
-      </div>`;
-  }).join('');
+  const tabBar = `
+    <div class="settings-tabs" id="settingsTabs">
+      ${_SETTINGS_TABS.map(t => `
+        <button class="settings-tab-pill ${t.slug === valid ? 'active' : ''}"
+                onclick="window.LF.switchSettingsTab('${t.slug}')">
+          ${lfIcon(t.icon, { cls: 'settings-tab-icon' })}
+          <span>${t.label}</span>
+        </button>`).join('')}
+    </div>`;
 
-  const iconRows = subjects.map(s => {
-    const hasUrl     = !!userData?.settings?.customIconUrls?.[s.id];
-    const emojiVal   = userData?.settings?.customIcons?.[s.id] || s.icon;
-    const previewHtml = hasUrl
-      ? `<img class="subject-icon-img" src="${userData.settings.customIconUrls[s.id]}" alt="" style="width:36px;height:36px">`
-      : emojiVal;
-    return `
-      <div class="settings-color-row">
-        <div class="settings-subject-info">
-          <span class="settings-icon" id="iconPreview_${s.id}">${previewHtml}</span>
-          <span class="settings-name">${s.name}</span>
-        </div>
-        <div class="settings-color-right">
-          <input type="text" class="form-input" id="icon_${s.id}"
-                 value="${emojiVal}" maxlength="2" style="width:54px;text-align:center;font-size:20px"
-                 oninput="window.LF.onEmojiInput('${s.id}',this.value)">
-          <label class="btn btn-ghost btn-sm icon-upload-label" title="PNG hochladen (64×64)">
-            ${lfIcon('folder')}
-            <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
-                   onchange="window.LF.handleIconFile('${s.id}',this)">
-          </label>
-          <button class="btn btn-ghost btn-sm" onclick="window.LF.resetIcon('${s.id}','${s.icon}')">
-            ↩
-          </button>
-        </div>
-      </div>`;
-  }).join('');
+  let content = '';
+  if      (valid === 'darstellung') content = _renderSettingsDarstellungTab();
+  else if (valid === 'lernen')      content = _renderSettingsLernenTab();
+  else if (valid === 'anpassung')   content = _renderSettingsAnpassungTab();
+  else if (valid === 'konto')       content = _renderSettingsKontoTab();
 
   document.getElementById('app').innerHTML = `
     ${renderNav([{ label: 'Einstellungen' }])}
     <div class="page">
       <div class="page-header">
         <h1>${lfIcon('settings')} Einstellungen</h1>
-        <div class="sub">Passe LearningForge nach deinen Wünschen an.</div>
+        <div class="sub">Dein Konto, dein Stil, deine App.</div>
       </div>
+      ${tabBar}
+      <div class="settings-tab-content" id="settingsTabContent">${content}</div>
+    </div>`;
+}
 
-      <div class="settings-card">
-        <div class="settings-section-title">${lfIcon('palette')} Fächerfarben</div>
-        <p class="settings-hint">Die Farben werden nur für dein Konto gespeichert.</p>
-        <div class="settings-color-list">
-          ${subjects.length === 0
-            ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden.</div>`
-            : colorRows}
-        </div>
-        ${subjects.length > 0 ? `
-          <div class="settings-actions">
-            <button class="btn btn-primary" onclick="window.LF.saveColors()">Farben speichern</button>
-            <button class="btn btn-secondary" onclick="window.LF.resetAllColors()">Alle zurücksetzen</button>
-          </div>` : ''}
-      </div>
+// ── Tab 1 — Darstellung ─────────────────────────────────
+function _renderSettingsDarstellungTab() {
+  const s = _settingsRead();
+  const themeRadios = [
+    ['light',  'Hell',                                 'sun'],
+    ['dark',   'Dunkel',                               'moon'],
+    ['system', 'System (folgt deinem Gerät)',     'globe']
+  ].map(([val, label, icon]) => `
+    <label class="settings-radio-row ${s.themeMode === val ? 'is-selected' : ''}">
+      <input type="radio" name="settingsThemeMode" value="${val}"
+             ${s.themeMode === val ? 'checked' : ''}
+             onchange="window.LF.settingsSaveThemeMode('${val}')">
+      ${lfIcon(icon, { cls: 'settings-radio-icon' })}
+      <span>${label}</span>
+    </label>`).join('');
 
-      <div class="settings-card" style="margin-top:16px">
-        <div class="settings-section-title">Fach-Icons</div>
-        <p class="settings-hint">Emoji eingeben oder eigenes PNG hochladen (wird auf 64×64 px skaliert).</p>
-        <div class="settings-color-list">
-          ${subjects.length === 0
-            ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden.</div>`
-            : iconRows}
-        </div>
-        ${subjects.length > 0 ? `
-          <div class="settings-actions">
-            <button class="btn btn-primary" onclick="window.LF.saveIcons()">Icons speichern</button>
-          </div>` : ''}
-      </div>
+  const cosmeticOptions = THEMES.map(t => `
+    <option value="${t.id}" ${s.cosmeticTheme === t.id ? 'selected' : ''}>${escapeHtml(t.name)}</option>
+  `).join('');
 
-      <div class="settings-card" style="margin-top:16px">
-        <div class="settings-section-title">${lfIcon('contrast')} Darstellung</div>
-        <div class="settings-color-row">
-          <div class="settings-subject-info">
-            <span class="settings-name">Hell oder Dunkel</span>
+  const fontSizeBtns = [
+    ['normal', 'Normal'],
+    ['large',  'Groß'],
+    ['xlarge', 'Sehr groß']
+  ].map(([val, label]) => `
+    <button class="settings-segment-btn ${s.fontSize === val ? 'active' : ''}"
+            onclick="window.LF.settingsSaveFontSize('${val}')">${label}</button>
+  `).join('');
+
+  return `
+    <div class="settings-card">
+      <div class="settings-section-title">Modus</div>
+      <p class="settings-hint">Wähle, wie LearningForge aussieht.</p>
+      <div class="settings-radio-group">${themeRadios}</div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Cosmetic-Theme</div>
+      <p class="settings-hint">Vorschau wird sofort angewendet.</p>
+      <div class="settings-cosmetic-row">
+        <select class="form-input settings-cosmetic-select" id="settingsCosmeticSelect"
+                onchange="window.LF.settingsSaveCosmeticTheme(this.value)">
+          ${cosmeticOptions}
+        </select>
+        <div class="settings-cosmetic-preview" data-app-theme="${escapeAttr(s.cosmeticTheme)}" id="settingsCosmeticPreview">
+          <div class="settings-cosmetic-preview-card">
+            <div class="settings-cosmetic-preview-bar"></div>
+            <div class="settings-cosmetic-preview-text">Aa</div>
           </div>
-          <div class="settings-color-right">
-            <button class="btn btn-secondary" onclick="window.LF.toggleTheme()">
-              ${document.documentElement.getAttribute('data-theme') === 'dark' ? `${lfIcon('sun')} Hell` : `${lfIcon('moon')} Dunkel`}
-            </button>
-          </div>
         </div>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Schriftgröße</div>
+      <p class="settings-hint">Skaliert die gesamte App.</p>
+      <div class="settings-segment-row">${fontSizeBtns}</div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Bewegung reduzieren</div>
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-label">
+          <div class="settings-name">Animationen werden ausgeschaltet.</div>
+          <div class="settings-hint" style="margin:2px 0 0">Hilft bei Reizempfindlichkeit oder schwachen Geräten.</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settingsReducedMotion"
+                 ${s.reducedMotion ? 'checked' : ''}
+                 onchange="window.LF.settingsSaveReducedMotion(this.checked)">
+          <span class="settings-toggle-slider"></span>
+        </label>
       </div>
     </div>`;
+}
+
+// ── Tab 2 — Lernen ──────────────────────────────────────
+function _renderSettingsLernenTab() {
+  const s = _settingsRead();
+  const subjects = Object.values(structure || {});
+  const userKlasse = userData?.klasse ? `Klasse ${escapeHtml(String(userData.klasse))}` : 'Klasse';
+
+  const klasseOpts = [
+    `<option value="auto" ${s.defaultKlasseFilter === 'auto' ? 'selected' : ''}>Automatisch (${userKlasse})</option>`,
+    ...[5,6,7,8,9,10,11,12,13].map(k =>
+      `<option value="${k}" ${String(s.defaultKlasseFilter) === String(k) ? 'selected' : ''}>Klasse ${k}</option>`
+    )
+  ].join('');
+
+  const subjectsOff = s.subjectThemesOff;
+  const subjectColorRows = subjects.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden.</div>`
+    : subjects.map(sub => {
+        const current = s.subjectColors?.[sub.id] || '';
+        const swatches = USER_SUBJECT_COLOR_PALETTE.map(p => `
+          <button class="settings-color-swatch ${current === p.slug ? 'is-selected' : ''}"
+                  data-slug="${p.slug}"
+                  style="background:${p.hex}"
+                  title="${escapeAttr(p.name)}"
+                  aria-label="${escapeAttr(p.name)} für ${escapeAttr(sub.name)}"
+                  onclick="window.LF.settingsSaveSubjectColor('${escapeAttr(sub.id)}','${p.slug}')">
+            ${current === p.slug ? lfIcon('check', { cls: 'settings-swatch-check' }) : ''}
+          </button>`).join('');
+        const currentLabel = current
+          ? (USER_SUBJECT_COLOR_PALETTE.find(p => p.slug === current)?.name || 'Eigene')
+          : 'Standard';
+        return `
+          <div class="settings-subject-color-row" id="subjColorRow_${escapeAttr(sub.id)}">
+            <div class="settings-subject-color-header">
+              <div class="settings-subject-info">
+                <span class="settings-icon">${getSubjectIcon(sub.id)}</span>
+                <span class="settings-name">${escapeHtml(sub.name)}</span>
+              </div>
+              <div class="settings-subject-color-meta">
+                <span class="settings-subject-color-current">${escapeHtml(currentLabel)}</span>
+                ${current ? `
+                  <button class="btn btn-ghost btn-sm"
+                          onclick="window.LF.settingsResetSubjectColor('${escapeAttr(sub.id)}')">Standard</button>` : ''}
+              </div>
+            </div>
+            <div class="settings-color-grid">${swatches}</div>
+          </div>`;
+      }).join('');
+
+  return `
+    <div class="settings-card">
+      <div class="settings-section-title">Tägliche Lern-Erinnerung</div>
+      <p class="settings-hint">Zeit, ab der wir dich erinnern, wenn du noch nichts gelernt hast.</p>
+      <div class="settings-time-row">
+        <input type="time" class="form-input settings-time-picker" id="settingsDailyReminder"
+               value="${escapeAttr(s.dailyReminderTime || '')}"
+               onchange="window.LF.settingsSaveDailyReminder(this.value)">
+        <button class="btn btn-ghost btn-sm" onclick="window.LF.settingsSaveDailyReminder('')">Aus</button>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Streak-Schutz</div>
+      <p class="settings-hint">Hinweis-Banner ab dieser Uhrzeit.</p>
+      <select class="form-input" id="settingsStreakWarn"
+              onchange="window.LF.settingsSaveStreakWarn(this.value)">
+        ${Array.from({length: 24}, (_, h) => `
+          <option value="${h}" ${Number(s.streakWarnThreshold) === h ? 'selected' : ''}>${String(h).padStart(2,'0')}:00</option>
+        `).join('')}
+      </select>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Standard-Klasse beim Lernen-Tab</div>
+      <p class="settings-hint">Bestimmt den initial-aktiven Filter im Lernen-Tab.</p>
+      <select class="form-input" id="settingsDefaultKlasse"
+              onchange="window.LF.settingsSaveDefaultKlasse(this.value)">
+        ${klasseOpts}
+      </select>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Fach-Themes</div>
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-label">
+          <div class="settings-name">Jedes Fach in eigener Optik.</div>
+          <div class="settings-hint" style="margin:2px 0 0">Mathe blau, Deutsch navy, Bio grün …</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settingsSubjectThemes"
+                 ${!subjectsOff ? 'checked' : ''}
+                 onchange="window.LF.settingsSaveSubjectThemesOn(this.checked)">
+          <span class="settings-toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Fach-Farben</div>
+      <p class="settings-hint">Hier kannst du die Standardfarbe pro Fach überschreiben.</p>
+      ${subjectsOff ? `
+        <div class="settings-disabled-hint">
+          ${lfIcon('info')} Aktiviere Fach-Themes oben, um Farben anzupassen.
+        </div>` : `
+        <div class="settings-subject-color-list">
+          ${subjectColorRows}
+        </div>
+        ${subjects.length > 0 ? `
+          <div class="settings-actions">
+            <button class="btn btn-secondary" onclick="window.LF.settingsResetAllSubjectColors()">
+              Alle auf Standard zurücksetzen
+            </button>
+          </div>` : ''}
+      `}
+    </div>`;
+}
+
+// ── Tab 3 — Anpassung ───────────────────────────────────
+function _renderSettingsAnpassungTab() {
+  const s = _settingsRead();
+  const subjects = Object.values(structure || {});
+  const initial = (userData?.name || currentUser?.displayName || 'U')[0].toUpperCase();
+  const photoURL = userData?.photoURL || currentUser?.photoURL || null;
+  const lvl = calcLevel(userData?.xp || 0).level;
+  const currentOutline = userData?.activeOutline || s.defaultOutline || '';
+
+  const outlineOpts = OUTLINE_TIERS.map(t => {
+    const lockedByLevel = lvl < t.level;
+    const owned = (userData?.outlines || []).includes(t.id);
+    const accessible = !lockedByLevel || owned || isAdmin();
+    return `<option value="${t.id}" ${currentOutline === t.id ? 'selected' : ''} ${!accessible ? 'disabled' : ''}>
+      ${escapeHtml(t.name)}${!accessible ? ` — ab Lv.${t.level}` : ''}
+    </option>`;
+  }).join('');
+
+  const iconRows = subjects.length === 0
+    ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden.</div>`
+    : subjects.map(sub => {
+        const hasUrl     = !!s.customIconUrls?.[sub.id];
+        const emojiVal   = s.customIcons?.[sub.id] || '';
+        const previewHtml = hasUrl
+          ? `<img class="subject-icon-img" src="${escapeAttr(s.customIconUrls[sub.id])}" alt="" style="width:36px;height:36px">`
+          : (emojiVal || getSubjectIcon(sub.id));
+        return `
+          <div class="settings-color-row">
+            <div class="settings-subject-info">
+              <span class="settings-icon" id="iconPreview_${escapeAttr(sub.id)}">${previewHtml}</span>
+              <span class="settings-name">${escapeHtml(sub.name)}</span>
+            </div>
+            <div class="settings-color-right">
+              <input type="text" class="form-input" id="icon_${escapeAttr(sub.id)}"
+                     value="${escapeAttr(emojiVal)}" maxlength="2"
+                     style="width:54px;text-align:center;font-size:20px"
+                     oninput="window.LF.onEmojiInput('${escapeAttr(sub.id)}',this.value)">
+              <label class="btn btn-ghost btn-sm icon-upload-label" title="PNG hochladen (64×64)">
+                ${lfIcon('folder')}
+                <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
+                       onchange="window.LF.handleIconFile('${escapeAttr(sub.id)}',this)">
+              </label>
+              <button class="btn btn-ghost btn-sm" onclick="window.LF.resetIcon('${escapeAttr(sub.id)}','')">
+                ${lfIcon('rotate-ccw')}
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+
+  return `
+    <div class="settings-card">
+      <div class="settings-section-title">Avatar</div>
+      <div class="settings-avatar-block">
+        <div class="profile-avatar-large" id="settingsAvatarPreview" style="margin:0 auto 12px">${
+          photoURL
+            ? `<img src="${escapeAttr(photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+            : escapeHtml(initial)
+        }</div>
+        <div class="settings-avatar-actions">
+          <label class="btn btn-secondary btn-sm">
+            ${lfIcon('folder')} ${photoURL ? 'Bild ändern' : 'Bild hochladen'}
+            <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
+                   onchange="window.LF.settingsAvatarFile(this)">
+          </label>
+          ${photoURL ? `
+            <button class="btn btn-ghost btn-sm" onclick="window.LF.settingsRemoveAvatar()">
+              ${lfIcon('x')} Bild entfernen
+            </button>` : ''}
+        </div>
+        <div class="settings-hint" style="text-align:center;margin-top:8px">Quadratisch, max 1 MB.</div>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Anzeige-Name</div>
+      <div class="settings-inline-row">
+        <input type="text" class="form-input" id="settingsDisplayName"
+               value="${escapeAttr(userData?.name || currentUser?.displayName || '')}"
+               placeholder="Anzeigename" maxlength="24"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();window.LF.settingsSaveDisplayName();}"
+               onblur="window.LF.settingsSaveDisplayNameIfChanged()">
+        <button class="btn btn-primary btn-sm" id="settingsDisplayNameSaveBtn"
+                onclick="window.LF.settingsSaveDisplayName()">Speichern</button>
+      </div>
+      <div class="settings-hint" style="margin-top:6px">2 bis 24 Zeichen.</div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Standard-Outline</div>
+      <p class="settings-hint">Wird als Avatar-Rand angezeigt. Gesperrte Tier-Stufen werden in deinem Inventar freigeschaltet.</p>
+      <select class="form-input" id="settingsDefaultOutline"
+              onchange="window.LF.settingsSaveDefaultOutline(this.value)">
+        ${outlineOpts}
+      </select>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Fach-Icons</div>
+      <p class="settings-hint">Emoji eingeben oder PNG hochladen (wird auf 64×64 px skaliert).</p>
+      <div class="settings-color-list">${iconRows}</div>
+      ${subjects.length > 0 ? `
+        <div class="settings-actions">
+          <button class="btn btn-primary" onclick="window.LF.saveIcons()">Icons speichern</button>
+        </div>` : ''}
+    </div>`;
+}
+
+// ── Tab 4 — Konto + Daten ───────────────────────────────
+function _renderSettingsKontoTab() {
+  const s = _settingsRead();
+  const email = currentUser?.email || '';
+  return `
+    <div class="settings-card">
+      <div class="settings-section-title">E-Mail</div>
+      <div class="settings-email-display">${escapeHtml(email)}</div>
+      <div class="settings-hint" style="margin-top:6px">Login-E-Mail kann nicht geändert werden.</div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Passwort</div>
+      <p class="settings-hint">Erhalte einen Reset-Link an deine E-Mail.</p>
+      <button class="btn btn-secondary" onclick="window.LF.settingsRequestPasswordReset()">
+        ${lfIcon('pen-line')} Reset-Link an meine E-Mail senden
+      </button>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Meine Daten</div>
+      <p class="settings-hint">Lade alle deine Daten als JSON-Datei herunter.</p>
+      <button class="btn btn-secondary" onclick="window.LF.settingsExportData()">
+        ${lfIcon('download')} Daten herunterladen
+      </button>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <div class="settings-section-title">Sichtbarkeit auf Ranglisten</div>
+      <div class="settings-toggle-row">
+        <div class="settings-toggle-label">
+          <div class="settings-name">Auf Ranglisten sichtbar</div>
+          <div class="settings-hint" style="margin:2px 0 0">Mit Aus erscheinst du nirgends — auch deine Freunde sehen dich nicht im Ranking.</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settingsLbVisible"
+                 ${!s.lbHidden ? 'checked' : ''}
+                 onchange="window.LF.settingsSaveLbHidden(!this.checked)">
+          <span class="settings-toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:16px">
+      <button class="btn btn-secondary" onclick="window.LF.settingsLogout()">
+        ${lfIcon('log-out')} Abmelden
+      </button>
+    </div>
+
+    <div class="settings-danger-zone" style="margin-top:24px">
+      <div class="settings-danger-zone-title">${lfIcon('triangle-alert')} Gefahrenzone</div>
+      <div class="settings-danger-zone-card">
+        <div class="settings-section-title" style="margin-bottom:4px">Konto löschen</div>
+        <p class="settings-hint">Setzt dein gesamtes Konto unwiderruflich zurück. Kein Undo.</p>
+        <button class="btn btn-danger" onclick="window.LF.settingsOpenDeleteModal()">
+          ${lfIcon('trash-2')} Konto löschen
+        </button>
+      </div>
+    </div>`;
+}
+
+// ── Konto-Loeschen-Modal (State-Machine: warning → countdown → execute) ──
+let _settingsDeleteState = null;
+
+function _openSettingsDeleteModal() {
+  if (document.getElementById('settingsDeleteOverlay')) return;
+  _settingsDeleteState = {
+    phase: 'warning',     // 'warning' | 'countdown'
+    timer: null,
+    countdown: 30,        // wird in settingsStartDeleteCountdown ueberschrieben
+    interval: null
+  };
+  const overlay = document.createElement('div');
+  overlay.id = 'settingsDeleteOverlay';
+  overlay.className = 'lf-modal-overlay';
+  overlay.addEventListener('click', e => { if (e.target === overlay) _closeSettingsDeleteModal(); });
+  document.body.appendChild(overlay);
+  _renderSettingsDeleteModalContent();
+}
+
+function _closeSettingsDeleteModal() {
+  if (_settingsDeleteState?.timer)    clearTimeout(_settingsDeleteState.timer);
+  if (_settingsDeleteState?.interval) clearInterval(_settingsDeleteState.interval);
+  _settingsDeleteState = null;
+  document.getElementById('settingsDeleteOverlay')?.remove();
+}
+
+function _renderSettingsDeleteModalContent() {
+  const overlay = document.getElementById('settingsDeleteOverlay');
+  if (!overlay || !_settingsDeleteState) return;
+  const userName = userData?.name || currentUser?.displayName || 'Nutzer';
+
+  if (_settingsDeleteState.phase === 'warning') {
+    overlay.innerHTML = `
+      <div class="lf-modal-card">
+        <div class="lf-modal-header">
+          <h3>${lfIcon('triangle-alert')} Konto löschen</h3>
+          <button class="btn-icon" onclick="window.LF.settingsCancelDelete()" aria-label="Schließen">${lfIcon('x')}</button>
+        </div>
+        <div class="lf-modal-body">
+          <p>Dein gesamtes Konto wird permanent gelöscht. Das kann nicht rückgängig gemacht werden.</p>
+          <div class="settings-delete-bullets">
+            <div class="settings-section-title" style="margin-bottom:6px">Was wird gelöscht:</div>
+            <ul>
+              <li>Alle Noten und Test-Historie</li>
+              <li>XP, Streak, Achievements</li>
+              <li>Eigene Themen aus dem Builder</li>
+              <li>Freundschaften und Gruppen-Mitgliedschaften</li>
+              <li>Dein Profil und Avatar</li>
+            </ul>
+          </div>
+          <label class="form-label" style="margin-top:12px;display:block">
+            Tippe deinen Anzeige-Namen, um zu bestätigen:
+          </label>
+          <input type="text" class="form-input" id="settingsDeleteConfirmInput"
+                 placeholder="${escapeAttr(userName)}"
+                 oninput="window.LF.settingsDeleteOnConfirmInput(this.value)">
+        </div>
+        <div class="lf-modal-footer" style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="window.LF.settingsCancelDelete()">Abbrechen</button>
+          <button class="btn btn-danger" id="settingsDeleteConfirmBtn" disabled
+                  onclick="window.LF.settingsStartDeleteCountdown()">Endgültig löschen</button>
+        </div>
+      </div>`;
+    setTimeout(() => document.getElementById('settingsDeleteConfirmInput')?.focus(), 30);
+  } else {
+    const c = _settingsDeleteState.countdown;
+    // 30s Countdown (siehe settingsStartDeleteCountdown). Initial-Wert kennen
+    // wir nicht zur Render-Zeit, also clampen wir auf 30 als Anker.
+    const pct = Math.max(0, Math.min(100, ((30 - c) / 30) * 100));
+    overlay.innerHTML = `
+      <div class="lf-modal-card">
+        <div class="lf-modal-header">
+          <h3>${lfIcon('triangle-alert')} Konto wird gelöscht</h3>
+        </div>
+        <div class="lf-modal-body">
+          <p style="text-align:center;font-size:18px;font-weight:600">
+            Konto wird in ${c} Sekunden gelöscht…
+          </p>
+          <div class="settings-delete-progress">
+            <div class="settings-delete-progress-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+        <div class="lf-modal-footer" style="display:flex;gap:8px;justify-content:center">
+          <button class="btn btn-secondary" onclick="window.LF.settingsCancelDelete()">Abbrechen</button>
+        </div>
+      </div>`;
+  }
+}
+
+// ── Daten-Export-Helper (Frontend-only Blob) ─────────────
+function _buildUserExport() {
+  const u = userData || {};
+  const stats = {
+    xp:            u.xp || 0,
+    level:         calcLevel(u.xp || 0).level,
+    streak:        (() => { try { return calcStreak(); } catch { return 0; } })(),
+    longestStreak: u.longestStreak || 0
+  };
+  return {
+    exportedAt:    new Date().toISOString(),
+    exportVersion: 1,
+    user: {
+      uid:       currentUser?.uid || null,
+      email:     currentUser?.email || null,
+      name:      u.name || null,
+      klasse:    u.klasse || null,
+      createdAt: u.createdAt?.toMillis ? u.createdAt.toMillis() : (u.createdAt || null),
+      photoURL:  u.photoURL || null
+    },
+    stats,
+    grades:        u.grades || {},
+    customTopics:  u.customTopics || [],
+    srs:           u.srs || {},
+    settings:      u.settings || {},
+    achievements:  u.achievements || [],
+    exams:         u.exams || [],
+    friendIds:     u.friendIds || []
+  };
+}
+
+// ── Apply-Helpers (DOM-Effekte) ─────────────────────────
+function _applyFontSizeScale(scale) {
+  const map = { normal: 1, large: 1.125, xlarge: 1.25 };
+  const v = map[scale] ?? 1;
+  document.documentElement.style.setProperty('--font-size-scale', String(v));
+}
+
+function _applyReducedMotion(on) {
+  if (on) document.documentElement.style.setProperty('--motion-duration', '0.01ms');
+  else    document.documentElement.style.removeProperty('--motion-duration');
+}
+
+let _systemThemeMql = null;
+function _applyThemeMode(mode) {
+  if (_systemThemeMql) {
+    try { _systemThemeMql.removeEventListener('change', _onSystemThemeChange); } catch {}
+    _systemThemeMql = null;
+  }
+  if (mode === 'system') {
+    _systemThemeMql = window.matchMedia('(prefers-color-scheme: dark)');
+    const sysDark = _systemThemeMql.matches;
+    document.documentElement.setAttribute('data-theme', sysDark ? 'dark' : 'light');
+    try { _systemThemeMql.addEventListener('change', _onSystemThemeChange); } catch {}
+  } else {
+    document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+    setCookie('lf_theme', mode === 'dark' ? 'dark' : 'light', 365);
+  }
+}
+
+function _onSystemThemeChange(e) {
+  if ((userData?.settings?.themeMode ?? 'light') !== 'system') return;
+  document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+}
+
+// Init-Hook (called from startApp after userData loads).
+export function applySettingsOnBoot() {
+  const s = _settingsRead();
+  _applyFontSizeScale(s.fontSize);
+  _applyReducedMotion(s.reducedMotion);
+  if (s.themeMode === 'system') _applyThemeMode('system');
 }
 
 // ── F-1: Klausur-Countdown ───────────────────────────────────
@@ -2557,11 +3401,20 @@ function openKlausurModal() {
   const today = _KLAUSUR_TODAY();
   const defaultDate = new Date();
   defaultDate.setDate(defaultDate.getDate() + 7);
+  // F-02 Cycle-6: Default-Plan = 5 Tage vor Klausur, 30 Min/Tag.
+  // Plan-Felder sind optional — initial leer, User kann eintragen oder
+  // weglassen. Wenn beide leer bleiben: kein plan im Exam-Objekt.
+  const defaultPlanStart = new Date(defaultDate);
+  defaultPlanStart.setDate(defaultPlanStart.getDate() - 5);
   _klausurModalState = {
     date: defaultDate.toISOString().slice(0, 10),
     subject: '',
     klasse: userData?.klasse ? String(userData.klasse) : '',
     topicIds: [],
+    // Plan-Felder leer initialisiert — User entscheidet aktiv ob er sie nutzt.
+    planStartDate: '',
+    planMinutesPerDay: '',
+    planStartDefault: defaultPlanStart.toISOString().slice(0, 10),
     errors: {},
     minDate: today
   };
@@ -2639,6 +3492,29 @@ function _renderKlausurModalContent() {
           ${err('topicIds')}
         </div>
         <div class="form-hint" style="margin-top:12px">Die letzten 3 Tage vor der Klausur boosten wir deine Daily Challenge und die Wiederholungs-Kiste auf diese Themen.</div>
+
+        <!-- F-02 Cycle-6: Plan-Sektion (optional). Wenn Felder gefuellt werden,
+             erscheint das Bereitschafts-Widget auf dem Dashboard ab startDate. -->
+        <div class="klausur-form-section-title">Lern-Plan (optional)</div>
+        <div class="klausur-form-row">
+          <label class="form-label">Ab wann lernen?</label>
+          <input type="date" class="form-input" id="klausurPlanStart"
+                 value="${escapeHtml(s.planStartDate || '')}"
+                 placeholder="${escapeHtml(s.planStartDefault || '')}"
+                 oninput="window.LF.onKlausurPlanStartChange(this.value)">
+          <div class="form-hint">Default: 5 Tage vor der Klausur (${escapeHtml(s.planStartDefault || '')}).</div>
+          ${err('planStart')}
+        </div>
+        <div class="klausur-form-row">
+          <label class="form-label">Wie viele Minuten pro Tag?</label>
+          <input type="number" class="form-input" id="klausurPlanMin"
+                 min="5" max="600" step="5"
+                 value="${escapeHtml(String(s.planMinutesPerDay || ''))}"
+                 placeholder="30"
+                 oninput="window.LF.onKlausurPlanMinChange(this.value)">
+          <div class="form-hint">30 Min ist ein guter Richtwert.</div>
+          ${err('planMin')}
+        </div>
       </div>
       <div class="lf-modal-actions">
         <button class="btn btn-ghost" onclick="window.LF.closeKlausurModal()">Abbrechen</button>
@@ -2666,6 +3542,31 @@ async function submitKlausur() {
   if (!s.topicIds || s.topicIds.length === 0) {
     s.errors.topicIds = 'W\xe4hle mindestens ein Thema aus.';
   }
+
+  // F-02 Cycle-6: Plan-Validierung. Plan ist optional — beide Felder muessen
+  // entweder beide leer (= kein Plan) oder beide gesetzt sein. Min-Cap = 1
+  // (Marcus' Schema akzeptiert 1..600), aber UX-Hinweis ist 5+.
+  let planObj = null;
+  const planStartRaw = (s.planStartDate || '').trim();
+  const planMinRaw   = String(s.planMinutesPerDay || '').trim();
+  if (planStartRaw || planMinRaw) {
+    if (!planStartRaw)  s.errors.planStart = 'Datum fehlt — oder beide Felder leer lassen.';
+    if (!planMinRaw)    s.errors.planMin   = 'Minuten fehlen — oder beide Felder leer lassen.';
+    if (planStartRaw && !/^\d{4}-\d{2}-\d{2}$/.test(planStartRaw)) {
+      s.errors.planStart = 'Datum-Format ung\xfcltig.';
+    }
+    const minNum = parseInt(planMinRaw, 10);
+    if (planMinRaw && (!Number.isFinite(minNum) || minNum < 1 || minNum > 600)) {
+      s.errors.planMin = 'Bitte 1 bis 600 Minuten pro Tag.';
+    }
+    if (planStartRaw && s.date && planStartRaw > s.date) {
+      s.errors.planStart = 'Lern-Start darf nicht nach der Klausur sein.';
+    }
+    if (!s.errors.planStart && !s.errors.planMin) {
+      planObj = { startDate: planStartRaw, minutesPerDay: minNum };
+    }
+  }
+
   if (Object.keys(s.errors).length) {
     _renderKlausurModalContent();
     return;
@@ -2682,6 +3583,11 @@ async function submitKlausur() {
     topicIds: [...s.topicIds],
     createdAt: Date.now()
   };
+  // F-02: Plan + dailyStats nur setzen wenn User Plan-Felder ausgefuellt hat.
+  if (planObj) {
+    newExam.plan = planObj;
+    newExam.dailyStats = {};
+  }
   const oldExams = Array.isArray(userData?.exams) ? userData.exams : [];
   const newArr   = [...oldExams, newExam];
   try {
@@ -2957,6 +3863,242 @@ function decideHeuteZuerstStep() {
       || _decideStep5NewTopic()
       || _decideStep6Fallback();
 }
+
+// ── F-02 Klausur-Bereitschafts-Widget (Cycle 6, Maya-Spec) ─────────────
+// Auf dem Dashboard zwischen Hero und Daily-Challenge. Erscheint pro Klausur,
+// wenn (a) plan vorhanden, (b) heute >= plan.startDate, (c) days_left <= 5
+// (Maya: "5 Tage vorher t\xe4glicher Bereitschaftscheck"). Stack max 3 sichtbar.
+//
+// Datenpfad: userData.exams[].plan + .dailyStats. Tages-Konfidenz in
+// dailyStats[YYYY-MM-DD].confidence (1..5). Tages-Lernzeit in .minutes.
+// Beide writes via saveExams (set+merge auf das ganze exams-Array).
+function renderKlausurReadinessWidgets() {
+  const exams = Array.isArray(userData?.exams) ? userData.exams : [];
+  if (exams.length === 0) return '';
+  const today = _KLAUSUR_TODAY();
+  const candidates = exams
+    .map(ex => {
+      if (!ex || !ex.plan || !ex.plan.startDate || !ex.plan.minutesPerDay) return null;
+      const days = _diffDaysFromToday(ex.date);
+      if (days === null || days < 0 || days > 5) return null;
+      if (today < ex.plan.startDate) return null;       // Plan-Start noch nicht erreicht
+      return { ex, days };
+    })
+    .filter(Boolean)
+    .slice(0, 3);                                       // Max 3 sichtbar (Maya-Spec)
+  if (candidates.length === 0) return '';
+  return candidates.map(({ ex, days }) => _renderKlausurReadinessWidget(ex, days, today)).join('');
+}
+
+function _renderKlausurReadinessWidget(exam, days, todayStr) {
+  const subj = structure?.[exam.subject];
+  const subjName = subj?.name || exam.subject;
+  const stats = exam.dailyStats || {};
+  const todayStats = stats[todayStr] || {};
+  const todayMin = typeof todayStats.minutes === 'number' ? todayStats.minutes : 0;
+  const planMin = exam.plan.minutesPerDay;
+  const pct = Math.min(100, Math.round((todayMin / Math.max(1, planMin)) * 100));
+  const examDayMode = days === 0;
+  const todayConf = (typeof todayStats.confidence === 'number'
+                  && todayStats.confidence >= 1 && todayStats.confidence <= 5)
+    ? todayStats.confidence : null;
+
+  // Title nach Spec
+  let title;
+  if (examDayMode)    title = `Heute ist ${escapeHtml(subjName)}-Klausur. Viel Erfolg.`;
+  else if (days === 1) title = `${escapeHtml(subjName)} morgen`;
+  else                 title = `${escapeHtml(subjName)} in ${days} Tagen`;
+
+  // Konfidenz-Slider (Reuse F-09-Pattern via _renderConfidenceStars).
+  // Picker-ID pro Exam, damit mehrere Widgets nebeneinander funktionieren.
+  const pid = `examConf_${exam.id}`;
+  // Wenn der User heute schon was eingetragen hat, picker-default = der Wert.
+  if (typeof _confidencePickers[pid] !== 'number') {
+    _confidencePickers[pid] = todayConf || 0;
+  }
+  const stars = _renderConfidenceStars(pid, _confidencePickers[pid] || todayConf || 0);
+  const confLabel = todayConf
+    ? `Heute: ${todayConf}/5 — \xe4ndern?`
+    : (examDayMode ? 'Wie sicher f\xfchlst du dich jetzt?' : 'Wie sicher heute?');
+
+  // Mini-Verlauf der letzten 5 Tage (Konfidenz + reality from boosted-Tests).
+  const sortedDates = Object.keys(stats).sort();
+  const last5 = sortedDates
+    .filter(d => d <= todayStr)
+    .slice(-6)                                          // bis zu 6 Tage = inkl. heute
+    .map(d => {
+      const v = stats[d] || {};
+      return {
+        date: d,
+        confidence: typeof v.confidence === 'number' ? v.confidence : null,
+        reality: typeof v.realityScore === 'number' ? Math.round(v.realityScore * 5) : null
+      };
+    });
+  const hasHistory = last5.some(p => p.confidence !== null || p.reality !== null);
+  const historyHtml = hasHistory ? (() => {
+    const W = 280, H = 70, padX = 8, padY = 8;
+    const innerW = W - 2 * padX;
+    const innerH = H - 2 * padY;
+    const n = last5.length;
+    const xFor = (i) => padX + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+    const yFor = (v) => padY + (1 - (v / 5)) * innerH;
+    const linePath = (key) => {
+      const points = last5
+        .map((p, i) => p[key] !== null ? `${xFor(i).toFixed(1)},${yFor(p[key]).toFixed(1)}` : null)
+        .filter(Boolean);
+      if (points.length === 0) return '';
+      return 'M' + points.join(' L');
+    };
+    const dots = (key, color) => last5
+      .map((p, i) => p[key] !== null
+        ? `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(p[key]).toFixed(1)}" r="3" fill="${color}"/>`
+        : '')
+      .join('');
+    return `
+      <div class="klausur-readiness-history">
+        <div class="klausur-readiness-history-title">Verlauf (letzte Tage)</div>
+        <svg class="confidence-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+          <path d="${linePath('confidence')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="${linePath('reality')}" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          ${dots('confidence', 'var(--accent)')}
+          ${dots('reality', 'var(--success)')}
+        </svg>
+        <div class="confidence-chart-legend">
+          <span><span class="confidence-chart-legend-dot" style="background:var(--accent)"></span>Konfidenz</span>
+          <span><span class="confidence-chart-legend-dot" style="background:var(--success)"></span>Realit\xe4t</span>
+        </div>
+      </div>`;
+  })() : '';
+
+  // Klausurtag-Rueckblick: erste vs aktuelle Konfidenz vergleichen.
+  let examDayMsg = '';
+  if (examDayMode) {
+    const confValues = sortedDates
+      .map(d => stats[d]?.confidence)
+      .filter(c => typeof c === 'number');
+    if (confValues.length >= 2) {
+      const first = confValues[0];
+      const current = todayConf || confValues[confValues.length - 1];
+      // Sophie cycle-7-fix: actual days-elapsed since the first entry, not
+      // count-of-entries. Bug: User der nur 3 von 5 Tagen geloggt hat sah
+      // "Vor 2 Tagen" statt "Vor 5 Tagen". sortedDates[0] ist YYYY-MM-DD →
+      // _diffDaysFromToday liefert negative Differenz fuer Vergangenheit.
+      const dd = _diffDaysFromToday(sortedDates[0]);
+      const diffDays = (typeof dd === 'number') ? Math.abs(dd) : (sortedDates.length - 1);
+      if (current - first > 1) {
+        examDayMsg = `Vor ${diffDays} Tagen warst du bei ${first}/5 — spitze!`;
+      } else if (Math.abs(current - first) <= 1) {
+        examDayMsg = 'Konfidenz stabil \xfcber die Tage. Du wei\xdft was du kannst.';
+      } else {
+        examDayMsg = 'Konfidenz ist gesunken — kennst du den Stoff besser als gedacht?';
+      }
+    }
+  }
+
+  return `
+    <div class="klausur-readiness-widget${examDayMode ? ' is-exam-day' : ''}" data-exam-id="${escapeAttr(exam.id || '')}">
+      <div class="klausur-readiness-title">${title}</div>
+      ${examDayMode ? '' : `
+        <div class="klausur-readiness-progress">
+          <span class="klausur-readiness-progress-label">Heute: ${todayMin} / ${planMin} Min</span>
+          <div class="klausur-readiness-progress-bar"><div class="klausur-readiness-progress-fill" style="width:${pct}%"></div></div>
+        </div>`}
+      <div class="klausur-readiness-confidence-row">
+        <div class="confidence-stars-q">${escapeHtml(confLabel)}</div>
+        <div class="confidence-stars" id="confidenceStars_${pid}">${stars}</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+          <button class="btn btn-primary btn-sm" onclick="window.LF.saveExamDailyConfidence('${escapeAttr(exam.id || '')}')">Speichern</button>
+        </div>
+      </div>
+      ${historyHtml}
+      ${examDayMsg ? `<div class="klausur-readiness-msg">${escapeHtml(examDayMsg)}</div>` : ''}
+    </div>`;
+}
+
+// F-02 Cycle-6: Lernzeit pro Klausur-Plan aggregieren. Wird vom Pomodoro-
+// Timer aufgerufen — addiert `minutes` zu dailyStats[today].minutes fuer
+// alle Klausuren mit aktivem Plan-Fenster (heute >= startDate, heute <= date).
+// Fire-and-forget, nicht await'en weil Pomodoro-Tick nicht blockieren darf.
+//
+// Sophie P2-4 (Cycle 7): topic-aware. Wenn `topicKey` gesetzt ist, werden
+// die Minuten NUR auf Klausuren deren topicIds den Key enthalten gebucht.
+// Ohne topicKey (Pomodoro lief nicht auf einer Topic-Seite) faellt es auf
+// Alt-Verhalten zurueck (alle aktiven Plaene) — sonst gehen Minuten verloren.
+async function _addExamStudyMinutes(minutes, topicKey) {
+  if (!currentUser || !minutes || minutes <= 0) return;
+  const exams = Array.isArray(userData?.exams) ? userData.exams : [];
+  if (exams.length === 0) return;
+  const today = _KLAUSUR_TODAY();
+  let changed = false;
+  const newExams = exams.map(ex => {
+    if (!ex?.plan?.startDate || !ex.plan.minutesPerDay) return ex;
+    if (today < ex.plan.startDate) return ex;
+    const days = _diffDaysFromToday(ex.date);
+    if (days === null || days < 0) return ex;
+    // Topic-Filter: nur Klausuren mit overlapping topicIds bekommen die
+    // Minuten gutgeschrieben. Fallback ohne topicKey = alle aktiven Plaene.
+    if (topicKey) {
+      const topicIds = Array.isArray(ex.topicIds) ? ex.topicIds : [];
+      if (!topicIds.includes(topicKey)) return ex;
+    }
+    const ds = { ...(ex.dailyStats || {}) };
+    const cur = ds[today] || {};
+    const prevMin = typeof cur.minutes === 'number' ? cur.minutes : 0;
+    ds[today] = { ...cur, minutes: prevMin + minutes };
+    changed = true;
+    return { ...ex, dailyStats: ds };
+  });
+  if (!changed) return;
+  // Cycle-7 P2-A (Marcus, 2026-05-08, Ramsey audit): assign userData.exams
+  // ONLY AFTER successful saveExams — vorher war die Reihenfolge mutate-
+  // first-then-await, was bei einer rule-rejection oder defense-in-depth-
+  // Validierung in saveExams (z.B. dailyStats[today].minutes ueber dem
+  // 1440-Min-Cap nach mehreren Pomodoro-Sessions) zu in-memory/server-
+  // Drift fuehrt. Frontend zeigt dann die mutierte Lokalkopie waehrend der
+  // Server den alten Wert haelt — naechster Reload "rollt" den Eintrag
+  // zurueck und der User glaubt der Pomodoro-Tick wurde verloren. Mit der
+  // korrigierten Reihenfolge bleibt userData.exams bei einem Save-Fail
+  // unangetastet und der Drift kann nicht entstehen.
+  try {
+    await saveExams(currentUser.uid, newExams);
+    userData.exams = newExams;
+  } catch (e) {
+    console.warn('[_addExamStudyMinutes]', e);
+  }
+}
+
+// Save handler: schreibt confidence in exam.dailyStats[today], persistiert
+// das ganze exams-Array via saveExams (Hard rule 4: set+merge).
+window.LF.saveExamDailyConfidence = async (examId) => {
+  if (!currentUser) return;
+  const exams = Array.isArray(userData?.exams) ? userData.exams : [];
+  const idx = exams.findIndex(e => e?.id === examId);
+  if (idx < 0) return;
+  const pid = `examConf_${examId}`;
+  const val = _confidencePickers[pid];
+  if (typeof val !== 'number' || val < 1 || val > 5) {
+    showToast('Bitte erst Sterne ausw\xe4hlen.', 'info');
+    return;
+  }
+  const today = _KLAUSUR_TODAY();
+  const newExams = exams.map((e, i) => {
+    if (i !== idx) return e;
+    const ds = { ...(e.dailyStats || {}) };
+    const todayEntry = { ...(ds[today] || {}), confidence: val };
+    ds[today] = todayEntry;
+    return { ...e, dailyStats: ds };
+  });
+  try {
+    await saveExams(currentUser.uid, newExams);
+    userData.exams = newExams;
+    delete _confidencePickers[pid];
+    showToast('Konfidenz gespeichert.', 'success');
+    if (location.hash === '#/' || location.hash === '') renderDashboard();
+  } catch (e) {
+    console.error('[saveExamDailyConfidence]', e);
+    showToast('Speichern fehlgeschlagen.', 'error');
+  }
+};
 
 function renderHeuteZuerstCard() {
   let step;
@@ -3977,9 +5119,12 @@ function renderFlashcard() {
 }
 
 // ── Pomodoro mounten/unmounten (F-17) ─────
-function mountPomodoro() {
+// Sophie P2-4 (Cycle 7): topicKey wird beim Mount durchgereicht und am
+// pomodoroState gehalten — der unmount/tick-Hook nutzt ihn als Filter fuer
+// _addExamStudyMinutes (nur Klausuren mit overlapping topicIds).
+function mountPomodoro(topicKey) {
   if (document.getElementById('pomodoroWidget')) return;
-  pomodoroState = { mode: 'work', seconds: 25*60, workMins: 25, breakMins: 5, timer: null, sessions: 0 };
+  pomodoroState = { mode: 'work', seconds: 25*60, workMins: 25, breakMins: 5, timer: null, sessions: 0, topicKey: topicKey || null };
   const el = document.createElement('div');
   el.id = 'pomodoroWidget';
   el.className = 'pomo-widget';
@@ -4021,6 +5166,9 @@ function unmountPomodoro() {
     const elapsed = Math.floor((pomodoroState.workMins * 60 - pomodoroState.seconds) / 60);
     if (pomodoroState.mode === 'work' && elapsed >= 1 && currentUser) {
       addStudyTime(currentUser.uid, elapsed).catch(console.error);
+      // F-02 Cycle-6: Lernzeit auch in aktive Klausur-Plaene aggregieren.
+      // Sophie P2-4 (Cycle 7): topicKey aus pomodoroState durchreichen.
+      _addExamStudyMinutes(elapsed, pomodoroState.topicKey).catch(console.error);
     }
   }
   pomodoroState = null;
@@ -4033,7 +5181,12 @@ function pomodoroTick() {
   if (pomodoroState.seconds <= 0) {
     if (pomodoroState.mode === 'work') {
       pomodoroState.sessions++;
-      if (currentUser) addStudyTime(currentUser.uid, pomodoroState.workMins).catch(console.error);
+      if (currentUser) {
+        addStudyTime(currentUser.uid, pomodoroState.workMins).catch(console.error);
+        // F-02 Cycle-6: Klausur-Plan-dailyStats mit denselben Minuten fuettern.
+        // Sophie P2-4 (Cycle 7): topicKey aus pomodoroState durchreichen.
+        _addExamStudyMinutes(pomodoroState.workMins, pomodoroState.topicKey).catch(console.error);
+      }
       pomodoroState.mode = 'break';
       pomodoroState.seconds = pomodoroState.breakMins * 60;
       showToast('Fokuszeit vorbei! Pause genießen.', 'info');
@@ -4071,6 +5224,7 @@ function renderProfile() {
     <div class="profile-tabs" id="profileTabs">
       <button class="profile-tab ${tab === 'uebersicht' ? 'active' : ''}" onclick="window.LF.switchProfileTab('uebersicht')">Übersicht</button>
       <button class="profile-tab ${tab === 'stats' ? 'active' : ''}"      onclick="window.LF.switchProfileTab('stats')">Statistiken</button>
+      <button class="profile-tab ${tab === 'selbsteinschaetzung' ? 'active' : ''}" onclick="window.LF.switchProfileTab('selbsteinschaetzung')">Selbsteinschätzung</button>
       <button class="profile-tab ${tab === 'erfolge' ? 'active' : ''}"    onclick="window.LF.switchProfileTab('erfolge')">Erfolge</button>
       <button class="profile-tab ${tab === 'inventar' ? 'active' : ''}"   onclick="window.LF.switchProfileTab('inventar')">Inventar</button>
     </div>`;
@@ -4108,6 +5262,8 @@ function renderProfile() {
     content = _renderProfileErfolgeTab();
   } else if (tab === 'inventar') {
     content = _renderProfileInventarTab();
+  } else if (tab === 'selbsteinschaetzung') {
+    content = _renderProfileConfidenceTab();
   } else {
     content = _renderProfileUebersichtTab();
   }
@@ -4540,6 +5696,85 @@ function _renderProfileInventarTab() {
     <div class="inv-grid">${themeCards}</div>`;
 }
 
+// ── Profil-Tab: Selbsteinschaetzung (F-09 Cycle 6) ──────────
+// Pro Topic eine Mini-Verlaufslinie: Konfidenz-Sterne vs Note (umgerechnet
+// auf 1-5-Skala, wobei Note 1 → 5, Note 6 → 0). Topics ohne Konfidenz-Daten
+// werden ausgelassen. Empty-State wenn nichts vorhanden.
+//
+// Maya-Spec-Mapping (F-09): reality = max(0, 6 - grade).
+// Kein Heatmap, kein Cross-Topic-Aggregat (out-of-scope V1, siehe Spec).
+function _renderProfileConfidenceTab() {
+  const grades = userData?.grades || {};
+  // Sammeln: pro Topic-Key alle Versuche mit confidence
+  const topics = [];
+  Object.entries(grades).forEach(([key, entry]) => {
+    if (!entry || !Array.isArray(entry.history)) return;
+    const series = entry.history
+      .filter(h => typeof h?.confidence === 'number'
+                && h.confidence >= 1 && h.confidence <= 5
+                && typeof h.grade === 'number')
+      .map(h => ({
+        confidence: h.confidence,
+        reality: Math.max(0, 6 - h.grade)
+      }));
+    if (series.length === 0) return;
+    const [sid, yid, tid] = key.split('__');
+    const subject = structure?.[sid];
+    const topic   = subject?.years?.[yid]?.topics?.[tid];
+    const subjectName = subject?.name || sid || '';
+    const topicName   = topic?.name || tid || '';
+    topics.push({ key, subjectName, topicName, series });
+  });
+
+  if (topics.length === 0) {
+    return renderEmptyState({
+      icon: 'target',
+      title: 'Noch keine Konfidenz-Daten',
+      sub: 'Vor dem n\xe4chsten Test einsch\xe4tzen — dann siehst du hier deinen Verlauf.',
+      ctaLabel: 'Zur F\xe4cher-\xdcbersicht',
+      ctaAction: "location.hash='#/lernen'",
+    });
+  }
+
+  // Mini-Chart als Inline-SVG: 2 Linien (Konfidenz + Realitaet), Stufen 0-5.
+  // Kein externer Chart-Lib — das hier sind 4-12 Punkte pro Topic, ein
+  // hand-gezeichnetes path="M..." reicht und vermeidet einen weiteren Import.
+  const chartFor = (series) => {
+    const W = 280, H = 90, padX = 8, padY = 8;
+    const innerW = W - 2 * padX;
+    const innerH = H - 2 * padY;
+    const n = series.length;
+    const xFor = (i) => padX + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+    const yFor = (v) => padY + (1 - (v / 5)) * innerH;
+    const linePath = (key) => series
+      .map((p, i) => `${i === 0 ? 'M' : 'L'}${xFor(i).toFixed(1)},${yFor(p[key]).toFixed(1)}`)
+      .join(' ');
+    const dots = (key, color) => series
+      .map((p, i) => `<circle cx="${xFor(i).toFixed(1)}" cy="${yFor(p[key]).toFixed(1)}" r="3" fill="${color}"/>`)
+      .join('');
+    return `
+      <svg class="confidence-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <path d="${linePath('confidence')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${linePath('reality')}" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${dots('confidence', 'var(--accent)')}
+        ${dots('reality', 'var(--success)')}
+      </svg>`;
+  };
+
+  const cards = topics.map(t => `
+    <div class="confidence-history-card">
+      <div class="confidence-history-title">${escapeHtml(t.subjectName)} \xb7 ${escapeHtml(t.topicName)}</div>
+      <div class="confidence-history-sub">${t.series.length} Versuch${t.series.length !== 1 ? 'e' : ''} mit Selbsteinsch\xe4tzung</div>
+      ${chartFor(t.series)}
+      <div class="confidence-chart-legend">
+        <span><span class="confidence-chart-legend-dot" style="background:var(--accent)"></span>Konfidenz</span>
+        <span><span class="confidence-chart-legend-dot" style="background:var(--success)"></span>Note (umgerechnet)</span>
+      </div>
+    </div>`).join('');
+
+  return `<div class="confidence-history-list">${cards}</div>`;
+}
+
 // Theme-Previews als Hintergrund auf data-theme-preview-Karten zeichnen
 function _drawThemePreviews() {
   setTimeout(() => {
@@ -4807,7 +6042,13 @@ async function renderMyContent() {
 }
 
 function renderCustomTopicCard(topic, canDelete) {
-  const qCount = (topic.questions || []).length;
+  // V-09 (Marcus, 2026-05-08, Mission-13): listCustomTopics returns
+  // metadata-only summary rows with `questionCount` rather than the
+  // full questions[]. Fallback to the array-length for callers that
+  // still pass the full doc (e.g. detail page → list re-use).
+  const qCount = typeof topic.questionCount === 'number'
+    ? topic.questionCount
+    : (topic.questions || []).length;
   const safeId = topic.id;
   // Wave-1-Ramsey CHEAT-21: ALLE User-controlled Felder escapen.
   // Phase 3a (Ethan, 2026-05-08): Visibility-Status-Badge.
@@ -4894,6 +6135,11 @@ async function renderCustomTopicPage(topicId) {
     const safeContent = t.content
       ? sanitizeTopicContent(t.content)
       : '<p style="color:var(--text-muted)">Kein Inhalt vorhanden.</p>';
+    // Sophie P2-5 (Cycle 7): Custom-Topic mit Lese-Inhalt aber ohne Browser-
+    // TTS-API → Fallback-Toast hier feuern (Spam-Schutz via LocalStorage).
+    if (t.content && !_audioModeAvailable()) {
+      _audioWarnUnavailableOnce();
+    }
     document.getElementById('customTopicBody').innerHTML = `
       <div class="page-header">
         <div class="breadcrumb-sub">${escapeHtml(t.fach || '')} · ${escapeHtml(t.klasse || '')}</div>
@@ -4904,6 +6150,9 @@ async function renderCustomTopicPage(topicId) {
         <button class="tab-btn active" id="ctTabBtnLernen" onclick="window.LF.ctSwitchTab('Lernen')">Lernen</button>
         ${qCount > 0 ? `<button class="tab-btn" id="ctTabBtnTest" onclick="window.LF.ctSwitchTab('Test')">Test</button>` : ''}
       </div>
+      ${(_audioModeAvailable() && t.content)
+        ? `<div class="topic-toolbar"><button class="btn btn-ghost btn-sm audio-toolbar-btn" id="audioToolbarBtn" onclick="window.LF.toggleAudioMode()">${_audioHeadphonesIcon()} Vorlesen</button></div>`
+        : ''}
       <div id="ctTabLernen">
         <div class="content-body">${safeContent}</div>
       </div>
@@ -4917,6 +6166,8 @@ async function renderCustomTopicPage(topicId) {
           </div>
         </div>
       </div>` : ''}`;
+    // Sophie P1-1 (Cycle 7): Resume-Prompt auch fuer Custom-Topic-Pages.
+    _audioMaybeShowResumePrompt();
   } catch(e) {
     document.getElementById('customTopicBody').innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
   }
@@ -6787,7 +8038,11 @@ function _renderPublicLibraryList() {
 }
 
 function _renderPublicCard(topic) {
-  const qCount = (topic.questions || []).length;
+  // V-09 (Marcus, 2026-05-08, Mission-13): see renderCustomTopicCard
+  // for why questionCount is preferred over questions[].length.
+  const qCount = typeof topic.questionCount === 'number'
+    ? topic.questionCount
+    : (topic.questions || []).length;
   // Subject-Token-Adoption (Maya-Spec): data-subject Attribut auf der Card,
   // damit per-subject-color/font Tokens auf die Subject-Identity reagieren.
   // Wir mappen anhand t.fach auf den subjectId — wenn structure den Fach-
@@ -6868,7 +8123,10 @@ function _openPublicSubmitModal(opts = {}) {
   setTimeout(() => document.getElementById('publicSubmitMessage')?.focus(), 50);
 }
 
-window.LF = {
+// HARD RULE: window.LF ist global namespace und wird in mehreren Stellen
+// vor diesem Block bereits gesetzt (z.B. tourToastDismiss/Accept ~Z.3650).
+// Object.assign() statt Re-Assign — sonst loescht das die vorherigen Properties.
+Object.assign(window.LF, {
   toggleTheme,
   toggleUserMenu: (e) => {
     e.stopPropagation();
@@ -8036,27 +9294,34 @@ window.LF = {
     if (!customTopicData) return;
     const raw = customTopicData.questions || [];
     if (!raw.length) { showToast('Keine Fragen in diesem Thema.', 'error'); return; }
-    // MC-Optionen mischen + shuffledCorrectIndex setzen, sonst marked evaluateAnswers
-    // alle MC-Antworten als falsch (parseInt(answer) === undefined → false).
-    const questions = raw.map(q => {
-      if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
-        const indexed = q.options.map((opt, i) => ({ opt, correct: i === q.correct }));
-        for (let i = indexed.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+    // F-09: Pre-Test-Konfidenz-Step (custom-Test). Container = ctTestArea.
+    // Fallback-Container = testArea (wenn renderActiveTest erst spaeter mountet).
+    _pendingConfidence = null;
+    const _ctArea = document.getElementById('ctTestArea') || document.getElementById('testArea');
+    _renderConfidencePreTest(_ctArea, (confidence) => {
+      _pendingConfidence = confidence;
+      // MC-Optionen mischen + shuffledCorrectIndex setzen, sonst marked evaluateAnswers
+      // alle MC-Antworten als falsch (parseInt(answer) === undefined → false).
+      const questions = raw.map(q => {
+        if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
+          const indexed = q.options.map((opt, i) => ({ opt, correct: i === q.correct }));
+          for (let i = indexed.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+          }
+          return {
+            ...q,
+            shuffledOptions:      indexed.map(x => x.opt),
+            shuffledCorrectIndex: indexed.findIndex(x => x.correct),
+            points: q.points || 2
+          };
         }
-        return {
-          ...q,
-          shuffledOptions:      indexed.map(x => x.opt),
-          shuffledCorrectIndex: indexed.findIndex(x => x.correct),
-          points: q.points || 2
-        };
-      }
-      return { ...q, maxPoints: q.maxPoints || 4 };
+        return { ...q, maxPoints: q.maxPoints || 4 };
+      });
+      const fakeSubject = { name: customTopicData.fach || 'Eigene Inhalte' };
+      const fakeTopic   = { name: customTopicData.thema || 'Unbenannt' };
+      renderActiveTest(questions, 30, '_custom', '_custom', customTopicData.id, fakeSubject, fakeTopic);
     });
-    const fakeSubject = { name: customTopicData.fach || 'Eigene Inhalte' };
-    const fakeTopic   = { name: customTopicData.thema || 'Unbenannt' };
-    renderActiveTest(questions, 30, '_custom', '_custom', customTopicData.id, fakeSubject, fakeTopic);
   },
 
   deleteCustomTopicUI: async (topicId) => {
@@ -8097,30 +9362,38 @@ window.LF = {
       window.LF.startCustomTest();
       return;
     }
-    const subject = structure[subjectId];
-    const topic   = subject.years[yearId].topics[topicId];
+    // F-09 Cycle-6: Konfidenz-Pre-Test-Step. Zwischen "Test beginnen" und
+    // dem Spinner zeigen wir die Sterne-Karte. Skip → confidence=null.
+    // Nach Pick: wir rendern den Spinner und laufen den existing Pfad weiter.
+    _pendingConfidence = null;           // Sauber: Reset vor jedem neuen Pre-Test
+    const _testAreaForConf = document.getElementById('testArea');
+    _renderConfidencePreTest(_testAreaForConf, async (confidence) => {
+      _pendingConfidence = confidence;   // 1..5 oder null
+      const subject = structure[subjectId];
+      const topic   = subject.years[yearId].topics[topicId];
 
-    const testAreaEl = document.getElementById('testArea');
-    if (testAreaEl) testAreaEl.innerHTML = `
-      <div style="text-align:center;padding:60px">
-        <div class="spinner" style="margin:0 auto 20px"></div>
-        <p>Fragen werden generiert…</p>
-      </div>`;
+      const testAreaEl = document.getElementById('testArea');
+      if (testAreaEl) testAreaEl.innerHTML = `
+        <div style="text-align:center;padding:60px">
+          <div class="spinner" style="margin:0 auto 20px"></div>
+          <p>Fragen werden generiert…</p>
+        </div>`;
 
-    let questions = null;
-    const meta = await getTopicMeta(subjectId, yearId, topicId);
-    const contentForGemini = meta.subtopics?.length > 0
-      ? meta.subtopics.map(st => st.content).join(' ')
-      : meta.content;
-    if (contentForGemini) {
-      questions = await generateQuestionsWithGemini(contentForGemini, selectedTime);
-    }
-    if (!questions || questions.length === 0) {
-      const allQ = await getTopicQuestions(subjectId, yearId, topicId);
-      questions  = selectQuestions(allQ, selectedTime);
-    }
+      let questions = null;
+      const meta = await getTopicMeta(subjectId, yearId, topicId);
+      const contentForGemini = meta.subtopics?.length > 0
+        ? meta.subtopics.map(st => st.content).join(' ')
+        : meta.content;
+      if (contentForGemini) {
+        questions = await generateQuestionsWithGemini(contentForGemini, selectedTime);
+      }
+      if (!questions || questions.length === 0) {
+        const allQ = await getTopicQuestions(subjectId, yearId, topicId);
+        questions  = selectQuestions(allQ, selectedTime);
+      }
 
-    renderActiveTest(questions, selectedTime, subjectId, yearId, topicId, subject, topic);
+      renderActiveTest(questions, selectedTime, subjectId, yearId, topicId, subject, topic);
+    });
   },
 
   switchTab: (name) => {
@@ -8242,16 +9515,391 @@ window.LF = {
         <div class="subtopic-arrow">›</div>
       </div>`).join('');
   }
-};
+});
 
 // ── Mission 1 — Neue window.LF-Handler ────────────────────
 
 // Profil-Tab-Switch
 window.LF.switchProfileTab = (tab) => {
   // Update Hash mit ?tab=xy. route() greift dann renderProfile() → liest tab.
-  const allowed = ['uebersicht','stats','erfolge','inventar'];
+  const allowed = ['uebersicht','stats','selbsteinschaetzung','erfolge','inventar'];
   const safe = allowed.includes(tab) ? tab : 'uebersicht';
   location.hash = `#/profil?tab=${safe}`;
+};
+
+// ── Cycle-3 Settings-Page Handlers ────────────────────────
+// Maya-Spec: settings-page-refactor-implementation.md
+// Persistenz-Pattern: alle settings-Writes via set+merge auf userData.settings
+// (Hard-Rule 4 — kein update()). Optimistic-UI: in-memory userData zuerst,
+// dann Worker/Firestore async. Toast nach erfolgreicher Mutation.
+
+async function _persistSettings(partial) {
+  if (!currentUser) return;
+  userData = userData || {};
+  userData.settings = { ...(userData.settings || {}), ...partial };
+  try {
+    await db().collection('users').doc(currentUser.uid).set({
+      settings: partial
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[settings] persist failed', e);
+    showToast('Offline — wird später gespeichert.', 'warn');
+  }
+}
+
+async function _persistTopLevel(partial) {
+  if (!currentUser) return;
+  userData = userData || {};
+  Object.assign(userData, partial);
+  try {
+    await db().collection('users').doc(currentUser.uid).set(partial, { merge: true });
+  } catch (e) {
+    console.warn('[settings] persist top-level failed', e);
+    showToast('Offline — wird später gespeichert.', 'warn');
+  }
+}
+
+window.LF.switchSettingsTab = (tab) => {
+  const allowed = ['darstellung','lernen','anpassung','konto'];
+  const safe = allowed.includes(tab) ? tab : 'darstellung';
+  location.hash = `#/einstellungen?tab=${safe}`;
+};
+
+// Tab 1 — Darstellung
+window.LF.settingsSaveThemeMode = (mode) => {
+  const allowed = ['light','dark','system'];
+  if (!allowed.includes(mode)) return;
+  _applyThemeMode(mode);
+  _persistSettings({ themeMode: mode });
+  showToast('Gespeichert.', 'success');
+  // Re-render so the radios reflect the new selection.
+  if (location.hash.startsWith('#/einstellungen')) renderSettings();
+};
+
+window.LF.settingsSaveCosmeticTheme = (themeId) => {
+  const valid = THEMES.find(t => t.id === themeId);
+  if (!valid) return;
+  applyTheme(themeId);
+  _persistSettings({ cosmeticTheme: themeId });
+  // Live-Preview-Kachel synchron halten (data-app-theme).
+  const preview = document.getElementById('settingsCosmeticPreview');
+  if (preview) preview.setAttribute('data-app-theme', themeId);
+  showToast('Theme angewendet.', 'success');
+};
+
+window.LF.settingsSaveFontSize = (size) => {
+  const allowed = ['normal','large','xlarge'];
+  if (!allowed.includes(size)) return;
+  _applyFontSizeScale(size);
+  _persistSettings({ fontSize: size });
+  showToast('Schriftgröße aktualisiert.', 'success');
+  if (location.hash.startsWith('#/einstellungen')) renderSettings();
+};
+
+window.LF.settingsSaveReducedMotion = (on) => {
+  const v = !!on;
+  _applyReducedMotion(v);
+  _persistSettings({ reducedMotion: v });
+  showToast('Gespeichert.', 'success');
+};
+
+// Tab 2 — Lernen
+window.LF.settingsSaveDailyReminder = (val) => {
+  // Erlaubt: leer (= aus) oder HH:MM 24h.
+  const isEmpty = !val || val === '';
+  const reMatch = /^([0-1]\d|2[0-3]):[0-5]\d$/.test(val || '');
+  if (!isEmpty && !reMatch) { showToast('Ungültige Uhrzeit.', 'error'); return; }
+  _persistSettings({ dailyReminderTime: isEmpty ? '' : val });
+  showToast(isEmpty ? 'Erinnerung aus.' : 'Erinnerung gespeichert.', 'success');
+  if (location.hash.startsWith('#/einstellungen')) renderSettings();
+};
+
+window.LF.settingsSaveStreakWarn = (val) => {
+  const h = parseInt(val, 10);
+  if (!Number.isFinite(h) || h < 0 || h > 23) return;
+  _persistSettings({ streakWarnThreshold: h });
+  showToast('Gespeichert.', 'success');
+};
+
+window.LF.settingsSaveDefaultKlasse = (val) => {
+  const allowed = ['auto','5','6','7','8','9','10','11','12','13'];
+  if (!allowed.includes(String(val))) return;
+  _persistSettings({ defaultKlasseFilter: String(val) });
+  showToast('Gespeichert.', 'success');
+};
+
+// Toggle-Semantik in der UI ist "Fach-Themes AN" (Default=AN).
+// Gespeichertes Feld ist subjectThemesOff (legacy, invertiert).
+window.LF.settingsSaveSubjectThemesOn = (on) => {
+  const off = !on;
+  if (off) document.body.classList.add('subject-themes-off');
+  else     document.body.classList.remove('subject-themes-off');
+  _persistSettings({ subjectThemesOff: off });
+  showToast(on ? 'Fach-Themes aktiviert.' : 'Fach-Themes aus.', 'success');
+  if (location.hash.startsWith('#/einstellungen')) renderSettings();
+};
+
+window.LF.settingsSaveSubjectColor = (subjectId, slug) => {
+  if (!USER_SUBJECT_COLOR_SLUGS.includes(slug)) return;
+  const map = { ...(userData?.settings?.subjectColors || {}) };
+  map[subjectId] = slug;
+  // Live-Override im DOM (Layer 4): root-Subject-Card muss data-user-subject-color
+  // bekommen — Re-Render der Page deckt das ab. Plus: Layer-2 Subject-Tokens-Cascade
+  // greift erst auf Subject-/Year-Routes; hier in Settings reicht Re-Render.
+  _persistSettings({ subjectColors: map });
+  showToast('Fach-Farbe gespeichert.', 'success');
+  // Nur die Row neu rendern wuerde State-Drift erzeugen — voller Page-Render ist sauberer.
+  if (location.hash.startsWith('#/einstellungen')) renderSettings();
+};
+
+window.LF.settingsResetSubjectColor = async (subjectId) => {
+  // Sophie-Cycle-3-fix: set+merge merges nested map keys leaf-by-leaf — der
+  // alte `delete map[id]; set+merge({subjectColors: map})`-Pfad hatte keinen
+  // Loesch-Effekt auf Firestore (lokale userData wirkte korrekt, aber Reload
+  // brachte den Slug zurueck). FieldValue.delete() entfernt die Key explizit.
+  if (!currentUser) return;
+  userData = userData || {};
+  userData.settings = userData.settings || {};
+  userData.settings.subjectColors = { ...(userData.settings.subjectColors || {}) };
+  delete userData.settings.subjectColors[subjectId];
+  try {
+    await db().collection('users').doc(currentUser.uid).set({
+      settings: { subjectColors: { [subjectId]: firebase.firestore.FieldValue.delete() } }
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[settingsResetSubjectColor]', e);
+    showToast('Offline — wird später gespeichert.', 'warn');
+  }
+  showToast('Auf Standard zurückgesetzt.', 'info');
+  if (location.hash.startsWith('#/einstellungen')) renderSettings();
+};
+
+window.LF.settingsResetAllSubjectColors = async () => {
+  if (!confirm('Alle Fach-Farben auf Standard zurücksetzen?')) return;
+  // Sophie-Cycle-3-fix: set+merge mit `{}` ist ein No-Op (merge erhaelt
+  // bestehende Keys). Pro-Key FieldValue.delete-Sentinel zwingt Firestore,
+  // jeden Key zu entfernen.
+  if (!currentUser) return;
+  const existing = userData?.settings?.subjectColors || {};
+  const deletes = {};
+  for (const k of Object.keys(existing)) deletes[k] = firebase.firestore.FieldValue.delete();
+  userData = userData || {};
+  userData.settings = userData.settings || {};
+  userData.settings.subjectColors = {};
+  try {
+    await db().collection('users').doc(currentUser.uid).set({
+      settings: { subjectColors: deletes }
+    }, { merge: true });
+  } catch (e) {
+    console.warn('[settingsResetAllSubjectColors]', e);
+    showToast('Offline — wird später gespeichert.', 'warn');
+  }
+  showToast('Alle Fach-Farben zurückgesetzt.', 'info');
+  if (location.hash.startsWith('#/einstellungen')) renderSettings();
+};
+
+// Tab 3 — Anpassung
+window.LF.settingsAvatarFile = async (input) => {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    showToast('Bild zu groß — max 1 MB.', 'error');
+    input.value = '';
+    return;
+  }
+  try {
+    const dataUrl = await _resizeProfileImage(file, 512);
+    await updateUserProfile(currentUser.uid,
+      userData?.name || currentUser.displayName || 'Nutzer',
+      dataUrl
+    );
+    userData.photoURL = dataUrl;
+    showToast('Avatar aktualisiert.', 'success');
+    renderSettings();
+  } catch (e) {
+    showToast(e.message || 'Bild konnte nicht geladen werden.', 'error');
+  }
+  input.value = '';
+};
+
+window.LF.settingsRemoveAvatar = async () => {
+  if (!currentUser) return;
+  if (!confirm('Profilbild entfernen?')) return;
+  try {
+    await updateUserProfile(currentUser.uid,
+      userData?.name || currentUser.displayName || 'Nutzer',
+      null
+    );
+    userData.photoURL = null;
+    showToast('Profilbild entfernt.', 'success');
+    renderSettings();
+  } catch (e) {
+    console.error('[settingsRemoveAvatar]', e);
+    showToast('Fehler beim Entfernen.', 'error');
+  }
+};
+
+window.LF.settingsSaveDisplayName = async () => {
+  const input = document.getElementById('settingsDisplayName');
+  const btn   = document.getElementById('settingsDisplayNameSaveBtn');
+  if (!input) return;
+  const name = (input.value || '').trim();
+  if (name.length < 2 || name.length > 24) {
+    showToast('Name muss zwischen 2 und 24 Zeichen haben.', 'error');
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Speichern…'; }
+  try {
+    await updateUserProfile(currentUser.uid, name, userData?.photoURL || null);
+    userData.name = name;
+    showToast('Name aktualisiert.', 'success');
+  } catch (e) {
+    console.error('[settingsSaveDisplayName]', e);
+    showToast('Fehler beim Speichern.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Speichern'; }
+  }
+};
+
+// Auto-Save-on-blur: nur wenn Wert sich tatsaechlich geaendert hat UND valide
+// ist. Sonst still — kein Toast-Spam, wenn der User nur draufklickt und wieder
+// raus.
+window.LF.settingsSaveDisplayNameIfChanged = () => {
+  const input = document.getElementById('settingsDisplayName');
+  if (!input) return;
+  const name = (input.value || '').trim();
+  const current = (userData?.name || currentUser?.displayName || '').trim();
+  if (name === current) return;
+  if (name.length < 2 || name.length > 24) return;
+  window.LF.settingsSaveDisplayName();
+};
+
+window.LF.settingsSaveDefaultOutline = (val) => {
+  // Speichert nur die Praeferenz. Aktiv-Outline-Switch laeuft via
+  // window.LF.selectOutline (Server-Unlock-Path). Hier nur Default-Hint.
+  _persistSettings({ defaultOutline: val || '' });
+  showToast('Standard-Outline gespeichert.', 'success');
+};
+
+// Tab 4 — Konto
+window.LF.settingsRequestPasswordReset = async () => {
+  const email = currentUser?.email;
+  if (!email) { showToast('Keine E-Mail-Adresse.', 'error'); return; }
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    showToast('E-Mail mit Reset-Link gesendet.', 'success');
+  } catch (e) {
+    console.error('[settingsRequestPasswordReset]', e);
+    showToast('Konnte E-Mail nicht senden — versuche es später nochmal.', 'error');
+  }
+};
+
+window.LF.settingsExportData = () => {
+  try {
+    const payload = _buildUserExport();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    a.download = `learningforge-export-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast('Datei wird heruntergeladen…', 'success');
+  } catch (e) {
+    console.error('[settingsExportData]', e);
+    showToast('Export fehlgeschlagen.', 'error');
+  }
+};
+
+// Inverted-Toggle (Casey F-9): UI zeigt Visibility-State ("auf Rangliste sichtbar"),
+// Schema speichert Hidden-State (`lbHidden: true` = nicht sichtbar).
+// Im Markup: `checked` wenn !lbHidden (sichtbar), onchange ruft mit !this.checked
+// (= hidden) auf. Hier dann einfach 1:1 schreiben.
+window.LF.settingsSaveLbHidden = (hidden) => {
+  _persistTopLevel({ lbHidden: !!hidden });
+  showToast(hidden ? 'Du bist nicht mehr auf Ranglisten sichtbar.' : 'Du erscheinst wieder auf Ranglisten.', 'info');
+};
+
+window.LF.settingsLogout = async () => {
+  if (isTestActive()) _abortActiveTest();
+  _teardownMidTestGuards();
+  await logout();
+  location.hash = '#/';
+};
+
+window.LF.settingsOpenDeleteModal = () => {
+  if (_blockClaudeWrite('Konto löschen')) return;
+  _openSettingsDeleteModal();
+};
+
+window.LF.settingsDeleteOnConfirmInput = (val) => {
+  const expected = userData?.name || currentUser?.displayName || 'Nutzer';
+  const btn = document.getElementById('settingsDeleteConfirmBtn');
+  if (!btn) return;
+  btn.disabled = (val !== expected);
+};
+
+window.LF.settingsCancelDelete = () => {
+  _closeSettingsDeleteModal();
+};
+
+window.LF.settingsStartDeleteCountdown = () => {
+  if (!_settingsDeleteState) return;
+  _settingsDeleteState.phase = 'countdown';
+  // GDPR-Soft-Win: 30s Countdown statt 10s — Soft-Delete (7-Tage-Recovery)
+  // ist Mission-13-Maya-Spec-Kandidat, hier nur die Wartezeit erhoeht.
+  _settingsDeleteState.countdown = 30;
+  _renderSettingsDeleteModalContent();
+  _settingsDeleteState.interval = setInterval(() => {
+    if (!_settingsDeleteState) return;
+    _settingsDeleteState.countdown -= 1;
+    if (_settingsDeleteState.countdown <= 0) {
+      clearInterval(_settingsDeleteState.interval);
+      _settingsDeleteState.interval = null;
+      window.LF.settingsConfirmDelete();
+    } else {
+      _renderSettingsDeleteModalContent();
+    }
+  }, 1000);
+};
+
+window.LF.settingsConfirmDelete = async () => {
+  if (!_settingsDeleteState) return;
+  // Race-Frei: Cancel-Knopf wird im Countdown-State noch angezeigt — wenn der
+  // User in der letzten Sekunde cancelt, schliesst _closeSettingsDeleteModal()
+  // den Interval und _settingsDeleteState wird null, dann no-op.
+  const overlay = document.getElementById('settingsDeleteOverlay');
+  if (overlay) {
+    overlay.innerHTML = `
+      <div class="lf-modal-card">
+        <div class="lf-modal-body" style="text-align:center;padding:24px">
+          <div class="spinner" style="margin:0 auto 12px"></div>
+          <p>Konto wird gelöscht…</p>
+        </div>
+      </div>`;
+  }
+  try {
+    // Worker-only-Plan (Marcus, 2026-05-08): cf.deleteAccount() macht jetzt
+    // Firestore-Wipe + Auth-User-Delete atomar serverseitig (Identity-Toolkit
+    // via Service-Account). Frontend macht KEIN currentUser.delete() mehr —
+    // das wuerde das Token vorher invalidieren und cf.deleteAccount() in 401
+    // laufen lassen, sodass der Firestore-Wipe nie passiert.
+    await cf.deleteAccount(userData?.name || currentUser?.displayName || '');
+    // Lokales Token clearen — Auth-User ist serverseitig schon weg.
+    try { await logout(); } catch (_) { /* token already invalid is fine */ }
+    _closeSettingsDeleteModal();
+    showToast('Konto gelöscht.', 'success');
+    location.hash = '#/';
+  } catch (e) {
+    console.error('[settingsConfirmDelete]', e);
+    showToast('Löschen fehlgeschlagen — bitte erneut versuchen.', 'error');
+    _closeSettingsDeleteModal();
+  }
 };
 
 // Achievement-Modal öffnen
@@ -8729,6 +10377,472 @@ window.LF.midTestAbort = () => {
   _abortActiveTest();
 };
 
+// ── F-03 Audio-Modus (Cycle 6, Maya-Spec) ────────────────────────────────
+// Komplett client-side. SpeechSynthesis-API (browser-native).
+// State: _audioState haelt Absatz-Liste, aktuellen Index, Speed, Auto-Advance,
+// Voice-Pick, "is-playing"-Flag. Hash-Change → cancel().
+//
+// Persistenz nur in localStorage (lfAudioSpeed, lfAudioAutoAdvance,
+// lfAudioUnavailableNotified). Kein Firestore, kein Worker.
+let _audioState = null;
+
+function _audioModeAvailable() {
+  return typeof window !== 'undefined'
+      && typeof window.speechSynthesis !== 'undefined'
+      && typeof window.SpeechSynthesisUtterance !== 'undefined';
+}
+
+// Inline-SVG (Lucide-Headphones) — nicht in icons.js weil das auto-generiert
+// ist und ich kein Build-Script-Roundtrip ziehen will. stroke=currentColor →
+// passt sich an Theme an, wie alle anderen Icons.
+function _audioHeadphonesIcon() {
+  return '<svg xmlns="http://www.w3.org/2000/svg" class="lf-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1zm18 0h-3a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h2a1 1 0 0 0 1-1zM3 14a9 9 0 0 1 18 0"/></svg>';
+}
+
+function _audioReadSpeedPref() {
+  try {
+    const raw = parseFloat(localStorage.getItem('lfAudioSpeed') || '1');
+    if ([0.75, 1, 1.25, 1.5].includes(raw)) return raw;
+  } catch {}
+  return 1;
+}
+function _audioReadAutoAdvancePref() {
+  try { return localStorage.getItem('lfAudioAutoAdvance') === '1'; } catch { return false; }
+}
+
+// Fallback-Toast bei fehlender API. LocalStorage-Flag verhindert Spam.
+function _audioWarnUnavailableOnce() {
+  try {
+    if (localStorage.getItem('lfAudioUnavailableNotified') === '1') return;
+    localStorage.setItem('lfAudioUnavailableNotified', '1');
+  } catch {}
+  showToast('Vorlesen geht in deinem Browser leider nicht.', 'info');
+}
+
+// Voice-Pick: deutsche Stimme bevorzugen, sonst voices[0]. SpeechSynthesis
+// laedt voices async — getVoices() kann initial leer sein. Wir holen sie
+// einmalig via voiceschanged-Event (oder direkt wenn schon da).
+function _audioPickVoice() {
+  if (!_audioModeAvailable()) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  if (voices.length === 0) return null;
+  const de = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('de'));
+  return de || voices[0];
+}
+
+// Absaetze aus dem aktuellen Content extrahieren. Wir sammeln <p>, <li>, <h2>,
+// <h3>, <h4> in DOM-Reihenfolge und vergeben jedem ein data-audio-idx.
+// Subtopic-Auto-Weiter ist in v1 nur ein Marker fuer den naechsten Subtopic-
+// Inhalt — die Bar bleibt offen.
+function _audioCollectParagraphs() {
+  // Kandidaten-Container in Praeferenz-Reihenfolge:
+  //   1. .content-body (regulaeres Topic / custom topic)
+  //   2. #subtopicGrid expanded subtopic
+  const containers = [
+    document.querySelector('.content-body'),
+    document.querySelector('#subtopicGrid')
+  ].filter(Boolean);
+  if (containers.length === 0) return [];
+  const root = containers[0];
+  const nodes = Array.from(root.querySelectorAll('p, li, h1, h2, h3, h4'));
+  // Filter: leere Absaetze (nur whitespace) raus.
+  const out = [];
+  nodes.forEach((n, i) => {
+    const txt = (n.textContent || '').trim();
+    if (!txt) return;
+    n.dataset.audioIdx = String(out.length);
+    out.push({ el: n, text: txt });
+  });
+  return out;
+}
+
+window.LF.toggleAudioMode = () => {
+  // Defensive: Button wird nur gerendert wenn _audioModeAvailable() — der
+  // sichtbare Fallback-Toast feuert beim Topic-Render (Sophie P2-5,
+  // Cycle 7). Hier nur stiller Bail.
+  if (!_audioModeAvailable()) return;
+  if (_audioState && _audioState.isOpen) {
+    _audioStopFully();
+    return;
+  }
+  const paragraphs = _audioCollectParagraphs();
+  if (paragraphs.length === 0) {
+    showToast('Dieses Topic hat noch keinen Lese-Inhalt.', 'info');
+    return;
+  }
+  _audioState = {
+    paragraphs, currentIdx: 0,
+    speed: _audioReadSpeedPref(),
+    autoAdvance: _audioReadAutoAdvancePref(),
+    isOpen: true, isPlaying: false, voice: null,
+    // Sophie P1-1 (Cycle 7): topicHash fuer Resume-Persistenz.
+    topicHash: location.hash
+  };
+  // Voice asynchron picken — manche Browser brauchen voiceschanged.
+  const tryPickVoice = () => {
+    _audioState.voice = _audioPickVoice();
+    if (!_audioState.voice) {
+      // Voices noch nicht geladen — beim Start-Speak nochmal versuchen.
+      window.speechSynthesis.addEventListener('voiceschanged', () => {
+        if (_audioState) _audioState.voice = _audioPickVoice();
+      }, { once: true });
+    } else if (!_audioState.voice.lang?.toLowerCase().startsWith('de')) {
+      showToast('Keine deutsche Stimme installiert — nutze die Standard-Stimme.', 'info');
+    }
+  };
+  tryPickVoice();
+  _audioRenderBar();
+  _audioPlayCurrent();
+};
+
+function _audioPlayCurrent() {
+  if (!_audioState || !_audioModeAvailable()) return;
+  const p = _audioState.paragraphs[_audioState.currentIdx];
+  if (!p) {
+    _audioStopFully();
+    return;
+  }
+  // Vorherige Highlights weg, neuer setzen.
+  document.querySelectorAll('[data-audio-idx].audio-active').forEach(el => el.classList.remove('audio-active'));
+  p.el.classList.add('audio-active');
+  // Ins Viewport scrollen wenn out-of-view (nur bei laufender Wiedergabe).
+  const r = p.el.getBoundingClientRect();
+  if (r.top < 60 || r.bottom > window.innerHeight - 100) {
+    p.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  // SpeechSynthesisUtterance fuer den Absatz-Text. Sehr lange Absaetze
+  // splittet die Engine selbst — fuer v1 belassen.
+  window.speechSynthesis.cancel();   // Race-Schutz: vorherige Utterance abwerfen.
+  const u = new SpeechSynthesisUtterance(p.text);
+  if (_audioState.voice) u.voice = _audioState.voice;
+  u.lang = _audioState.voice?.lang || 'de-DE';
+  u.rate = _audioState.speed;
+  u.onend = () => {
+    if (!_audioState) return;
+    if (_audioState.currentIdx + 1 < _audioState.paragraphs.length) {
+      _audioState.currentIdx++;
+      _audioPlayCurrent();
+    } else {
+      _audioState.isPlaying = false;
+      document.querySelectorAll('[data-audio-idx].audio-active').forEach(el => el.classList.remove('audio-active'));
+      _audioRenderBar();
+    }
+  };
+  u.onerror = () => {
+    _audioState.isPlaying = false;
+    _audioRenderBar();
+  };
+  _audioState.isPlaying = true;
+  window.speechSynthesis.speak(u);
+  _audioRenderBar();
+}
+
+function _audioRenderBar() {
+  if (!_audioState) return;
+  let bar = document.getElementById('audioBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'audio-bar';
+    bar.id = 'audioBar';
+    document.body.appendChild(bar);
+  }
+  const speeds = [0.75, 1, 1.25, 1.5];
+  const playPauseIcon = _audioState.isPlaying
+    ? lfIcon('pause')
+    : lfIcon('play');
+  const speedChips = speeds.map(s => `
+    <button class="audio-bar-speed-chip ${s === _audioState.speed ? 'active' : ''}"
+            onclick="window.LF.audioSetSpeed(${s})">${s}x</button>`).join('');
+  bar.innerHTML = `
+    <button class="audio-bar-btn audio-play-btn" aria-label="${_audioState.isPlaying ? 'Pause' : 'Abspielen'}"
+            onclick="window.LF.audioTogglePlay()">${playPauseIcon}</button>
+    <button class="audio-bar-btn" aria-label="Stoppen"
+            onclick="window.LF.audioStop()">${lfIcon('x')}</button>
+    <div class="audio-bar-pos">${_audioState.currentIdx + 1}/${_audioState.paragraphs.length}</div>
+    <div class="audio-bar-speed">${speedChips}</div>
+    <button class="audio-bar-close audio-bar-btn" aria-label="Audio-Player schlie\xdfen"
+            onclick="window.LF.audioClose()">×</button>
+  `;
+  // Toolbar-Button-State.
+  const tb = document.getElementById('audioToolbarBtn');
+  if (tb) tb.classList.toggle('is-playing', !!_audioState.isPlaying);
+}
+
+window.LF.audioTogglePlay = () => {
+  if (!_audioState || !_audioModeAvailable()) return;
+  if (_audioState.isPlaying) {
+    window.speechSynthesis.pause();
+    _audioState.isPlaying = false;
+  } else {
+    // Wenn Speech bereits in Pause-State haengt, resume(); sonst neu starten.
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+      _audioState.isPlaying = true;
+    } else {
+      _audioPlayCurrent();
+      return;
+    }
+  }
+  _audioRenderBar();
+};
+
+window.LF.audioStop = () => {
+  if (!_audioState) return;
+  if (_audioModeAvailable()) window.speechSynthesis.cancel();
+  _audioState.currentIdx = 0;
+  _audioState.isPlaying = false;
+  document.querySelectorAll('[data-audio-idx].audio-active').forEach(el => el.classList.remove('audio-active'));
+  _audioRenderBar();
+};
+
+window.LF.audioClose = () => {
+  // Sophie P1-1 (Cycle 7): Explizites Close = "fertig", Resume-State weg.
+  _audioClearResume();
+  _audioStopFully();
+};
+
+window.LF.audioSetSpeed = (rate) => {
+  if (!_audioState || !_audioModeAvailable()) return;
+  if (![0.75, 1, 1.25, 1.5].includes(rate)) return;
+  _audioState.speed = rate;
+  try { localStorage.setItem('lfAudioSpeed', String(rate)); } catch {}
+  // Bei laufender Wiedergabe: aktuellen Absatz mit neuer Rate neu starten
+  // (SpeechSynthesisUtterance ist immutable — `u.rate` aendern bringt nichts).
+  if (_audioState.isPlaying) _audioPlayCurrent();
+  _audioRenderBar();
+};
+
+function _audioStopFully() {
+  if (_audioModeAvailable()) {
+    try { window.speechSynthesis.cancel(); } catch {}
+  }
+  document.querySelectorAll('[data-audio-idx].audio-active').forEach(el => el.classList.remove('audio-active'));
+  document.getElementById('audioBar')?.remove();
+  const tb = document.getElementById('audioToolbarBtn');
+  if (tb) tb.classList.remove('is-playing');
+  _audioState = null;
+}
+
+// Sophie P1-1 (Cycle 7): Audio-Resume-Persistenz.
+// Beim Hash-Change wird der aktuelle State (topicHash, idx, speed, autoAdvance,
+// isPlaying, ts) in localStorage geschrieben — wenn der User innerhalb des
+// Resume-Fensters auf dieselbe Topic-Seite zurueckkehrt, bietet ein Toast
+// "Fortsetzen?" das Wiederaufnehmen ab dem gespeicherten Absatz.
+//
+// Persistiert wird nur, wenn der User wirklich konsumiert hat (currentIdx > 0
+// ODER isPlaying) — sonst Spam.
+const _LF_AUDIO_RESUME_KEY = 'lfAudioResume';
+const _LF_AUDIO_RESUME_TTL_MS = 60 * 60 * 1000;   // 1 Stunde
+
+function _audioPersistResume() {
+  if (!_audioState || !_audioState.topicHash) return;
+  const idx = _audioState.currentIdx | 0;
+  const wasPlaying = !!_audioState.isPlaying;
+  // Skip wenn Nutzer noch nichts konsumiert hat (Bar geoeffnet, sofort weg).
+  if (idx === 0 && !wasPlaying) {
+    try { localStorage.removeItem(_LF_AUDIO_RESUME_KEY); } catch {}
+    return;
+  }
+  const payload = {
+    topicHash: _audioState.topicHash,
+    currentIdx: idx,
+    paragraphCount: (_audioState.paragraphs || []).length,
+    speed: _audioState.speed,
+    autoAdvance: _audioState.autoAdvance,
+    wasPlaying,
+    ts: Date.now()
+  };
+  try { localStorage.setItem(_LF_AUDIO_RESUME_KEY, JSON.stringify(payload)); } catch {}
+}
+
+function _audioReadResume() {
+  try {
+    const raw = localStorage.getItem(_LF_AUDIO_RESUME_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object') return null;
+    if (typeof data.ts !== 'number' || (Date.now() - data.ts) > _LF_AUDIO_RESUME_TTL_MS) {
+      localStorage.removeItem(_LF_AUDIO_RESUME_KEY);
+      return null;
+    }
+    return data;
+  } catch { return null; }
+}
+
+function _audioClearResume() {
+  try { localStorage.removeItem(_LF_AUDIO_RESUME_KEY); } catch {}
+}
+
+// Resume-Ausfuehrung: Audio-Modus ab gespeichertem Absatz starten. Wird nur
+// nach User-Klick auf den Toast-Button gerufen (Browser-Autoplay-Gate ok).
+function _audioResumeFromSaved(saved) {
+  if (!_audioModeAvailable()) {
+    _audioWarnUnavailableOnce();
+    return;
+  }
+  const paragraphs = _audioCollectParagraphs();
+  if (paragraphs.length === 0) {
+    showToast('Kein Lese-Inhalt gefunden.', 'info');
+    return;
+  }
+  // Falls Inhalt sich geaendert hat (anderer paragraphCount), trotzdem versuchen
+  // — aber idx clampen, damit wir nicht out-of-bounds laufen.
+  const idx = Math.min(Math.max(saved.currentIdx | 0, 0), paragraphs.length - 1);
+  const speed = [0.75, 1, 1.25, 1.5].includes(saved.speed) ? saved.speed : _audioReadSpeedPref();
+  _audioState = {
+    paragraphs, currentIdx: idx,
+    speed,
+    autoAdvance: !!saved.autoAdvance,
+    isOpen: true, isPlaying: false, voice: null,
+    topicHash: location.hash
+  };
+  // Voice asynchron picken — gleicher Pfad wie toggleAudioMode.
+  _audioState.voice = _audioPickVoice();
+  if (!_audioState.voice && _audioModeAvailable()) {
+    window.speechSynthesis.addEventListener('voiceschanged', () => {
+      if (_audioState) _audioState.voice = _audioPickVoice();
+    }, { once: true });
+  }
+  _audioRenderBar();
+  _audioPlayCurrent();
+  _audioClearResume();
+}
+
+window.LF.audioResume = () => {
+  const saved = _audioReadResume();
+  if (!saved) return;
+  _audioResumeFromSaved(saved);
+};
+
+window.LF.audioResumeDismiss = () => {
+  _audioClearResume();
+  document.getElementById('audioResumeToast')?.remove();
+};
+
+// Beim Topic-Mount aufrufen: wenn ein gespeicherter Resume-State existiert
+// und auf die aktuelle Topic-Seite passt, Toast mit "Fortsetzen"-Button zeigen.
+function _audioMaybeShowResumePrompt() {
+  if (!_audioModeAvailable()) return;
+  const saved = _audioReadResume();
+  if (!saved) return;
+  if (saved.topicHash !== location.hash) return;
+  // Wenn Audio gerade laeuft (z.B. Hash hat sich gar nicht aendernd-aber-gleich
+  // refresh'ed) → keinen Resume-Toast aufstapeln.
+  if (_audioState && _audioState.isOpen) return;
+  // Toast bauen — eigene DOM-Struktur, damit der "Fortsetzen"-Button sichtbar
+  // mit Tap-Target ist (showToast ist nur Text). Auto-dismiss nach 8s.
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  document.getElementById('audioResumeToast')?.remove();
+  const toast = document.createElement('div');
+  toast.id = 'audioResumeToast';
+  toast.className = 'toast info toast-undo';
+  const msg = document.createElement('span');
+  msg.className = 'toast-undo-msg';
+  msg.textContent = `Audio fortsetzen? (Absatz ${saved.currentIdx + 1})`;
+  const resumeBtn = document.createElement('button');
+  resumeBtn.className = 'toast-undo-btn';
+  resumeBtn.type = 'button';
+  resumeBtn.textContent = 'Fortsetzen';
+  resumeBtn.addEventListener('click', () => {
+    toast.remove();
+    window.LF.audioResume();
+  });
+  toast.appendChild(msg);
+  toast.appendChild(resumeBtn);
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 8000);
+}
+
+// Hash-Change → State persistieren, dann komplett aufraeumen. Spec: Auto-Pause
+// beim Wegnavigieren; Resume-Prompt beim Zurueckkehren.
+window.addEventListener('hashchange', () => {
+  if (_audioState) {
+    _audioPersistResume();
+    _audioStopFully();
+  }
+});
+
+// ── F-09 Konfidenz-Verlauf (Cycle 6, Maya-Spec) ───────────────────────────
+// _pendingConfidence: 1..5 (User hat Sterne gewaehlt) | null (skipped).
+// Lebt zwischen Pre-Test-Step und submitTest. Nach Persistenz (in
+// grades[key].history[].confidence) wieder genullt. Skip-Pfad → kein
+// Banner, kein Profil-Tab-Eintrag fuer diesen Versuch.
+let _pendingConfidence = null;
+
+// Star-Renderer fuer Konfidenz-Slider 1-5. Wird in 3 Kontexten genutzt:
+// 1. Pre-Test-Step (renderConfidencePreTest)
+// 2. Klausur-Tag-Reflection-Modal (Klausurtag-Konfidenz)
+// 3. Klausur-Bereitschafts-Widget (Tages-Konfidenz)
+// Maya-Spec: Tap-Target 44px (CSS .confidence-star-btn min-width/height).
+// `value` 1..5 oder null. `onPick` ist ein Funktionsname-Pfad (window.LF.X).
+// Wir passen auf, dass arg-quoting safe ist — `pickerId` ist controlled
+// (Aufrufer-konstant), `value` int.
+function _renderConfidenceStars(pickerId, currentValue) {
+  const v = (typeof currentValue === 'number' && currentValue >= 1 && currentValue <= 5)
+    ? currentValue : 0;
+  return [1,2,3,4,5].map(i => `
+    <button type="button"
+            class="confidence-star-btn ${i <= v ? 'active' : ''}"
+            aria-label="${i} von 5 Sternen"
+            onclick="window.LF.pickConfidence('${pickerId}',${i})">
+      ${lfIcon(i <= v ? 'star' : 'star', { cls: 'lf-icon-md' })}
+    </button>`).join('');
+}
+
+// Pre-Test-Step. Rendert in den uebergebenen Container und ruft `onProceed`
+// mit der gewaehlten Konfidenz (1..5 | null bei Skip) auf.
+// Maya-Spec-Copy: "Wie sicher bist du im Stoff?" / Default 3 / Skip moeglich.
+function _renderConfidencePreTest(targetEl, onProceed) {
+  if (!targetEl) { onProceed(null); return; }
+  // Pro Render-Call eindeutige Picker-ID, weil mehrere Slider nebeneinander
+  // existieren koennen (Pre-Test + Klausur-Widget gleichzeitig sichtbar).
+  const pid = '_preTest';
+  _confidencePickers[pid] = 3;   // Default 3 — "geht so"
+  const html = `
+    <div class="confidence-card" id="confidencePreTestCard">
+      <h2>Wie sicher bist du im Stoff?</h2>
+      <div class="confidence-sub">1 = unsicher · 5 = voll sicher</div>
+      <div class="confidence-stars" id="confidenceStars_${pid}">
+        ${_renderConfidenceStars(pid, 3)}
+      </div>
+      <div class="confidence-actions">
+        <button class="btn btn-ghost btn-lg" id="confSkipBtn">\xdcberspringen</button>
+        <button class="btn btn-primary btn-lg" id="confStartBtn">Los geht's</button>
+      </div>
+    </div>`;
+  targetEl.innerHTML = html;
+  document.getElementById('confSkipBtn')?.addEventListener('click', () => {
+    delete _confidencePickers[pid];
+    onProceed(null);
+  });
+  document.getElementById('confStartBtn')?.addEventListener('click', () => {
+    const val = _confidencePickers[pid];
+    delete _confidencePickers[pid];
+    onProceed(typeof val === 'number' ? val : null);
+  });
+}
+
+// Picker-State-Map: { pickerId → 1..5 }. window.LF.pickConfidence updated
+// den Wert + re-rendert NUR die Sterne (kein voller Re-Render damit
+// Buttons-Listener intakt bleiben).
+const _confidencePickers = {};
+
+window.LF.pickConfidence = (pickerId, value) => {
+  if (typeof value !== 'number' || !isFinite(value) || value < 1 || value > 5) return;
+  // Ramsey P2-C (Cycle 7): Picker-Integer-UX. 2.5 → 2 (Math.floor), nicht
+  // Server-Reject. Schuetzt vor floats die durch JSON-Roundtrip / fremde
+  // Aufrufer reinkommen koennten.
+  const intVal = Math.floor(value);
+  _confidencePickers[pickerId] = intVal;
+  const starsEl = document.getElementById(`confidenceStars_${pickerId}`);
+  if (starsEl) starsEl.innerHTML = _renderConfidenceStars(pickerId, intVal);
+};
+
 function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, subject, topic) {
   setupTabSwitchDetection();
   // B3 Sophie-QA-Fix (2026-05-08): Test-Hash = die ACTUAL location.hash, nicht
@@ -8870,6 +10984,12 @@ window.LF.submitTest = async () => {
         grade: penalty ? 6 : grade.grade,
         date: new Date().toISOString()
       };
+      // F-09 Cycle-6: Konfidenz nur bei normaler Wertung, nicht bei Penalty
+      // (Penalty = Tab-Wechsel-Cheat-Versuch, Selbsteinschaetzung ungueltig).
+      if (!penalty && typeof _pendingConfidence === 'number'
+          && _pendingConfidence >= 1 && _pendingConfidence <= 5) {
+        attempt.confidence = _pendingConfidence;
+      }
       const history = [...(existing.history || []), attempt];
       const bestRun = history.reduce((best, h) =>
         (h.points / h.maxPoints) > (best.points / best.maxPoints) ? h : best,
@@ -8957,6 +11077,25 @@ window.LF.submitTest = async () => {
           const fresh = await getUserData(currentUser.uid);
           if (fresh) userData = fresh;
         } catch(e) { console.warn('[cf-userdata-refresh]', e); }
+        // F-09 Cycle-6: Konfidenz nach dem CF-Refresh in den letzten history-
+        // Eintrag schreiben. CF kennt confidence nicht (kein Server-Wert) →
+        // wir mergen client-side via saveGrade. Nur bei !penalty und
+        // gueltigem Wert. set+merge schreibt nur das eine Feld nach.
+        if (!penalty && typeof _pendingConfidence === 'number'
+            && _pendingConfidence >= 1 && _pendingConfidence <= 5) {
+          try {
+            const ge = userData?.grades?.[key];
+            if (ge && Array.isArray(ge.history) && ge.history.length > 0) {
+              const newHistory = ge.history.map((h, i) =>
+                i === ge.history.length - 1 ? { ...h, confidence: _pendingConfidence } : h
+              );
+              const updated = { ...ge, history: newHistory };
+              userData.grades[key] = updated;
+              await saveGrade(currentUser.uid, subjectId, yearId, topicId, updated)
+                .catch(err => console.warn('[confidence-save]', err));
+            }
+          } catch (e) { console.warn('[confidence-merge]', e); }
+        }
         // Mission 7 — Drop-Roll-Refactor (Variant B):
         // Server (Marcus' submitTestResult) wuerfelt den Drop und liefert
         // ihn in der Response. Frontend STOPPT eigenes Wuerfeln, liest nur.
@@ -9000,6 +11139,11 @@ window.LF.submitTest = async () => {
           grade: penalty ? 6 : grade.grade,
           date: new Date().toISOString()
         };
+        // F-09: Konfidenz auch im Offline-Fallback persistieren.
+        if (!penalty && typeof _pendingConfidence === 'number'
+            && _pendingConfidence >= 1 && _pendingConfidence <= 5) {
+          attempt.confidence = _pendingConfidence;
+        }
         const history = [...(existing.history || []), attempt];
         const bestRun = history.reduce((best, h) =>
           (h.points / h.maxPoints) > (best.points / best.maxPoints) ? h : best,
@@ -9054,7 +11198,11 @@ window.LF.submitTest = async () => {
   // ist die Differenz minimal; ein motivationaler Pop ist hier wichtiger als
   // server-pixel-genau. Anti-Penalty: bei Tab-Wechsel zeigt der Pop trotzdem +5.
   const _xpAwardedDisplay = penalty ? 5 : calcXPForTest(grade.grade);
-  renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty, prevAttempt: _prevAttemptForResults, xpAwarded: _xpAwardedDisplay });
+  // F-09 Cycle-6: confidence im meta durchreichen, dann State zuruecksetzen
+  // (sonst wuerde der naechste Test ohne Skip-Flow den alten Wert sehen).
+  const _confForResults = _pendingConfidence;
+  _pendingConfidence = null;
+  renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty, prevAttempt: _prevAttemptForResults, xpAwarded: _xpAwardedDisplay, confidence: _confForResults });
   } finally {
     if (testState) testState._submitting = false;
     // B3 Sophie-Audit-Fix (2026-05-08): wenn evaluateAnswers/CF wirft, hat
@@ -9311,6 +11459,36 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
   }
   const celebrationBlock = _renderCelebrationBlock(grade.grade, meta.xpAwarded || 0, isNewBest);
 
+  // F-09 Cycle-6: Konfidenz-vs-Realitaet-Banner. Maya-Spec-Mapping:
+  //   Note 1 → Realitaet 5,  Note 2 → 4,  Note 3 → 3,
+  //   Note 4 → 2,  Note 5 → 1,  Note 6 → 0
+  // diff = confidence - reality (positiv = ueberschaetzt).
+  let confidenceBanner = '';
+  if (typeof meta.confidence === 'number'
+      && meta.confidence >= 1 && meta.confidence <= 5
+      && !meta.penalty) {
+    const reality = Math.max(0, 6 - grade.grade);   // 6→0, 5→1, 4→2, 3→3, 2→4, 1→5
+    const diff = meta.confidence - reality;
+    let msg, extraClass = '';
+    if (Math.abs(diff) <= 0.5) {
+      msg = 'Genau richtig eingesch\xe4tzt — gutes Bauchgef\xfchl.';
+    } else if (diff > 1.5) {
+      msg = 'Konfidenz war deutlich zu hoch — lohnt sich, das Topic nochmal anzugucken.';
+      extraClass = 'confidence-overestimate';
+    } else if (diff > 0.5) {
+      msg = 'Du hast dich leicht \xfcbersch\xe4tzt — n\xe4chstes Mal vorsichtiger.';
+    } else { // diff < -0.5
+      msg = 'Du kannst mehr als du denkst — trau dir was zu.';
+    }
+    confidenceBanner = `
+      <div class="confidence-result-banner ${extraClass}">
+        <div class="confidence-banner-title">Selbsteinsch\xe4tzung vs Realit\xe4t</div>
+        <div class="confidence-banner-row"><span>Selbsteinsch\xe4tzung</span><strong>${meta.confidence} / 5</strong></div>
+        <div class="confidence-banner-row"><span>Tats\xe4chlich</span><strong>Note ${grade.grade} (= ${reality}/5)</strong></div>
+        <div class="confidence-banner-msg">${msg}</div>
+      </div>`;
+  }
+
   const resultItems = questions.map((q, i) => {
     const r   = results[i];
     const pts = r.points || 0;
@@ -9460,9 +11638,23 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
   const yearId    = testState?.yearId;
   const topicId   = testState?.topicId;
   const subject   = structure?.[subjectId];
-  const recommendations = (typeof getRecommendations === 'function')
-    ? (getRecommendations() || [])
-    : [];
+  // Casey-Cycle-3-Befund: Card-2 darf nicht ein Englisch-Topic zeigen, wenn
+  // gerade ein Mathe-Test gelaufen ist. → Erst fach-aware probieren (gleiches
+  // Fach, aktuelles Topic ausgeschlossen). Wenn da nichts kommt (z.B. einziges
+  // Topic im Fach), Fallback global. Wenn auch global nichts → Card-2 nicht
+  // rendern (siehe Card-2-Block unten).
+  const currentKey = (subjectId && yearId && topicId)
+    ? `${subjectId}__${yearId}__${topicId}`
+    : null;
+  let recommendations = [];
+  if (typeof getRecommendations === 'function') {
+    if (subjectId) {
+      recommendations = getRecommendations({ subjectFilter: subjectId, excludeKey: currentKey }) || [];
+    }
+    if (!recommendations.length) {
+      recommendations = getRecommendations({ excludeKey: currentKey }) || [];
+    }
+  }
   const topRec = recommendations[0] || null;
   const nextTopic = (subjectId && yearId && topicId)
     ? getNextTopic(subjectId, yearId, topicId)
@@ -9471,6 +11663,14 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
   const safeTopicName   = escapeHtml(meta.topicName || '');
   const isLowGrade  = grade.grade >= 4 || meta.penalty;
   const isMidGrade  = grade.grade === 3;
+
+  // Cycle-2-Ramsey P2-1: Action-Cards nutzen jetzt data-* + addEventListener
+  // statt inline-onclick mit String-interpolierten Werten. Heute waeren die
+  // Werte (subjectId/yearId/topicId aus repo-`structure`) zwar safe, aber
+  // sobald Custom-Topics ihre eigenen IDs liefern (Future), waere ein
+  // Apostroph in einer ID ein JS-Breakout-Vektor. data-* + delegierter
+  // Listener (siehe nach innerHTML-Assign) loest das sauber — Werte werden
+  // als reine Strings ausgelesen, kein Code-Path.
 
   // Card 1 — Lerninhalt nochmal lesen (immer)
   const card1Sub = isLowGrade
@@ -9482,7 +11682,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
   const card1 = {
     key: 'read',
     html: (cls) => `
-      <div class="${cls}" onclick="location.hash='${card1Hash}'">
+      <div class="${cls}" data-action="hash" data-hash="${escapeAttr(card1Hash)}">
         <div class="action-card-icon">${lfIcon('book-open')}</div>
         <div class="action-card-body">
           <div class="action-card-title">Lerninhalt nochmal lesen</div>
@@ -9499,10 +11699,11 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     const recSubjectName = escapeHtml(recSubject?.name || topRec.subjectId);
     const recTopicName   = escapeHtml(topRec.topic?.name || topRec.topicId);
     const recReason      = escapeHtml(topRec.reason || '');
+    const recHash        = `#/fach/${topRec.subjectId}/${topRec.yearId}/${topRec.topicId}`;
     card2 = {
       key: 'recommend',
       html: (cls) => `
-        <div class="${cls}" onclick="location.hash='#/fach/${topRec.subjectId}/${topRec.yearId}/${topRec.topicId}'">
+        <div class="${cls}" data-action="hash" data-hash="${escapeAttr(recHash)}">
           <div class="action-card-icon">${lfIcon('target')}</div>
           <div class="action-card-body">
             <div class="action-card-title">\xdcbe dein schw\xe4chstes Subtopic</div>
@@ -9513,7 +11714,11 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     };
   }
 
-  // Card 3 — Probier das naechste Thema (nur wenn nextTopic existiert)
+  // Card 3 — Probier das naechste Thema. Wenn kein next-Topic verfuegbar
+  // (z.B. Mathe Klasse 9 = letztes Topic im Fach), Fallback "Wiederhole
+  // ein altes Thema" auf ein bereits geuebtes Topic im gleichen Fach
+  // (excl. aktuelles). Wenn auch das nicht klappt → Card-3 weglassen statt
+  // Quatsch zeigen (Casey-Cycle-3-Befund).
   let card3 = null;
   if (nextTopic) {
     const nextTopicName = escapeHtml(nextTopic.topic?.name || nextTopic.topicId);
@@ -9524,10 +11729,11 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
       : (classMatch
           ? `${nextSubjectName} · Klasse ${classMatch[1]} · ${nextTopicName}`
           : `${nextSubjectName} · ${nextTopicName}`);
+    const nextHash = `#/fach/${nextTopic.subjectId}/${nextTopic.yearId}/${nextTopic.topicId}`;
     card3 = {
       key: 'next',
       html: (cls) => `
-        <div class="${cls}" onclick="location.hash='#/fach/${nextTopic.subjectId}/${nextTopic.yearId}/${nextTopic.topicId}'">
+        <div class="${cls}" data-action="hash" data-hash="${escapeAttr(nextHash)}">
           <div class="action-card-icon" aria-hidden="true">→</div>
           <div class="action-card-body">
             <div class="action-card-title">Probier das n\xe4chste Thema</div>
@@ -9536,11 +11742,42 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <div class="action-card-arrow">›</div>
         </div>`
     };
+  } else if (subjectId && subject) {
+    // Fallback: schon geuebtes Topic im gleichen Fach, nicht aktuelles.
+    const grades = userData?.grades || {};
+    let fallbackEntry = null;
+    Object.values(subject.years || {}).forEach(year => {
+      Object.values(year.topics || {}).forEach(topic => {
+        const k = `${subject.id}__${year.id}__${topic.id}`;
+        if (k === currentKey) return;
+        if (!grades[k]) return;
+        if (!fallbackEntry) fallbackEntry = { yearId: year.id, topicId: topic.id, topic, year };
+      });
+    });
+    if (fallbackEntry) {
+      const repTopicName = escapeHtml(fallbackEntry.topic?.name || fallbackEntry.topicId);
+      const repSubjectName = escapeHtml(subject?.name || subjectId);
+      const repHash = `#/fach/${subjectId}/${fallbackEntry.yearId}/${fallbackEntry.topicId}`;
+      card3 = {
+        key: 'repeat',
+        html: (cls) => `
+          <div class="${cls}" data-action="hash" data-hash="${escapeAttr(repHash)}">
+            <div class="action-card-icon" aria-hidden="true">${lfIcon('repeat')}</div>
+            <div class="action-card-body">
+              <div class="action-card-title">Wiederhole ein altes Thema</div>
+              <div class="action-card-sub">${repSubjectName} · ${repTopicName}</div>
+            </div>
+            <div class="action-card-arrow">›</div>
+          </div>`
+      };
+    }
   }
 
   // Wave-4 (Maya/Bereich-3): vierte Action-Card "Mit Freunden teilen" — nur
   // wenn User Freunde hat. Kopiert die Note in die Zwischenablage. Topic-Name
-  // wird via escapeAttr fuer den onclick-String gehaertet.
+  // wandert in data-topic, Note in data-grade — Listener liest beide und ruft
+  // shareGradeWithFriends auf. Kein onclick-String mit String-Args mehr
+  // (P2-1 Hardening).
   let cardShare = null;
   const friendCount = (userData?.friendIds || []).length;
   if (friendCount > 0) {
@@ -9548,7 +11785,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     cardShare = {
       key: 'share',
       html: (cls) => `
-        <div class="${cls}" onclick="window.LF.shareGradeWithFriends('${safeTopicAttr}','${grade.grade}')">
+        <div class="${cls}" data-action="share-grade" data-topic="${safeTopicAttr}" data-grade="${escapeAttr(grade.grade)}">
           <div class="action-card-icon">${lfIcon('users')}</div>
           <div class="action-card-body">
             <div class="action-card-title">Mit Freunden teilen</div>
@@ -9607,6 +11844,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <div class="grade-points">${total} von ${max} Punkten · ${pct}%</div>
         </div>
         ${improvementBanner}
+        ${confidenceBanner}
         ${srsAutoBanner}
         <div class="section-title">Aufgaben im Detail</div>
         <div class="results-list">${resultItems}</div>
@@ -9649,6 +11887,30 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
       </div>
 
     </div>`;
+
+  // Cycle-2-Ramsey P2-1: Delegierter Click-Listener fuer die Action-Cards.
+  // Ersetzt die frueheren inline-onclick-Strings durch sauberes data-* +
+  // addEventListener — keine String-Interpolation von potenziell unsicheren
+  // Werten in JS-Code-Pfade. Container ist `.action-cards-grid`, Cards
+  // tragen data-action="hash"|"share-grade" + zugehoerige data-*.
+  const actionCardsGrid = document.getElementById('testArea').querySelector('.action-cards-grid');
+  if (actionCardsGrid) {
+    actionCardsGrid.addEventListener('click', (ev) => {
+      const card = ev.target.closest('[data-action]');
+      if (!card || !actionCardsGrid.contains(card)) return;
+      const action = card.dataset.action;
+      if (action === 'hash') {
+        const h = card.dataset.hash || '#/';
+        location.hash = h;
+      } else if (action === 'share-grade') {
+        const t = card.dataset.topic || '';
+        const g = card.dataset.grade || '';
+        if (typeof window.LF?.shareGradeWithFriends === 'function') {
+          window.LF.shareGradeWithFriends(t, g);
+        }
+      }
+    });
+  }
 
   testState._copyText = generateCopyText(questions, answers, results, timeUsed, meta);
 
@@ -11454,6 +13716,20 @@ window.LF.toggleKlausurTopic = (key) => {
   if (idx >= 0) _klausurModalState.topicIds.splice(idx, 1);
   else          _klausurModalState.topicIds.push(key);
   if (_klausurModalState.errors?.topicIds) delete _klausurModalState.errors.topicIds;
+};
+
+// F-02 Cycle-6: Plan-Felder live-binden. Kein Re-Render auf jeden Tippen
+// — User wuerde den Cursor verlieren. State direkt mutieren, Validierung
+// laeuft erst beim Submit.
+window.LF.onKlausurPlanStartChange = (val) => {
+  if (!_klausurModalState) return;
+  _klausurModalState.planStartDate = val || '';
+  if (_klausurModalState.errors?.planStart) delete _klausurModalState.errors.planStart;
+};
+window.LF.onKlausurPlanMinChange = (val) => {
+  if (!_klausurModalState) return;
+  _klausurModalState.planMinutesPerDay = val || '';
+  if (_klausurModalState.errors?.planMin) delete _klausurModalState.errors.planMin;
 };
 
 // F-3 KI-Erklaerung pro falscher Frage

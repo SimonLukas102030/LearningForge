@@ -93,6 +93,15 @@
      the active theme automatically; per-component CSS can override (e.g. --accent for emphasis). */
   --icon-color: var(--text);
 
+  /* Cycle-3 Settings-Page Refactor: Schriftgr&ouml;&szlig;e + Reduced-Motion +
+     Danger-Zone. Defaults sind no-op — JS setzt --font-size-scale + --motion-duration
+     auf :root/<html>, Themes ueberschreiben --danger-zone-bg/-border falls noetig. */
+  --font-size-scale: 1;
+  --motion-duration-base: 200ms;
+  --motion-duration: var(--motion-duration-base);
+  --danger-zone-bg: var(--danger-subtle);
+  --danger-zone-border: var(--danger);
+
   /* Physik-Simulationen — Light Mode */
   --sim-sky:        #dbeafe;
   --sim-ground:     #f8fafc;
@@ -115,6 +124,12 @@
   --sim-tip-bg2:    #fde68a;
   --sim-tip-bar:    #f59e0b;
   --sim-tip-text:   #78350f;
+
+  /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
+     Eigene Variable statt --accent-subtle, weil mehrere Themes
+     --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
+     drueber unlesbar. Per-Theme-Override siehe cosmetics.css (aurora). */
+  --audio-highlight: rgba(245, 158, 11, 0.15);
 }
 
 [data-theme="dark"] {
@@ -151,6 +166,11 @@
   --danger-subtle:  #450a0a;        /* red-950 */
   --danger-text:    #fca5a5;        /* red-300 */
 
+  /* Cycle-3 Settings: Danger-Zone-Card auf Dunkelrot statt :root --danger-subtle (= red-950),
+     das auf bg-card-Kontrast schlecht ist. Custom dunkelrot mit dezentem rot-Lift. */
+  --danger-zone-bg: #1f0707;
+  --danger-zone-border: var(--danger);
+
   /* Wave-5b HIGH-4 (WCAG-Fix): Dark-Mode-Override entfernt. Die 400-shades
      (z.B. indigo-400 #818cf8) hatten <2.5:1 Kontrast zu weissem Text in
      `.avatar-default { color:#fff }` — fail WCAG AA (>=4.5:1 erforderlich).
@@ -183,12 +203,37 @@
   --sim-tip-bg2:    #78350f;
   --sim-tip-bar:    #f59e0b;
   --sim-tip-text:   #fde68a;
+
+  /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
+     kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
+  --audio-highlight: rgba(245, 158, 11, 0.20);
 }
 
 /* ── 2. Reset & Base ────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Cycle-3 Settings: Schriftgr&ouml;&szlig;e ueber rem-Skalierung. JS setzt
+     --font-size-scale auf 1 (normal) / 1.125 (large) / 1.25 (xlarge). Alle
+     rem-basierten Layouts skalieren mit. */
+  font-size: calc(16px * var(--font-size-scale, 1));
+}
+
+/* Cycle-3 Settings: Reduced-Motion. JS setzt --motion-duration: 0.01ms
+   auf :root, dieses Override killt alle CSS-transitions/animationen
+   (Default ist 200ms, also no-op solange JS nichts setzt). */
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-duration: 0.01ms; }
+}
+:root[style*="--motion-duration: 0.01ms"] *,
+:root[style*="--motion-duration: 0.01ms"] *::before,
+:root[style*="--motion-duration: 0.01ms"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
 
 body {
   font-family: var(--font);
@@ -502,7 +547,9 @@ input, textarea, select { font-family: var(--font); }
    auf das Hex aus subjects-config zurueck bis Phase-2 die Tokens fuellt. */
 .subject-card::before {
   content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  /* F-01 (Casey): 4px war zu subtil — auf 6px hoch, damit die Subject-Identity
+     beim Scannen der Dashboard-Grid sofort lesbar ist. */
+  position: absolute; top: 0; left: 0; right: 0; height: 6px;
   background: var(--subject-accent, var(--subject-color, var(--accent)));
 }
 .subject-card .s-icon {
@@ -968,6 +1015,12 @@ input, textarea, select { font-family: var(--font); }
 }
 .empty-state-cta {
   margin-top: 12px;
+}
+/* F-04 (Casey): sekundaerer CTA unter dem primary — etwas Abstand, kleinere
+   visuelle Gewichtung. btn-ghost-Stil kommt vom .btn — wir setzen nur Layout. */
+.empty-state-cta-secondary {
+  margin-top: 8px;
+  margin-left: 8px;
 }
 
 /* ── 18. Toast ──────────────────────────── */
@@ -1484,6 +1537,318 @@ input, textarea, select { font-family: var(--font); }
 }
 .settings-actions {
   display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;
+}
+
+/* ── 22b. Settings-Page Refactor (Cycle-3, Maya-Spec) ──
+   4-Tab-Layout, Color-Grid, Toggle, Danger-Zone, Avatar-
+   Editor, Inline-Save-Row. Alle Selectors theme-agnostisch
+   ueber CSS-Variablen — keine hardcoded Hex ausser Brand. */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.settings-tabs::-webkit-scrollbar { display: none; }
+.settings-tab-pill {
+  background: transparent;
+  border: none;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+  min-height: 44px;
+  justify-content: center;
+  transition: color var(--transition), border-color var(--transition);
+}
+.settings-tab-pill:hover { color: var(--text); }
+.settings-tab-pill.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.settings-tab-icon { width: 16px; height: 16px; }
+.settings-tab-content { animation: fadeIn .2s ease; }
+
+.settings-radio-group {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.settings-radio-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+.settings-radio-row:hover { background: var(--bg-input); }
+.settings-radio-row.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.settings-radio-row input[type="radio"] {
+  accent-color: var(--accent);
+  width: 18px; height: 18px;
+}
+.settings-radio-icon { width: 18px; height: 18px; }
+
+.settings-cosmetic-row {
+  display: flex; gap: 16px; align-items: center;
+}
+.settings-cosmetic-select { flex: 1; }
+.settings-cosmetic-preview {
+  width: 80px; height: 80px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 8px;
+}
+.settings-cosmetic-preview-card {
+  width: 100%; height: 100%;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 6px; gap: 4px;
+}
+.settings-cosmetic-preview-bar {
+  height: 6px; border-radius: 3px;
+  background: var(--accent);
+  width: 60%;
+}
+.settings-cosmetic-preview-text {
+  font-size: 18px; font-weight: 700;
+  color: var(--text);
+  margin-top: auto;
+}
+
+.settings-segment-row {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px;
+  background: var(--bg-input);
+  gap: 4px;
+}
+.settings-segment-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  min-height: 36px;
+  transition: background var(--transition), color var(--transition);
+}
+.settings-segment-btn:hover { color: var(--text); }
+.settings-segment-btn.active {
+  background: var(--bg-card);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.settings-toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+}
+.settings-toggle-label { flex: 1; }
+.settings-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px; height: 24px;
+  flex-shrink: 0;
+}
+.settings-toggle input { display: none; }
+.settings-toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.settings-toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  background: var(--bg-card);
+  border-radius: 50%;
+  transition: transform var(--transition);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.settings-toggle input:checked + .settings-toggle-slider {
+  background: var(--accent);
+}
+.settings-toggle input:checked + .settings-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.settings-time-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.settings-time-picker {
+  width: auto; min-width: 120px;
+}
+
+.settings-subject-color-list {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.settings-subject-color-row {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+}
+.settings-subject-color-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.settings-subject-color-meta {
+  display: flex; align-items: center; gap: 8px;
+}
+.settings-subject-color-current {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.settings-color-grid {
+  display: grid;
+  /* Tap-Target-Min 44px (Casey F-1, WCAG 2.5.5) — auto-fill skaliert auf
+     beliebige Viewport-Breiten ab 320px runter. */
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+}
+.settings-color-swatch {
+  aspect-ratio: 1;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform var(--transition), border-color var(--transition);
+}
+.settings-color-swatch:hover {
+  transform: scale(1.1);
+}
+.settings-color-swatch.is-selected {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent);
+}
+.settings-swatch-check {
+  width: 14px; height: 14px;
+  color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+.settings-disabled-hint {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px;
+  background: var(--bg-input);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.settings-avatar-block {
+  display: flex; flex-direction: column; align-items: center;
+}
+.settings-avatar-actions {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+}
+
+.settings-inline-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.settings-inline-row .form-input { flex: 1; }
+
+.settings-email-display {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 14px;
+  padding: 10px 12px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  word-break: break-all;
+}
+
+.settings-danger-zone-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--danger);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.settings-danger-zone-card {
+  background: var(--danger-zone-bg);
+  border: 1px solid var(--danger-zone-border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.btn.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: 1px solid var(--danger);
+}
+.btn.btn-danger:hover {
+  background: var(--danger-text);
+  border-color: var(--danger-text);
+}
+.btn.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-delete-bullets ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.settings-delete-progress {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-input);
+  border-radius: 4px;
+  margin-top: 16px;
+  overflow: hidden;
+}
+.settings-delete-progress-fill {
+  height: 100%;
+  background: var(--danger);
+  transition: width 1s linear;
+}
+
+/* Mobile responsive: 360px-friendly settings */
+@media (max-width: 640px) {
+  .settings-cosmetic-row { flex-direction: column; align-items: stretch; }
+  .settings-cosmetic-preview { width: 100%; height: 60px; }
+  .settings-color-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .settings-subject-color-header { flex-direction: column; align-items: flex-start; }
+  .settings-tab-pill span { font-size: 13px; }
+  .settings-card { padding: 16px; }
 }
 
 /* ── 23. Responsive ─────────────────────── */
@@ -2099,6 +2464,15 @@ input, textarea, select { font-family: var(--font); }
   font: inherit;
   color: inherit;
 }
+/* F-06 (Casey): Code-Block auf 360px Mobile-Viewport — schmaleres Padding,
+   kleinere Schrift, word-break damit lange Identifier nicht ueberlaufen. */
+@media (max-width: 480px) {
+  .lf-code-block {
+    padding: 10px 12px;
+    font-size: 12px;
+    word-break: break-word;
+  }
+}
 
 .lf-widget-pending {
   padding: 16px 20px;
@@ -2109,6 +2483,178 @@ input, textarea, select { font-family: var(--font); }
   color: var(--text-muted);
   font-size: 14px;
   text-align: center;
+}
+
+/* ── Cycle 8 — Predict-Reveal-Widget (Maya MVP-1) ───────────
+   Brilliant-Style Predict→Commit→Reveal. Theme-aware via
+   --subject-accent / --success / --danger. Mobile-first ≥44px
+   Tap-Targets. Keine Hex-Literale. */
+
+.lf-widget-predict-reveal {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-pr-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-pr-setup {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lf-pr-setup p:last-child { margin-bottom: 0; }
+
+.lf-pr-question {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.lf-pr-options {
+  list-style: none;
+  margin: 0 0 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lf-pr-option-item {
+  display: block;
+}
+
+.lf-pr-option {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.lf-pr-option:hover:not(:disabled) {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-pr-option:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-pr-option:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.lf-pr-option:disabled {
+  cursor: default;
+}
+
+.lf-pr-option.lf-pr-correct {
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success-text);
+  font-weight: 600;
+}
+.lf-pr-option.lf-pr-wrong {
+  background: var(--danger-subtle);
+  border-color: var(--danger);
+  color: var(--danger-text);
+  font-weight: 600;
+}
+.lf-pr-option.lf-pr-wrong-locked {
+  background: transparent;
+  border-color: var(--border);
+  border-style: dashed;
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.lf-pr-option-explanation {
+  margin: 6px 4px 4px 4px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.lf-pr-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.lf-pr-state-revealed .lf-pr-hint {
+  display: none;
+}
+
+.lf-pr-reveal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-pr-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-pr-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-pr-reveal-body p:last-child { margin-bottom: 0; }
+
+.lf-pr-retry {
+  margin-top: 12px;
+  min-height: 44px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.lf-pr-retry:hover {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-pr-retry:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-pr-option,
+  .lf-pr-retry { transition: none; }
+  .lf-pr-option:active:not(:disabled) { transform: none; }
 }
 
 .subtopic-detail-title {
@@ -5808,4 +6354,302 @@ input, textarea, select { font-family: var(--font); }
 .public-lib-card { position: relative; }
 @media (max-width: 480px) {
   .public-lib-toolbar .public-lib-fach-select { width: 100%; }
+}
+
+/* ══════════════════════════════════════════
+   Cycle-6 — F-09 Konfidenz / F-02 Klausur-Plan / F-03 Audio
+   ══════════════════════════════════════════ */
+
+/* ── F-09: Konfidenz-Slider (Sterne 1-5) ──────────────────
+   Wird in 3 Kontexten genutzt: Pre-Test-Step, Klausur-Widget, Klausur-Tag.
+   Tap-Targets sind 44x44 px (Maya-Spec) auch wenn die SVGs kleiner aussehen
+   — der Padding-Bereich ist klick-aktiv. */
+.confidence-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 16px 0;
+  text-align: center;
+}
+.confidence-card h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: var(--text);
+}
+.confidence-card .confidence-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.confidence-stars {
+  display: inline-flex;
+  gap: 4px;
+  margin: 8px 0 14px;
+}
+.confidence-star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: transform var(--motion-duration, 200ms) ease, color var(--motion-duration, 200ms) ease;
+}
+.confidence-star-btn:hover { transform: scale(1.1); }
+.confidence-star-btn.active { color: var(--accent); }
+.confidence-star-btn .lf-icon { width: 28px; height: 28px; }
+.confidence-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* ── F-09: Result-Page — Konfidenz-vs-Realitaet-Banner ──── */
+.confidence-result-banner {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin: 12px 0;
+}
+.confidence-result-banner.confidence-overestimate {
+  border-color: var(--warning);
+  border-width: 2px;
+}
+.confidence-banner-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.confidence-banner-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 2px 0;
+}
+.confidence-banner-row strong { color: var(--text); }
+.confidence-banner-msg {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* ── F-09: Profil-Tab Selbsteinschaetzung ───────────────── */
+.confidence-history-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.confidence-history-title {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+.confidence-history-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.confidence-chart {
+  width: 100%;
+  height: 90px;
+  display: block;
+}
+.confidence-chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.confidence-chart-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* ── F-02: Klausur-Plan-Widget auf Dashboard ───────────── */
+.klausur-readiness-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 16px 0;
+}
+.klausur-readiness-widget.is-exam-day {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+.klausur-readiness-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.klausur-readiness-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.klausur-readiness-progress-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-width: 130px;
+}
+.klausur-readiness-progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-input);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.klausur-readiness-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--motion-duration, 200ms) ease;
+}
+.klausur-readiness-confidence-row {
+  margin: 12px 0;
+  padding: 12px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+}
+.klausur-readiness-confidence-row .confidence-stars { margin: 6px 0 0; }
+.klausur-readiness-confidence-row .confidence-stars-q {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.klausur-readiness-history {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.klausur-readiness-history-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.klausur-readiness-msg {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--text);
+}
+.klausur-form-section-title {
+  font-weight: 700;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ── F-03: Audio-Modus ──────────────────────────────────── */
+.audio-toolbar-btn { /* extends .btn-ghost via class composition in JS */ }
+.audio-toolbar-btn.is-playing {
+  color: var(--accent);
+  font-weight: 600;
+}
+[data-audio-idx].audio-active {
+  background: var(--audio-highlight);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  margin: -2px -6px;
+  transition: background var(--motion-duration, 200ms) ease;
+}
+.audio-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  max-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.audio-bar-btn {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.audio-bar-btn.audio-play-btn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.audio-bar-pos {
+  font-size: 13px;
+  color: var(--text-muted);
+  min-width: 60px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.audio-bar-speed {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.audio-bar-speed-chip {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  min-height: 32px;
+}
+.audio-bar-speed-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.audio-bar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.audio-bar-close {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .audio-bar {
+    gap: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .audio-bar-pos { min-width: 44px; font-size: 12px; }
+  .audio-bar-toggle { display: none; } /* Auto-Weiter-Toggle sehr eng — wegfallen lassen */
 }

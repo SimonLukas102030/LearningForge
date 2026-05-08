@@ -211,3 +211,65 @@ export async function approveTopicForPublic(topicId, action, rejectionNote = '')
 export async function aiCall(payload) {
   return await _call('aiCall', payload);
 }
+
+// -----------------------------------------------------------
+//  listCustomTopics - V-09 list-scope hardening (Marcus,
+//  2026-05-08, Mission-13). Replaces the four direct Firestore
+//  list-queries in auth.js (getMyCustomTopics / getGroupCustomTopics
+//  / getPublicLibraryTopics / getPendingApprovals). The Firestore
+//  rules now have `allow list: if false` on customTopics, so the
+//  only path to enumerate is via this Worker endpoint.
+//
+//  payload:
+//    { scope: 'mine' | 'public' | 'pending' }
+//    { scope: 'group', groupIds: string[] }
+//
+//  returns: array of summary rows (id, ownerUid, fach, klasse,
+//           thema, description, visibility, groupId, plus
+//           scope-specific extras like approvedAt/submittedAt/
+//           rejectionNote). NOT the full doc — questions/content
+//           still flow through the per-doc `get` rule via
+//           getCustomTopicById.
+// -----------------------------------------------------------
+export async function listCustomTopics(scope, opts = {}) {
+  const body = { scope };
+  if (Array.isArray(opts.groupIds)) body.groupIds = opts.groupIds;
+  return await _call('listCustomTopics', body);
+}
+
+// -----------------------------------------------------------
+//  deleteAccount - Cycle-3 (Marcus, 2026-05-08)
+// -----------------------------------------------------------
+//  Hard-deletes the caller's full account-state on Firestore:
+//  users/{uid}, leaderboard/{uid}, every customTopics-doc the
+//  caller owns, every pendingApprovals-row the caller submitted.
+//  Auth-User itself (Firebase Auth, not Firestore) stays — the
+//  Frontend (Ethan) calls firebase.auth().currentUser.delete()
+//  AFTER this returns ok, then signOut + redirect to /login.
+//
+//  Hard-rule note: the worker uses Firestore HARD-DELETE here,
+//  not soft-delete-via-set+merge. Hard-rule 5 ("never delete()
+//  for resets") forbids the delete-as-reset pattern; account-
+//  deletion is the explicit user-driven obliterate-the-account
+//  use-case where hard-delete is correct (DSGVO-spirit, no
+//  zombie row). The rule is written against the
+//  "set({reset:0}) is safer than delete because reads see the
+//  reset state instantly" pattern; it's NOT a blanket ban on
+//  every Firestore-delete primitive.
+//
+//  Body:
+//    { confirmName: <string> }   // must equal users.{uid}.name
+//
+//  Returns:
+//    { ok: true, deleted: { user, leaderboard, customTopics,
+//                            pendingApprovals } }
+//                            // counts per collection, for the
+//                            // confirmation-toast wording
+//
+//  403 if confirmName mismatch — frontend modal already gates the
+//  Submit-button on a client-side equality check, but the Worker
+//  re-checks server-side so a console-bypass cannot skip it.
+// -----------------------------------------------------------
+export async function deleteAccount(confirmName) {
+  return await _call('deleteAccount', { confirmName });
+}

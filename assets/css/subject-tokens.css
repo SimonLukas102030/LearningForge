@@ -369,3 +369,156 @@ body.subject-themes-off[data-subject] {
 @media (prefers-reduced-motion: reduce) {
   [data-subject] { --subject-motion-feel: 0s linear; }
 }
+
+
+/* ══════════════════════════════════════════════════════
+   ── Layer 4 — User-Subject-Color-Override (Cycle-3) ──
+   ══════════════════════════════════════════════════════
+   Maya v2-Spec Color-Palette. 12 Slugs, jeder schreibt
+   --user-subject-accent + --user-subject-accent-soft, die
+   in der Cascade ueber Layer-2 (--subject-accent) gewinnen.
+
+   Anwendung: app.js setzt data-user-subject-color="<slug>"
+   auf das Subject-Wrapper-Element wenn der User in den
+   Settings eine Farbe ueberschreibt.
+
+   Konsumenten lesen via:
+     color: var(--user-subject-accent,
+                var(--topic-accent,
+                    var(--subject-accent,
+                        var(--accent))));
+
+   Spec-Tabelle:
+   slug                 hue   chroma(L/D)  lightness(L/D)
+   royal-blue           252   0.18 / 0.14  0.48 / 0.72
+   electric-cyan        220   0.16 / 0.13  0.52 / 0.74
+   terminal-green       150   0.16 / 0.14  0.50 / 0.74
+   emerald-leaf         152   0.18 / 0.14  0.48 / 0.73
+   teal-globe           175   0.14 / 0.12  0.52 / 0.74
+   sepia-bronze          60   0.13 / 0.11  0.55 / 0.76
+   crimson-classical     25   0.18 / 0.15  0.50 / 0.72
+   coral-pop             35   0.17 / 0.14  0.58 / 0.74
+   amber-warm            50   0.16 / 0.13  0.60 / 0.76
+   violet-chem          290   0.17 / 0.14  0.50 / 0.72
+   mauve-soft           310   0.10 / 0.08  0.58 / 0.74
+   slate-pro            240   0.04 / 0.03  0.50 / 0.72
+
+   Soft-Variante: gleiche Hue, Chroma ~0.04, Lightness 0.96 (light) / 0.18 (dark).
+   ══════════════════════════════════════════════════════ */
+
+[data-user-subject-color="royal-blue"] {
+  --user-subject-accent:      oklch(0.48 0.18 252);
+  --user-subject-accent-soft: oklch(0.96 0.04 252);
+}
+[data-theme="dark"] [data-user-subject-color="royal-blue"] {
+  --user-subject-accent:      oklch(0.72 0.14 252);
+  --user-subject-accent-soft: oklch(0.18 0.04 252);
+}
+
+[data-user-subject-color="electric-cyan"] {
+  --user-subject-accent:      oklch(0.52 0.16 220);
+  --user-subject-accent-soft: oklch(0.96 0.04 220);
+}
+[data-theme="dark"] [data-user-subject-color="electric-cyan"] {
+  --user-subject-accent:      oklch(0.74 0.13 220);
+  --user-subject-accent-soft: oklch(0.18 0.04 220);
+}
+
+[data-user-subject-color="terminal-green"] {
+  --user-subject-accent:      oklch(0.50 0.16 150);
+  --user-subject-accent-soft: oklch(0.96 0.04 150);
+}
+[data-theme="dark"] [data-user-subject-color="terminal-green"] {
+  --user-subject-accent:      oklch(0.74 0.14 150);
+  --user-subject-accent-soft: oklch(0.18 0.04 150);
+}
+
+[data-user-subject-color="emerald-leaf"] {
+  --user-subject-accent:      oklch(0.48 0.18 152);
+  --user-subject-accent-soft: oklch(0.96 0.04 152);
+}
+[data-theme="dark"] [data-user-subject-color="emerald-leaf"] {
+  --user-subject-accent:      oklch(0.73 0.14 152);
+  --user-subject-accent-soft: oklch(0.18 0.04 152);
+}
+
+[data-user-subject-color="teal-globe"] {
+  --user-subject-accent:      oklch(0.52 0.14 175);
+  --user-subject-accent-soft: oklch(0.96 0.04 175);
+}
+[data-theme="dark"] [data-user-subject-color="teal-globe"] {
+  --user-subject-accent:      oklch(0.74 0.12 175);
+  --user-subject-accent-soft: oklch(0.18 0.04 175);
+}
+
+[data-user-subject-color="sepia-bronze"] {
+  --user-subject-accent:      oklch(0.55 0.13 60);
+  --user-subject-accent-soft: oklch(0.96 0.04 60);
+}
+[data-theme="dark"] [data-user-subject-color="sepia-bronze"] {
+  --user-subject-accent:      oklch(0.76 0.11 60);
+  --user-subject-accent-soft: oklch(0.18 0.04 60);
+}
+
+[data-user-subject-color="crimson-classical"] {
+  --user-subject-accent:      oklch(0.50 0.18 25);
+  --user-subject-accent-soft: oklch(0.96 0.04 25);
+}
+[data-theme="dark"] [data-user-subject-color="crimson-classical"] {
+  --user-subject-accent:      oklch(0.72 0.15 25);
+  --user-subject-accent-soft: oklch(0.18 0.04 25);
+}
+
+[data-user-subject-color="coral-pop"] {
+  --user-subject-accent:      oklch(0.58 0.17 35);
+  --user-subject-accent-soft: oklch(0.96 0.04 35);
+}
+[data-theme="dark"] [data-user-subject-color="coral-pop"] {
+  --user-subject-accent:      oklch(0.74 0.14 35);
+  --user-subject-accent-soft: oklch(0.18 0.04 35);
+}
+
+[data-user-subject-color="amber-warm"] {
+  --user-subject-accent:      oklch(0.60 0.16 50);
+  --user-subject-accent-soft: oklch(0.96 0.04 50);
+}
+[data-theme="dark"] [data-user-subject-color="amber-warm"] {
+  --user-subject-accent:      oklch(0.76 0.13 50);
+  --user-subject-accent-soft: oklch(0.18 0.04 50);
+}
+
+[data-user-subject-color="violet-chem"] {
+  --user-subject-accent:      oklch(0.50 0.17 290);
+  --user-subject-accent-soft: oklch(0.96 0.04 290);
+}
+[data-theme="dark"] [data-user-subject-color="violet-chem"] {
+  --user-subject-accent:      oklch(0.72 0.14 290);
+  --user-subject-accent-soft: oklch(0.18 0.04 290);
+}
+
+[data-user-subject-color="mauve-soft"] {
+  --user-subject-accent:      oklch(0.58 0.10 310);
+  --user-subject-accent-soft: oklch(0.96 0.04 310);
+}
+[data-theme="dark"] [data-user-subject-color="mauve-soft"] {
+  --user-subject-accent:      oklch(0.74 0.08 310);
+  --user-subject-accent-soft: oklch(0.18 0.04 310);
+}
+
+[data-user-subject-color="slate-pro"] {
+  --user-subject-accent:      oklch(0.50 0.04 240);
+  --user-subject-accent-soft: oklch(0.96 0.02 240);
+}
+[data-theme="dark"] [data-user-subject-color="slate-pro"] {
+  --user-subject-accent:      oklch(0.72 0.03 240);
+  --user-subject-accent-soft: oklch(0.18 0.02 240);
+}
+
+/* Subject-cards consume --user-subject-accent via Layer-2 fallback chain.
+   When user has overridden a subject's color, this Layer 4 sits highest
+   in cascade-resolution. Existing consumers in main.css/subject-tokens.css
+   already use the var() fallback chain — no consumer-edit needed. */
+[data-subject][data-user-subject-color] {
+  --subject-accent:      var(--user-subject-accent, var(--subject-accent));
+  --subject-accent-soft: var(--user-subject-accent-soft, var(--subject-accent-soft));
+}

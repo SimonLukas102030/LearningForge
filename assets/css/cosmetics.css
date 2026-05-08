@@ -428,6 +428,9 @@
 [data-app-theme="aurora"] {
   --accent: #06b6d4; --accent-hover: #0891b2; --accent-subtle: #ecfeff;
   /* highlight-me default-Gelb beibehalten — gibt scharfen Kontrast zum cyan-Body */
+  /* F-03 Audio-Modus: aurora pickt einen lila Tint, weil der animierte
+     Cyan/Lila/Pink-Body sonst gegen den amber-Akzent zu chaotisch wirkt. */
+  --audio-highlight: rgba(168, 85, 247, 0.18);
 }
 [data-app-theme="aurora"] body {
   background:
@@ -446,6 +449,9 @@
   --accent: #67e8f9; --accent-subtle: #164e63;
   /* warmes Amber-Highlight gegen lila/cyan Body */
   --highlight-me: rgba(245,158,11,0.18); --highlight-me-border: #f59e0b;
+  /* F-03 Audio-Modus: dark-aurora — staerkerer lila Tint fuer Sichtbarkeit
+     auf dem dunkleren Body. */
+  --audio-highlight: rgba(192, 132, 252, 0.25);
 }
 [data-app-theme="aurora"][data-theme="dark"] body {
   background:

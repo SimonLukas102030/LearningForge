@@ -112,9 +112,40 @@ service cloud.firestore {
         // soft-cap in V1 — Mission-3-Followup if size becomes relevant
         // (exams capped naturally by user behaviour ~20/year, error
         // explanations frontend-rate-limited at 20/day via localStorage).
-        'exams', 'errorExplanations'
+        'exams', 'errorExplanations',
+        // Cycle-3 Settings-Refactor (Marcus, 2026-05-08, Sophie+Ramsey
+        // P0-1): leaderboard-Visibility-Toggle. The "auf Ranglisten
+        // anzeigen"-Switch in the new Settings-Tab "Konto" writes
+        // `lbHidden:true|false` to the user-doc via _persistTopLevel
+        // (app.js:9148). Without this entry every toggle was silent-
+        // denied at the rules layer (the toast claimed success because
+        // _persistTopLevel only catches the throw, not a denied-by-rule
+        // write). getLeaderboard() in auth.js mirrors this with a
+        // `.filter(e => !e.lbHidden)` and the worker's leaderboard-
+        // mirror in submitTestResult.js writes lbHidden alongside the
+        // other display fields so a hidden user disappears from BOTH
+        // the live snapshot AND any cached leaderboard mirror.
+        'lbHidden'
       ];
     }
+
+    // Cycle-3 Settings-Refactor TODO (Marcus, 2026-05-08, Mission-13):
+    //   Settings-Map-Bloat-Self-DoS — a malicious client can write
+    //   `set({settings: {junk: 'A'.repeat(900_000)}}, {merge:true})`
+    //   directly to their own user-doc and bloat it past the 1MB Firestore
+    //   limit, locking themselves out (user-doc unreadable -> app fails to
+    //   load on next login). Discovered by Ramsey in Cycle-3 audit (P1 #2).
+    //   FIRESTORE-RULES LIMITATION: maps cannot be size-capped via .size()
+    //   on values; we'd need a fixed allow-list of settings keys via
+    //   `request.resource.data.settings.keys().hasOnly([...])` which is
+    //   the proper fix but requires enumerating every settings field
+    //   (themeMode, fachColors per subject, fachIcons per subject, ...)
+    //   and updating both rule + frontend on every settings addition.
+    //   Decision (this cycle): skip the rules-side cap. Mission-13 ticket
+    //   = Worker endpoint /saveSettings with schema-validation + key-
+    //   whitelist + per-key value-size cap, then tighten the rule to
+    //   `if false` for `settings`-bearing writes. Self-DoS only — no
+    //   cross-user attack surface — so the priority is medium, not high.
 
     // CHEAT-26 (Wave-1, Marcus, 2026-05-08): activeOutline/activeTheme must
     // be in the user's owned list before being set as active. Without this
@@ -166,8 +197,24 @@ service cloud.firestore {
     // logged in once and triggered the migration, the rule accepts BOTH:
     //   - numeric 5..13 (legacy, transitional)
     //   - string  '5'..'13' (canonical)
-    // After the migration has soaked through the user base (probably
-    // ~30 days), drop the numeric branch in a follow-up wave.
+    //
+    // TODO(2026-06-08, Marcus): drop the numeric `[5,6,7,...,13]` branch
+    // BELOW after the 30-day soak. The frontend migration in app.js:331
+    // (`if (typeof userData?.klasse === 'number') ...`) writes a string
+    // back on every login, so by 2026-06-08 every user that has logged
+    // in at least once since 2026-05-08 has been migrated. Cleanup
+    // checklist for that follow-up commit:
+    //   1. Remove the third predicate of klasseOk() below.
+    //   2. Remove the migration block in assets/js/app.js:~331-336.
+    //   3. Anything left in production with numeric klasse means a user
+    //      hasn't logged in for 30+ days; their next login will hit the
+    //      tightened rule and Case-A-self-write will be denied until
+    //      they pick a klasse via the onboarding/settings UI again. Add
+    //      a guard in the auth.js init that detects denied-set+merge on
+    //      klasseOk and surfaces "Bitte Klasse erneut wählen" rather
+    //      than silently failing. (Mission-13-followup ticket if needed.)
+    // DO NOT remove before 2026-06-08 — premature cleanup re-breaks
+    // every set+merge by inactive legacy users.
     function klasseOk() {
       return !('klasse' in request.resource.data)
           || request.resource.data.klasse in ['5','6','7','8','9','10','11','12','13']
@@ -448,7 +495,18 @@ service cloud.firestore {
                         // only groupIds, or both together.
                         || (isAuth() && onlyChanged(['friendIds', 'groupIds']))
                       );
-      allow delete: if isOwner(uid) || isAdmin();
+      // Cycle-3 Settings-Refactor (Marcus, 2026-05-08): user-doc delete
+      // tightened to Worker-only. The new /deleteAccount endpoint is the
+      // sole legitimate path to wipe a user-doc — it orchestrates a full
+      // atomic cleanup (users + leaderboard + customTopics + pending-
+      // Approvals + groups-membership null-markers) that a direct client
+      // delete would skip, leaving orphan rows everywhere. Worker uses
+      // a service-account credential which bypasses rules entirely; this
+      // `if false` blocks every client path including admin-from-console.
+      // Admins who genuinely need to wipe a foreign user-doc do so via
+      // the Worker (or wrangler-tail + manual REST call) — there is no
+      // legitimate UI flow that requires direct-from-client delete.
+      allow delete: if false;
     }
 
     // ── groups ────────────────────────────────────────────────────────────
@@ -559,7 +617,18 @@ service cloud.firestore {
     function lbOwnerSafeFields() {
       return [
         'activeTheme', 'activeOutline', 'scores', 'updatedAt',
-        'xp', 'displayName', 'photoURL', 'role', 'klasse'
+        'xp', 'displayName', 'photoURL', 'role', 'klasse',
+        // Cycle-3 Settings-Refactor (Marcus, 2026-05-08, Sophie+Ramsey
+        // P0-1): leaderboard-Visibility-Toggle mirror. The Worker
+        // (submitTestResult) writes `lbHidden` to the leaderboard doc
+        // alongside the display fields. The owner may also mirror it
+        // from their user-doc on cosmetic-flip writes. Cross-checked
+        // below via lbHiddenEqualsUserDoc() so the leaderboard value
+        // always matches the user-doc — flipping it on the leaderboard
+        // doc directly without flipping the user-doc would let a user
+        // selectively hide from the leaderboard while still showing as
+        // visible in friend-views (which read users.{uid}.lbHidden).
+        'lbHidden'
       ];
     }
     function lbXpEqualsUserDoc() {
@@ -587,6 +656,18 @@ service cloud.firestore {
           || request.resource.data.role
                == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null);
     }
+    // Cycle-3 (Marcus, 2026-05-08, Sophie+Ramsey P0-1): leaderboard mirror
+    // of the user-doc lbHidden flag must match. Without this an attacker
+    // could `set({lbHidden:true}, {merge:true})` on their leaderboard doc
+    // alone (user-doc still says false) — friend-views rendered from the
+    // user-doc would still show them, but the public Rangliste would
+    // hide them. Pinning to the user-doc value forces consistency.
+    // Default lookup is `false` to match the frontend default (showing).
+    function lbHiddenEqualsUserDoc() {
+      return !('lbHidden' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.lbHidden
+               == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('lbHidden', false);
+    }
     match /leaderboard/{uid} {
       allow read, list: if isAuth();
       allow create:     if isOwner(uid);
@@ -609,9 +690,19 @@ service cloud.firestore {
                             && lbDisplayNameEqualsUserDoc()
                             && lbPhotoEqualsUserDoc()
                             && lbRoleEqualsUserDoc()
+                            && lbHiddenEqualsUserDoc()
                           )
                           || isAdmin();
-      allow delete:     if isOwner(uid) || isAdmin();
+      // Cycle-3 Settings-Refactor (Marcus, 2026-05-08): leaderboard delete
+      // tightened to Worker-only. Owner-delete was never a legitimate UI
+      // path — resetLeaderboard (auth.js:387) uses set+merge with `scores:
+      // {}` per Hard-rule-5. The only realistic delete-leaderboard caller
+      // is the new /deleteAccount endpoint (service-account bypasses
+      // rules). Locking this to `if false` removes a small attack surface
+      // (a user could `db.collection('leaderboard').doc(uid).delete()` from
+      // the console to silently drop themselves off the rangliste — not
+      // catastrophic, but unnecessary).
+      allow delete: if false;
     }
 
     // ── customTopics ──────────────────────────────────────────────────────
@@ -704,18 +795,20 @@ service cloud.firestore {
     }
     match /customTopics/{topicId} {
       allow get:    if isAuth() && customTopicReadOk();
-      // V-PHASE-E-09 (Ramsey Cycle-E, P2 documented for Mission-13,
-      // 2026-05-08): `list: isAuth()` lets every authed user enumerate
-      // metadata of EVERY customTopic doc in the collection — including
-      // private/pending-approval ones (which fail get-rule but show up
-      // in list-snapshots until the per-doc filter runs). Mitigation
-      // here is a no-op (Mission-13 fix: dedicated Worker endpoint
-      // `getCustomTopicsForUser(scope)` returns scope-filtered results
-      // via service-account; client list-query then deleted entirely).
-      // Marker comment + TODO so the audit-trail is visible.
-      // TODO(Mission-13): tighten customTopics.list to scope-filtered
-      //                   Worker endpoint; remove this rule case.
-      allow list:   if isAuth();
+      // V-09 closed (Marcus, 2026-05-08, Mission-13): collection-list
+      // is now Worker-only. The `listCustomTopics` endpoint at
+      // workers/src/endpoints/listCustomTopics.js takes a scope
+      // ('mine' | 'group' | 'public' | 'pending') and returns only
+      // the rows the caller is allowed to see, via a service-account
+      // read that bypasses rules. The client `auth.js` wrappers
+      // (getMyCustomTopics / getGroupCustomTopics / getPublicLibraryTopics
+      // / getPendingApprovals) all post to that endpoint now — no
+      // direct Firestore list-query remains in the frontend.
+      //
+      // Per-doc reads still flow through `allow get` above with
+      // customTopicReadOk(), so a user who learns a topicId by other
+      // means still hits the per-doc visibility check.
+      allow list:   if false;
       allow create: if isAuth()
                      && request.resource.data.ownerUid == request.auth.uid
                      && (

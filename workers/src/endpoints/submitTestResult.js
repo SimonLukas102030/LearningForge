@@ -398,6 +398,14 @@ export async function handleSubmitTestResult(request, env) {
       studyMins:              studyMinsTotal,
       isClaude:               !!userData.isClaude,
       isHacker:               !!userData.isHacker,
+      // Cycle-3 Settings-Refactor (Marcus, 2026-05-08, Sophie+Ramsey
+      // P1): mirror lbHidden so the auth.js getLeaderboard()-filter
+      // can honour the user's "auf Ranglisten anzeigen"-Toggle. The
+      // rule's lbHiddenEqualsUserDoc() cross-check pins this to the
+      // user-doc value, so the only legitimate writer is this worker
+      // (service-account bypasses rules) or the owner mirroring their
+      // own user-doc. Default false matches the rule's get-default.
+      lbHidden:               !!userData.lbHidden,
       updatedAt:              serverTimestamp()
     }));
     leaderboardUpdated = true;

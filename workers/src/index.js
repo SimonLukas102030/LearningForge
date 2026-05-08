@@ -12,6 +12,8 @@
 //    POST /submitTopicForApproval   (auth required)  [Phase 3c]
 //    POST /approveTopicForPublic    (auth required, admin only) [Phase 3c]
 //    POST /aiCall                   (auth required)  [Mission 12]
+//    POST /listCustomTopics         (auth required, admin for scope='pending') [V-09 Mission-13]
+//    POST /deleteAccount            (auth required) [Cycle-3 Settings-Refactor]
 //
 //  Auth is per-endpoint (each handler calls requireAuth() if it
 //  needs it) - this Worker is unauth-callable for the parent
@@ -29,6 +31,8 @@ import { handleSubmitDailyChallenge }   from './endpoints/submitDailyChallenge.j
 import { handleSubmitTopicForApproval } from './endpoints/submitTopicForApproval.js';
 import { handleApproveTopicForPublic }  from './endpoints/approveTopicForPublic.js';
 import { handleAiCall }                 from './endpoints/aiCall.js';
+import { handleListCustomTopics }       from './endpoints/listCustomTopics.js';
+import { handleDeleteAccount }          from './endpoints/deleteAccount.js';
 import { json, cors, errorResponse }    from './lib/http.js';
 
 export default {
@@ -68,6 +72,12 @@ export default {
           break;
         case 'aiCall':
           result = await handleAiCall(request, env);
+          break;
+        case 'listCustomTopics':
+          result = await handleListCustomTopics(request, env);
+          break;
+        case 'deleteAccount':
+          result = await handleDeleteAccount(request, env);
           break;
         default:
           return cors(errorResponse(404, `unknown endpoint: ${path}`));

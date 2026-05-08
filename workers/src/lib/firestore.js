@@ -10,9 +10,10 @@
 //    1. Sign a JWT with SA_PRIVATE_KEY (RS256) via crypto.subtle.
 //    2. POST it to oauth2.googleapis.com/token, get back a 1h
 //       access_token.
-//    3. Cache the token in globalThis._fsToken with a 50min TTL
-//       (so we never serve a request with a token that will
-//       expire mid-flight).
+//    3. Cache the token in globalThis._fsTokens[scope] with a 50min
+//       TTL (so we never serve a request with a token that will
+//       expire mid-flight). Scope-keyed because deleteAccount mints
+//       a separate `firebase`-scope token for Identity-Toolkit.
 //
 //  All writes use PATCH with updateMask (== merge:true) or the
 //  :commit endpoint when transforms (serverTimestamp /
@@ -60,7 +61,14 @@ function strToB64Url(str) {
   return bytesToB64Url(new TextEncoder().encode(str));
 }
 
-async function buildSaJwt(env) {
+// Default scope = Firestore-Datastore. Cycle-3 (Marcus, 2026-05-08):
+// scope is now a parameter so the deleteAccount endpoint can request a
+// `firebase`-scope token to call Identity-Toolkit accounts:delete.
+// Token cache is keyed per-scope (different scopes mint different tokens).
+const SCOPE_DATASTORE = 'https://www.googleapis.com/auth/datastore';
+const SCOPE_FIREBASE  = 'https://www.googleapis.com/auth/firebase';
+
+async function buildSaJwt(env, scope = SCOPE_DATASTORE) {
   const clientEmail = env.SA_CLIENT_EMAIL;
   if (!clientEmail) throw httpError(500, 'SA_CLIENT_EMAIL nicht gesetzt.');
 
@@ -68,7 +76,7 @@ async function buildSaJwt(env) {
   const header  = { alg: 'RS256', typ: 'JWT' };
   const payload = {
     iss:   clientEmail,
-    scope: 'https://www.googleapis.com/auth/datastore',
+    scope,
     aud:   TOKEN_URL,
     exp:   now + 3600,
     iat:   now
@@ -82,12 +90,14 @@ async function buildSaJwt(env) {
   return `${head}.${pay}.${bytesToB64Url(new Uint8Array(sig))}`;
 }
 
-export async function getAccessToken(env) {
-  const cache = globalThis._fsToken;
+export async function getAccessToken(env, scope = SCOPE_DATASTORE) {
+  // Cache keyed by scope: globalThis._fsTokens[scope] = {accessToken, expiresAt}
+  const cacheBag = globalThis._fsTokens || (globalThis._fsTokens = {});
+  const cache = cacheBag[scope];
   const now = Date.now();
   if (cache && cache.expiresAt > now) return cache.accessToken;
 
-  const jwt = await buildSaJwt(env);
+  const jwt = await buildSaJwt(env, scope);
   const res = await fetch(TOKEN_URL, {
     method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -104,12 +114,56 @@ export async function getAccessToken(env) {
   const json = await res.json();
   if (!json.access_token) throw httpError(503, 'Service-Account-Login: kein access_token.');
 
-  globalThis._fsToken = {
+  cacheBag[scope] = {
     accessToken: json.access_token,
     // Cache for 50min even if Google says 60min - safety margin.
     expiresAt:   now + 50 * 60 * 1000
   };
   return json.access_token;
+}
+
+// =============================================================
+//  deleteFirebaseAuthUser(env, uid)
+// -------------------------------------------------------------
+//  Cycle-3 Settings-Refactor (Marcus, 2026-05-08, Ramsey P0 #1):
+//  hard-deletes the Firebase Auth account. Closes the Auth/Firestore-
+//  Delete-Sequencing-Race where the frontend would Worker-delete the
+//  Firestore docs first, THEN call firebase.auth().currentUser.delete()
+//  — if the second step failed (network blip, expired ID-token after
+//  the long-running Worker call), the user was left in a "Firestore-
+//  gone, Auth-still-there" limbo state. They could log back in but
+//  the app crashed (no user-doc) and they couldn't re-register the
+//  same email (Auth account still claims it).
+//
+//  REST endpoint:
+//    POST https://identitytoolkit.googleapis.com/v1/projects/{PID}/accounts:delete
+//    Body: { localId: "<uid>" }
+//    Auth: Bearer <SA-token-with-firebase-scope>
+//
+//  Idempotent: returns OK on 200 OR on 400 USER_NOT_FOUND (already
+//  deleted on a prior call — same idempotency contract as the
+//  Firestore-side "alreadyDeleted" branch in deleteAccount.js).
+// =============================================================
+const ITK_BASE = 'https://identitytoolkit.googleapis.com/v1';
+export async function deleteFirebaseAuthUser(env, uid) {
+  const token = await getAccessToken(env, SCOPE_FIREBASE);
+  const url = `${ITK_BASE}/projects/${env.PROJECT_ID}/accounts:delete`;
+  const res = await fetch(url, {
+    method:  'POST',
+    headers: {
+      Authorization:  `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ localId: uid })
+  });
+  if (res.ok) return;
+  // 400 with USER_NOT_FOUND in the body == already gone, idempotent OK.
+  if (res.status === 400) {
+    const txt = await res.text();
+    if (txt.includes('USER_NOT_FOUND')) return;
+    throw httpError(502, `Identity-Toolkit accounts:delete fehlgeschlagen (HTTP 400).`);
+  }
+  throw httpError(502, `Identity-Toolkit accounts:delete fehlgeschlagen (HTTP ${res.status}).`);
 }
 
 // =============================================================
@@ -371,6 +425,36 @@ export function buildWriteFor(env, path, set) {
     else                plain[k] = v;
   }
   return buildWrite(env, path, plain, transforms);
+}
+
+// =============================================================
+//  buildDeleteWriteFor(env, path)
+// -------------------------------------------------------------
+//  Cycle-3 (Marcus, 2026-05-08): hard-delete primitive for the
+//  deleteAccount endpoint. The Firestore REST :commit Write
+//  proto accepts `{ delete: '<full-resource-name>' }` as one of
+//  the oneof variants (alongside `update` / `transform` /
+//  `verify`). Returns a Write-entry ready for firestoreCommit.
+//
+//  Hard-rule-5 note: this primitive is a hard-delete by design.
+//  The 5th hard rule forbids the "delete as reset" pattern (race
+//  against concurrent reads). The deleteAccount endpoint is the
+//  explicit "obliterate the account on user-request" use-case
+//  where hard-delete is correct, NOT the forbidden reset-via-
+//  delete pattern. New callers must justify their use of this
+//  primitive in a code-comment near the call-site.
+// =============================================================
+export function buildDeleteWriteFor(env, path) {
+  return {
+    delete: `projects/${env.PROJECT_ID}/databases/(default)/documents/${path}`
+  };
+}
+
+// Single-doc hard-delete convenience wrapper. Same Hard-rule-5
+// caveat as buildDeleteWriteFor — only use this for explicit
+// obliterate-the-doc flows, never as a reset-shortcut.
+export async function firestoreDelete(env, path) {
+  await firestoreCommit(env, [ buildDeleteWriteFor(env, path) ]);
 }
 
 // =============================================================

@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════
 
 import { CONFIG } from './config.js';
+import { listCustomTopics as _cfListCustomTopics } from './cf.js';
 
 let _auth = null;
 let _db   = null;
@@ -42,13 +43,39 @@ export async function registerWithEmail(email, password, displayName) {
     email,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     grades:    {},
-    // Phase-2-Vision (ADR 0002 / Subject-Tokens-Spec, Marcus 2026-05-08):
-    // explicit default for new users so the toggle UI (Mission-11-Kandidat)
-    // sees a known-good shape. Bestands-User read via `?? false` fallback —
-    // no migration script (forward-only per CLAUDE.md hard rule 7).
-    settings:  { subjectThemesOff: false }
+    // Cycle-3 Settings-Refactor (Marcus, 2026-05-08): explicit defaults for
+    // every settings-key the Tab-2/3/4 UI reads. Bestands-User read via the
+    // `?? default` fallback in app.js (forward-only per CLAUDE.md hard rule 7
+    // — no migration script). subjectThemesOff was already shipped pre-Cycle-
+    // 3; the rest is new and matches the Maya-spec schema-section
+    // (settings-page-refactor-implementation.md, "Schema-Erweiterungen").
+    settings:  _defaultUserSettings()
   });
   return cred;
+}
+
+// Cycle-3 Settings-Refactor (Marcus, 2026-05-08): single source-of-truth for
+// the userData.settings default-shape. Used by all four user-doc-creation
+// paths (registerWithEmail, loginWithGoogle, loginAsClaude, loginAsHacker) so
+// a new user always starts with a complete settings-object — no `undefined`
+// reads in the Settings-Page renderer. Bestands-User keep existing settings
+// thanks to set+merge; missing keys are read with `?? <default>` in app.js.
+//
+// Hard-rule 7 compliant: forward-only. No backfill script writes these into
+// existing user-docs — Ethan's Frontend reads with `?? <default>`. The first
+// time a Bestands-User toggles ANY settings switch, set+merge writes the
+// modified fields only, leaving every other key still missing from the doc
+// (which is fine — read-side fallback covers it indefinitely).
+function _defaultUserSettings() {
+  return {
+    subjectThemesOff:    false,           // existing pre-Cycle-3
+    dailyReminderTime:   '18:00',         // 'HH:MM' or '' (= aus)
+    streakWarnThreshold: 18,              // 0..23 (24h hour)
+    subjectColors:       {},              // map<subjectId, paletteSlug>
+    fontSize:            'normal',        // 'normal' | 'large' | 'xlarge'
+    reducedMotion:       false,           // boolean
+    defaultKlasseFilter: 'auto'           // 'auto' | '5'..'13'
+  };
 }
 
 // ── Profil aktualisieren ─────────────────
@@ -73,9 +100,8 @@ export async function loginWithGoogle() {
       email:     cred.user.email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       grades:    {},
-      // Phase-2-Vision (ADR 0002 / Subject-Tokens, Marcus 2026-05-08):
-      // explicit default for new users — see registerWithEmail comment.
-      settings:  { subjectThemesOff: false }
+      // Cycle-3 Settings-Refactor — see _defaultUserSettings above.
+      settings:  _defaultUserSettings()
     });
   }
   return cred;
@@ -157,8 +183,8 @@ export async function loginAsClaude() {
         email: creds.email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         grades: {},
-        // Phase-2-Vision default — see registerWithEmail comment.
-        settings: { subjectThemesOff: false }
+        // Cycle-3 Settings-Refactor — see _defaultUserSettings above.
+        settings: _defaultUserSettings()
       });
     } else {
       throw e;
@@ -217,8 +243,8 @@ export async function loginAsHacker() {
         email: creds.email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         grades: {},
-        // Phase-2-Vision default — see registerWithEmail comment.
-        settings: { subjectThemesOff: false }
+        // Cycle-3 Settings-Refactor — see _defaultUserSettings above.
+        settings: _defaultUserSettings()
       });
     } else {
       throw e;
@@ -357,14 +383,128 @@ export async function adminUnlockAllForUser(uid, allOutlines, allThemes) {
 // (`update()` requires the doc to exist; the doc only gets created on the
 // register/login auth-handler path). set+merge auto-creates if needed
 // AND covers the dot-path nested-write semantics identically.
+//
+// Cycle-6 schema-erweiterung (Marcus, 2026-05-08, F-09 Konfidenz-Verlauf):
+// `gradeData.history[]` entries may now carry an optional `confidence: 1..5`
+// field (numeric, integer). Skipped attempts have `confidence === undefined`
+// so the Profil-Selbsteinschaetzung-Tab and Result-Banner ignore them.
+// Defense-in-depth-Validierung defensively scrubs the array before write —
+// the rule whitelists `grades` as a name but does not validate inner shape,
+// so we cap the confidence range here and reject NaN / out-of-range values
+// rather than letting console-injected garbage land in the user-doc and
+// crash the chart-renderer in Ethan's profile-tab. No firestore.rules
+// change required: `grades` is already in ownerSafeFields().
 export async function saveGrade(uid, subjectId, yearId, topicId, gradeData) {
   const key = `grades.${subjectId}__${yearId}__${topicId}`;
+  // Defensive scrub of the history array. We don't reject — bad confidence
+  // values just get stripped so the rest of the attempt (date, grade, ...)
+  // still saves. This matches the optional-field semantics of the spec.
+  let cleaned = gradeData;
+  if (gradeData && Array.isArray(gradeData.history)) {
+    cleaned = {
+      ...gradeData,
+      history: gradeData.history.map(h => {
+        if (!h || typeof h !== 'object') return h;
+        const c = h.confidence;
+        const ok = typeof c === 'number' && Number.isFinite(c)
+                && c >= 1 && c <= 5 && Math.floor(c) === c;
+        if ('confidence' in h && !ok) {
+          const { confidence, ...rest } = h;
+          return rest;
+        }
+        return h;
+      })
+    };
+  }
   await _db.collection('users').doc(uid).set({
     [key]: {
-      ...gradeData,
+      ...cleaned,
       date: firebase.firestore.FieldValue.serverTimestamp()
     }
   }, { merge: true });
+}
+
+// ── Konfidenz-Patch (F-09 Cycle-7 P1-3) ─────────────────
+// Cycle-7 P1-3 (Marcus, 2026-05-08, Sophie audit + CF-confidence race):
+// Race-frei nur die `confidence` auf dem LETZTEN history-Entry eines Grade-
+// Eintrags patchen. Der CF-Pfad in app.js (submitTestResult) liest nach dem
+// Worker-Write `userData` neu via getUserData(), modifiziert die letzte
+// history-Position um confidence zu setzen, und ruft saveGrade() mit dem
+// GANZEN gradeData-Objekt auf. Problem: getUserData() liest mit dem default
+// Cache-Pfad (kein `source:'server'`), kann also veraltete history liefern.
+// Selbst mit server-read besteht ein Race wenn der User waehrend des CF-
+// Calls in einem zweiten Tab nochmal etwas am gleichen grade-Key schreibt
+// (zweiter Test, Bookmark-Loesch ueber Firestore-Listener-Ripple, etc.).
+// In jedem Fall ueberschreibt die nachfolgende saveGrade()-Schreibung die
+// frischen Worker-Werte mit dem stale Snapshot.
+//
+// Loesung: Firestore-Transaction. Liest das User-Doc innerhalb der Tx
+// (immer server-fresh), patcht nur das eine confidence-Feld auf der
+// letzten history-Position, und schreibt mit `set+merge` (Hard rule 4)
+// zurueck. Bei concurrent write retry-t Firestore die Tx automatisch.
+// Damit:
+//   - kein Verlust von server-side Worker-Writes (xpDelta, achievements,
+//     bestPoints) — die landen ausserhalb der confidence-Patch-Region und
+//     bleiben unangetastet.
+//   - kein Verlust von confidence wenn ein parallel Write stattfindet —
+//     Tx-Retry liest neue history neu, patcht erneut.
+//   - kein Verlust von minutes/dailyStats auf exams — separater Top-Level-
+//     Key.
+//
+// Hard rule 4: set+merge mit dot-path nested object — nur grades.<key>
+// wird ueberschrieben. Hard rule 5: kein delete()-Pfad. Validierung der
+// confidence-Range (1..5 int) wie in saveGrade()'s scrub-Logik.
+//
+// Frontend-Kontrakt (Ethan): app.js:10670-10684 ersetzt den read+saveGrade-
+// Block durch einen einzigen Aufruf `saveGradeConfidence(uid, key, val)`.
+// Returnt true bei Patch, false wenn keine history existiert (z.B. Worker
+// hat den Eintrag gerade erst angelegt aber Tx liest ihn nicht — sollte
+// nicht passieren, aber defensive: silent skip statt throw).
+//
+// KEIN Worker-Endpoint, KEIN Firestore-Rules-Update — `grades` ist bereits
+// in ownerSafeFields() (siehe firestore.rules:99) und confidence ist nur
+// ein nested Feld innerhalb dieses Map-Werts. Tx-Read+Write geht ueber
+// dieselbe Case-A-Owner-Branch.
+export async function saveGradeConfidence(uid, gradeKey, confidence) {
+  if (!uid) throw new Error('saveGradeConfidence: uid fehlt.');
+  if (typeof gradeKey !== 'string' || !gradeKey.startsWith('grades.')) {
+    throw new Error('saveGradeConfidence: gradeKey muss "grades.<subj>__<year>__<topic>" sein.');
+  }
+  if (typeof confidence !== 'number' || !Number.isFinite(confidence)
+      || confidence < 1 || confidence > 5 || Math.floor(confidence) !== confidence) {
+    throw new Error('saveGradeConfidence: confidence muss int 1..5 sein.');
+  }
+  // gradeKey hat das Format "grades.<subj>__<year>__<topic>". Wir brauchen
+  // den inneren Key fuer den nested-set. Firestore-set+merge mit Dot-Path
+  // auf `grades.<inner>` tut das richtige (nur dieser eine Map-Eintrag wird
+  // ueberschrieben, andere grade-Keys bleiben).
+  const innerKey = gradeKey.slice('grades.'.length);
+  const docRef = _db.collection('users').doc(uid);
+  return await _db.runTransaction(async (tx) => {
+    const snap = await tx.get(docRef);
+    if (!snap.exists) return false;
+    const data = snap.data() || {};
+    const ge = data.grades && data.grades[innerKey];
+    if (!ge || !Array.isArray(ge.history) || ge.history.length === 0) {
+      // Kein history-Eintrag zum Patchen — Worker hat noch nicht geschrieben
+      // oder Doc ist defekt. Silent-skip damit der CF-Pfad nicht throwt.
+      return false;
+    }
+    const lastIdx = ge.history.length - 1;
+    const newHistory = ge.history.map((h, i) =>
+      i === lastIdx ? { ...h, confidence } : h
+    );
+    // set+merge mit Dot-Path: nur `grades.<innerKey>` wird ueberschrieben,
+    // der GESAMTE Map-Eintrag muss aber komplett mitgegeben werden weil
+    // Firestore Map-Werte als atomic überschreibt (kein Deep-Merge in
+    // einer einzelnen Map). Da wir das Doc gerade frisch in der Tx gelesen
+    // haben ist der Snapshot kohaerent: alle Felder von ge bleiben erhalten,
+    // nur history bekommt das Confidence-Update.
+    tx.set(docRef, {
+      [gradeKey]: { ...ge, history: newHistory }
+    }, { merge: true });
+    return true;
+  });
 }
 
 // ── Auth-State beobachten ───────────────
@@ -405,7 +545,14 @@ export async function getLeaderboard(klasseFilter = null) {
     .map(d => ({ uid: d.id, ...d.data() }))
     .filter(e => Object.keys(e.scores || {}).length > 0)
     .filter(e => !e.isClaude)   // Claude-Test-Account ausblenden (greift jetzt dank markAsClaude-Mirror)
-    .filter(e => !e.isHacker);  // Hacker-Test-Account (Red-Team) ausblenden — Mirror via markAsHacker
+    .filter(e => !e.isHacker)   // Hacker-Test-Account (Red-Team) ausblenden — Mirror via markAsHacker
+    // Cycle-3 Settings-Refactor (Marcus, 2026-05-08, Sophie+Ramsey P1):
+    // honour the per-user "auf Ranglisten anzeigen"-Toggle. The user
+    // sets `lbHidden:true` via the Settings-Tab "Konto"; the field is
+    // mirrored to leaderboard/{uid} by the submitTestResult Worker so
+    // ranglistenfähige users without a fresh test still get filtered
+    // (the lb-doc's mirror is the source the rule allows-through).
+    .filter(e => !e.lbHidden);
 }
 
 export async function getAllUsers() {
@@ -557,19 +704,45 @@ export async function saveCustomTopic(uid, data, groupId = null, visibility = nu
 // both the queue-row + the field reset. clearRejectionNote was removed
 // here as dead-code; app.js's resubmit-handler no longer imports it.
 
-// Phase 3 Public-Library (Ethan, 2026-05-08): Lese-Wrapper fuer Topics
-// mit visibility='public'. Wird vom Public-Library-View benutzt. Server-
-// side Query — kein Cache. orderBy('approvedAt') ist auf der approve-
-// Seite vom Worker gesetzt; legacy public-Topics ohne approvedAt
-// koennen rausfallen, aber pre-Phase-3c gab es keine 'public'-Topics
-// (das Visibility-Field wurde mit dieser Phase eingefuehrt) — kein
-// Backfill noetig.
+// V-09 list-scope hardening (Marcus, 2026-05-08, Mission-13):
+// the four customTopics list-wrappers now go through the Worker
+// `listCustomTopics` endpoint instead of querying Firestore directly.
+// firestore.rules now has `allow list: if false` on customTopics — the
+// Worker reads via service-account, applies scope-specific filters, and
+// returns metadata-only summary rows. Per-doc body (questions/content)
+// still flows through getCustomTopicById which hits the per-doc `get`
+// rule with customTopicReadOk().
+//
+// Behavioural deltas vs the pre-Mission-13 versions:
+//   - getMyCustomTopics(uid) previously where('groupId','==',null)
+//     filtered out group-shared topics — i.e. it returned only the
+//     "private" subset of an owner's topics. The new 'mine' scope
+//     returns ALL of the owner's topics regardless of visibility, so
+//     callers that want JUST the private ones must filter on the
+//     returned `visibility`/`groupId`. The current call site
+//     (renderMyContent in app.js) renders a separate group-section
+//     directly afterwards — it WANTS the broader set so a topic can
+//     be shown in the owner's "Persönliche" list when groupId is null
+//     and in the group section otherwise. Filter applied client-side.
+//   - getGroupCustomTopics signature: was `(groupId: string)` per
+//     single group, is now `(groupIds: string[] | string)` to match
+//     the new endpoint. We accept a single string for backwards-compat
+//     with existing callers.
+//   - getPendingApprovals still hits the pendingApprovals collection
+//     (rules unchanged for that path — admin-only `list:isAuth() && (
+//     isAdminEmail() || isAdmin())`). That endpoint stays, no Worker
+//     hop needed.
+
 export async function getPublicLibraryTopics() {
-  const snap = await _db.collection('customTopics')
-    .where('visibility', '==', 'public')
-    .orderBy('approvedAt', 'desc')
-    .get({ source: 'server' });
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const rows = await _cfListCustomTopics('public');
+  // Worker returns metadata rows; sort by approvedAt desc client-side
+  // (matches the previous orderBy('approvedAt','desc') semantic).
+  rows.sort((a, b) => {
+    const ta = a.approvedAt?.seconds || (typeof a.approvedAt === 'string' ? Date.parse(a.approvedAt) / 1000 : 0);
+    const tb = b.approvedAt?.seconds || (typeof b.approvedAt === 'string' ? Date.parse(b.approvedAt) / 1000 : 0);
+    return tb - ta;
+  });
+  return rows;
 }
 
 // Phase 3b Admin-Queue (Ethan, 2026-05-08): Read-only Queue-Liste fuer
@@ -584,6 +757,11 @@ export async function getPublicLibraryTopics() {
 // per user; with N users the practical max is bounded but unbounded in
 // theory — 50 is generous enough that Simon never hits it under normal
 // load and small enough that a queue-flood doesn't kill the page.
+//
+// V-09 (Mission-13): this still hits the `pendingApprovals` collection
+// directly (NOT customTopics) — that collection's rules are already
+// admin-only and small enough that no scope-filter is needed. The
+// list-scope hardening only applies to customTopics.
 export async function getPendingApprovals() {
   const snap = await _db.collection('pendingApprovals')
     .where('status', '==', 'open')
@@ -593,16 +771,29 @@ export async function getPendingApprovals() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
-export async function getMyCustomTopics(uid) {
-  const snap = await _db.collection('customTopics')
-    .where('ownerUid', '==', uid).where('groupId', '==', null).get({ source: 'server' });
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+// Returns the caller's PERSONAL topics (groupId==null). Pre-V-09 this
+// was a Firestore list-query with `where('groupId','==',null)`; we keep
+// that same semantic here by post-filtering the Worker's broader
+// 'mine'-scope result, so the existing call site (renderMyContent) does
+// not need to change. The Worker derives ownership from the verified
+// ID-token's `sub` claim (NOT from a client-supplied uid) so the legacy
+// `(uid)` parameter is now unused but kept for signature-compat with
+// the call sites in app.js.
+export async function getMyCustomTopics(_uid) {
+  const rows = await _cfListCustomTopics('mine');
+  return rows.filter(t => !t.groupId);
 }
 
-export async function getGroupCustomTopics(groupId) {
-  const snap = await _db.collection('customTopics')
-    .where('groupId', '==', groupId).get({ source: 'server' });
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+// Accepts either a single groupId (legacy callers) or an array of
+// groupIds (new). The Worker cross-checks the supplied IDs against the
+// caller's actual users/{uid}.groupIds to prevent enumeration of
+// groups the caller is not a member of.
+export async function getGroupCustomTopics(groupIdOrIds) {
+  const groupIds = Array.isArray(groupIdOrIds)
+    ? groupIdOrIds
+    : (groupIdOrIds ? [groupIdOrIds] : []);
+  if (groupIds.length === 0) return [];
+  return await _cfListCustomTopics('group', { groupIds });
 }
 
 export async function deleteCustomTopic(topicId) {
@@ -653,6 +844,24 @@ export async function saveSRS(uid, srsData) {
 // `exams` (siehe ownerSafeFields), aber keine Struktur. Daher hier
 // clientseitig pruefen, dass kein Garbage rein kann (selbst falls jemand
 // per Console manuell ruft).
+//
+// Cycle-6 schema-erweiterung (Marcus, 2026-05-08, F-02 Klausur-Bereitschaft):
+// Pro exam-Eintrag sind jetzt drei optionale Zusatzfelder erlaubt:
+//   - plan: { startDate: 'YYYY-MM-DD', minutesPerDay: number 1..600 } | null
+//   - dailyStats: { 'YYYY-MM-DD': { minutes: 0..1440,
+//                                   confidence: 1..5 | null,
+//                                   realityScore: 0..1 | null } }
+//   - actualGrade: 1..6 | null   (post-Klausur-Eintrag)
+// Alte exams ohne diese Felder bleiben gueltig (forward-only schema, kein
+// Migrationsskript noetig — Defensive-Reads im Frontend per `?? null`).
+// Validierung defensiv weil Rules nur den Feld-NAMEN `exams` whitelisten,
+// nicht die Struktur; ohne Cap koennte ein Konsolen-Aufrufer eine 9999-Min/
+// Tag-Lernzeit oder einen 999-Sterne-Konfidenzwert reinschreiben.
+//
+// KEIN Worker-Endpoint, kein Firestore-Rules-Update — `exams` ist bereits in
+// ownerSafeFields() (siehe firestore.rules:111-113). Per-Day-Aggregation
+// laeuft client-side: Frontend liest existing exam, mergt heutigen Eintrag
+// in dailyStats, schreibt ganzes Array via diese Funktion zurueck.
 export async function saveExams(uid, examsArray) {
   if (!uid) throw new Error('saveExams: uid fehlt.');
   if (!Array.isArray(examsArray)) {
@@ -683,9 +892,140 @@ export async function saveExams(uid, examsArray) {
     if (typeof exam.createdAt !== 'number') {
       throw new Error(`saveExams: Eintrag ${i}.createdAt muss number sein.`);
     }
+    // ── Cycle-6 optional fields ───────────────────────────────────────
+    // plan: null erlaubt (User hat keinen Plan). Wenn gesetzt, beide
+    // Sub-Felder pflicht, startDate als YYYY-MM-DD, minutesPerDay 1..600
+    // (10h/Tag ist die obere realistische Grenze; alles drueber ist
+    // entweder ein Tippfehler oder ein Cheat).
+    if (exam.plan !== undefined && exam.plan !== null) {
+      if (typeof exam.plan !== 'object') {
+        throw new Error(`saveExams: Eintrag ${i}.plan muss object oder null sein.`);
+      }
+      if (typeof exam.plan.startDate !== 'string' || !dateRe.test(exam.plan.startDate)) {
+        throw new Error(`saveExams: Eintrag ${i}.plan.startDate muss YYYY-MM-DD sein.`);
+      }
+      if (typeof exam.plan.minutesPerDay !== 'number'
+          || !Number.isFinite(exam.plan.minutesPerDay)
+          || exam.plan.minutesPerDay < 1
+          || exam.plan.minutesPerDay > 600) {
+        throw new Error(`saveExams: Eintrag ${i}.plan.minutesPerDay muss number 1..600 sein.`);
+      }
+      // Cycle-7 P1-2 (Marcus, 2026-05-08, Sophie audit): cross-check
+      // startDate <= exam.date. Beide sind YYYY-MM-DD-Strings, also ist
+      // String-Vergleich identisch zur chronologischen Ordnung. Ohne den
+      // Check konnte der User einen Plan mit startDate NACH der Klausur
+      // anlegen — `_addExamStudyMinutes` hat den Plan dann nie aktiv
+      // gemacht (today < startDate), Heute-zuerst-Karte schlug stillos
+      // fehl, und der Pomodoro-Aggregator hat keine Minuten gesammelt.
+      // Entry-level reject statt silent-no-op damit der UI-Fehler sofort
+      // sichtbar wird.
+      if (exam.plan.startDate > exam.date) {
+        throw new Error(`saveExams: Eintrag ${i}.plan.startDate muss <= exam.date sein.`);
+      }
+    }
+    // dailyStats: Map { 'YYYY-MM-DD': { minutes, confidence, realityScore } }.
+    // Eintrag-Cap = 365 Keys (1 Schuljahr pro Klausur-Plan). Pro-Tag-Wert-
+    // Caps verhindern Heatmap-Inflation: minutes 0..1440 (24h), confidence
+    // 1..5 oder null, realityScore 0..1 oder null.
+    if (exam.dailyStats !== undefined && exam.dailyStats !== null) {
+      if (typeof exam.dailyStats !== 'object' || Array.isArray(exam.dailyStats)) {
+        throw new Error(`saveExams: Eintrag ${i}.dailyStats muss Map sein.`);
+      }
+      const keys = Object.keys(exam.dailyStats);
+      if (keys.length > 365) {
+        throw new Error(`saveExams: Eintrag ${i}.dailyStats hat mehr als 365 Keys.`);
+      }
+      keys.forEach(k => {
+        if (!dateRe.test(k)) {
+          throw new Error(`saveExams: Eintrag ${i}.dailyStats key "${k}" muss YYYY-MM-DD sein.`);
+        }
+        const v = exam.dailyStats[k];
+        if (!v || typeof v !== 'object') {
+          throw new Error(`saveExams: Eintrag ${i}.dailyStats[${k}] muss object sein.`);
+        }
+        if (v.minutes !== undefined && v.minutes !== null) {
+          if (typeof v.minutes !== 'number' || !Number.isFinite(v.minutes)
+              || v.minutes < 0 || v.minutes > 1440) {
+            throw new Error(`saveExams: Eintrag ${i}.dailyStats[${k}].minutes muss 0..1440 sein.`);
+          }
+        }
+        if (v.confidence !== undefined && v.confidence !== null) {
+          if (typeof v.confidence !== 'number' || !Number.isFinite(v.confidence)
+              || v.confidence < 1 || v.confidence > 5
+              || Math.floor(v.confidence) !== v.confidence) {
+            throw new Error(`saveExams: Eintrag ${i}.dailyStats[${k}].confidence muss 1..5 (int) sein.`);
+          }
+        }
+        if (v.realityScore !== undefined && v.realityScore !== null) {
+          if (typeof v.realityScore !== 'number' || !Number.isFinite(v.realityScore)
+              || v.realityScore < 0 || v.realityScore > 1) {
+            throw new Error(`saveExams: Eintrag ${i}.dailyStats[${k}].realityScore muss 0..1 sein.`);
+          }
+        }
+      });
+    }
+    // actualGrade: 1..6 (Schul-Notenskala) oder null.
+    if (exam.actualGrade !== undefined && exam.actualGrade !== null) {
+      if (typeof exam.actualGrade !== 'number' || !Number.isFinite(exam.actualGrade)
+          || exam.actualGrade < 1 || exam.actualGrade > 6) {
+        throw new Error(`saveExams: Eintrag ${i}.actualGrade muss 1..6 oder null sein.`);
+      }
+    }
+  });
+  // Cycle-7 P2-B (Marcus, 2026-05-08, Ramsey audit): explicit whitelist-pick
+  // bevor der set+merge ausgefuehrt wird. Die obigen Validatoren werfen bei
+  // bekannten Garbage-Feldern, aber UNBEKANNTE Top-Level-Felder auf einem
+  // exam-Eintrag (z.B. ein Konsolen-Aufrufer baut `{...exam, isAdmin:true,
+  // xpInjected:9999}`) kommen sonst durch — die rules-Whitelist deckt nur
+  // den Top-Level-Feld-Namen `exams` als Map-Wert ab, nicht die innere
+  // Struktur. Pre-Whitelist-Pick stellt sicher dass KEIN nicht-erlaubtes
+  // Feld jemals auf das User-Doc kommt.
+  //
+  // Whitelist = id, subject, klasse, date, topicIds, createdAt, plan,
+  // dailyStats, actualGrade. Alles andere wird gestrippt. plan- und
+  // dailyStats-Innerstrukturen werden ebenfalls auf bekannte Felder
+  // reduziert (defense-in-depth gegen "ich packe noch xpBonus ins
+  // dailyStats[today]"-Vektoren).
+  const sanitizedExams = examsArray.map(exam => {
+    const out = {
+      id:        exam.id,
+      subject:   exam.subject,
+      klasse:    exam.klasse,
+      date:      exam.date,
+      topicIds:  exam.topicIds,
+      createdAt: exam.createdAt
+    };
+    if (exam.plan !== undefined) {
+      if (exam.plan === null) {
+        out.plan = null;
+      } else {
+        out.plan = {
+          startDate:     exam.plan.startDate,
+          minutesPerDay: exam.plan.minutesPerDay
+        };
+      }
+    }
+    if (exam.dailyStats !== undefined) {
+      if (exam.dailyStats === null) {
+        out.dailyStats = null;
+      } else {
+        const dsClean = {};
+        Object.keys(exam.dailyStats).forEach(k => {
+          const v = exam.dailyStats[k] || {};
+          const inner = {};
+          if (v.minutes      !== undefined) inner.minutes      = v.minutes;
+          if (v.confidence   !== undefined) inner.confidence   = v.confidence;
+          if (v.realityScore !== undefined) inner.realityScore = v.realityScore;
+          dsClean[k] = inner;
+        });
+        out.dailyStats = dsClean;
+      }
+    }
+    if (exam.actualGrade !== undefined) out.actualGrade = exam.actualGrade;
+    return out;
   });
   await _db.collection('users').doc(uid).set(
-    { exams: examsArray }, { merge: true }
+    { exams: sanitizedExams }, { merge: true }
   );
 }
 
