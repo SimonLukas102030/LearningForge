@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, updateLeaderboard, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, loginAsHacker, markAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, loginAsHacker, markAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -956,6 +956,16 @@ function renderDashboard() {
   const recent         = getRecentTests();
   const recommendations = getRecommendations();
 
+  // V-09 (Casey, streak-save): Wenn User aktive Streak hat, heutige Daily-Challenge
+  // noch nicht gemacht hat, und es lokal schon 18:00 oder spaeter ist → warnen.
+  // Verhindert die schmerzhafteste UX (Streak-Bruch durch Vergesslichkeit).
+  // Done-Check: dieselbe Logik wie renderDailyChallengeCard()
+  // — userData.dailyChallenges[today] = der Eintrag fuer den heutigen Tag.
+  const _todayKey       = new Date().toISOString().slice(0, 10);
+  const _dcDoneToday    = !!userData?.dailyChallenges?.[_todayKey];
+  const _hourLocal      = new Date().getHours();
+  const showStreakWarn  = streak > 0 && !_dcDoneToday && _hourLocal >= 18;
+
   // Top-3 zuletzt benutzte Fächer (Schnellstart) — Mission 1, Open-Q-5
   const recentSubjectIds = [];
   Object.entries(grades)
@@ -1044,6 +1054,15 @@ function renderDashboard() {
         </div>
         ${streak > 1 ? `<div class="streak-badge">${lfIcon('flame', {cls:'sx-streak'})} ${streak} Tage Streak</div>` : ''}
       </div>
+      ${showStreakWarn ? `
+        <div class="streak-warning-banner" onclick="location.hash='#/daily-challenge'">
+          <span class="streak-warning-icon">${lfIcon('flame', {cls:'sx-streak'})}</span>
+          <div class="streak-warning-text">
+            <div class="streak-warning-title">Dein Streak von ${streak} Tag${streak !== 1 ? 'en' : ''} endet um Mitternacht</div>
+            <div class="streak-warning-sub">Mach die Daily-Challenge in 5 Min und halte ihn am Leben.</div>
+          </div>
+          <span class="streak-warning-cta">Jetzt machen ›</span>
+        </div>` : ''}
       <div class="stats-bar">
         <div class="stat-chip"><span class="stat-val">${subjects.length}</span><span class="stat-lbl">Fächer</span></div>
         <div class="stat-chip"><span class="stat-val">${totalTests}</span><span class="stat-lbl">Tests gemacht</span></div>
@@ -5185,13 +5204,21 @@ async function renderDailyChallenge() {
         ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[i] })
         : (i+1);
       const isMe = u.uid === currentUser?.uid;
+      // V-23 (Ramsey, P1): displayName ist self-write erlaubt → escapeHtml() um
+      // Cross-User-XSS via <img onerror=...> auf alle Klassenkameraden im
+      // Leaderboard-Render zu blockieren. Numbers werden defensiv mit-escaped.
+      const safeName    = escapeHtml(u.displayName || '?');
+      const safeInitial = escapeHtml((u.displayName?.[0] || '?').toUpperCase());
+      const safePoints  = escapeHtml(String(u.points ?? 0));
+      const safeMaxPts  = escapeHtml(String(u.maxPoints ?? 0));
+      const safeGrade   = escapeHtml(String(u.grade ?? ''));
       return `
         <div class="lb-row${isMe?' lb-me':''}">
           <div class="lb-rank">${m}</div>
-          <div class="lb-avatar ${outlineFor(u)}">${u.displayName?.[0]?.toUpperCase()||'?'}</div>
-          <div class="lb-name">${u.displayName||'?'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
-          <div class="lb-meta">${u.points}/${u.maxPoints} Pkt</div>
-          <div class="lb-score" style="color:${gradeColor(u.grade)}">${u.grade}</div>
+          <div class="lb-avatar ${outlineFor(u)}">${safeInitial}</div>
+          <div class="lb-name">${safeName} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+          <div class="lb-meta">${safePoints}/${safeMaxPts} Pkt</div>
+          <div class="lb-score" style="color:${gradeColor(u.grade)}">${safeGrade}</div>
         </div>`;
     }).join('') || '<div class="empty-state" style="padding:16px">Noch keine weiteren Einträge.</div>';
 
@@ -5247,9 +5274,13 @@ function _renderDCQuestion() {
   const pct = ((current) / questions.length) * 100;
 
   const opts = q.shuffledOptions || q.options || [];
+  // V-04 (Ramsey, defensive XSS): aktuell ist q.question/q.options Simon-authored
+  // (sicher), aber sobald custom-topics fuer DC eligible werden, koennte ein
+  // user-supplied String hier landen. escapeHtml() jetzt einziehen, damit der
+  // Layer da ist bevor er gebraucht wird.
   const optHtml = opts.map((o, i) => `
     <button class="dc-opt ${answers[current] === String(i) ? 'dc-opt-selected' : ''}"
-            onclick="window.LF.dcSelectOpt(${i})">${String.fromCharCode(65+i)}. ${o}</button>`).join('');
+            onclick="window.LF.dcSelectOpt(${i})">${String.fromCharCode(65+i)}. ${escapeHtml(o)}</button>`).join('');
 
   document.getElementById('dcArea').innerHTML = `
     <div class="dc-header">
@@ -5257,7 +5288,7 @@ function _renderDCQuestion() {
       <div class="dc-counter">${current+1} / ${questions.length}</div>
     </div>
     <div class="dc-progress"><div class="dc-progress-fill" style="width:${pct}%"></div></div>
-    <div class="dc-question">${q.question}</div>
+    <div class="dc-question">${escapeHtml(q.question)}</div>
     <div class="dc-opts">${optHtml}</div>
     <div class="dc-nav">
       ${current > 0 ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.dcNav(-1)">Zurück</button>` : '<div></div>'}
@@ -5290,6 +5321,9 @@ function checkAndShowWeeklySummary() {
   // weekly-overlay hat z-index 10000 und würde die Tour begraben.
   // Casey hat den Stack-Bug aufgespürt; defensiv hier blocken.
   if (_tourState) return;
+  // B3 Sophie-QA-Fix (2026-05-08): mid-test = NEVER weekly. Würde sonst
+  // mitten in einer Test-Frage als blocking-Modal aufploppen.
+  if (typeof isTestActive === 'function' && isTestActive()) return;
   // Casey-UX-Audit (2026-05-08): auch nicht wenn Tour-Toast gleich kommt
   // (Bestands-User mit pending tour-prompt). Tour-Toast hat Vortritt vor dem
   // Wochenrückblick — Tour ist actionable + zeitkritisch, Wochenrückblick
@@ -5834,8 +5868,11 @@ window.LF = {
 
   onNoteInput: (key, value) => {
     clearTimeout(_notesSaveTimer);
+    // V-13 (Casey, anxiety): sichtbares Auto-Save-Feedback. "Tippen..." waehrend
+    // Debounce, "Gespeichert"-Pill nach erfolgreichem saveNote, fade-out 2s
+    // spaeter via .notes-saved-pill-fade.
     const status = document.getElementById('notesStatus');
-    if (status) status.textContent = 'Tippen…';
+    if (status) status.innerHTML = '<span class="notes-saved-pill notes-saved-pill-typing">Tippen&hellip;</span>';
     _notesSaveTimer = setTimeout(async () => {
       if (!currentUser) return;
       userData = userData || {};
@@ -5843,7 +5880,14 @@ window.LF = {
       userData.notes[key] = value;
       await saveNote(currentUser.uid, key, value).catch(console.error);
       const s = document.getElementById('notesStatus');
-      if (s) { s.textContent = 'Gespeichert'; setTimeout(() => { if(s) s.textContent=''; }, 2000); }
+      if (!s) return;
+      s.innerHTML = '<span class="notes-saved-pill">&check; Gespeichert</span>';
+      setTimeout(() => {
+        if (!s) return;
+        const pill = s.querySelector('.notes-saved-pill');
+        if (pill) pill.classList.add('notes-saved-pill-fade');
+        setTimeout(() => { if (s) s.innerHTML = ''; }, 350);
+      }, 2000);
     }, 1500);
   },
 
@@ -6941,9 +6985,11 @@ window.LF.midTestAbort = () => {
 
 function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, subject, topic) {
   setupTabSwitchDetection();
-  // B3: Mid-test guards aktivieren. Test-Hash = der aktuelle Topic-Hash, von
-  // dem aus startTest aufgerufen wurde.
-  _setupMidTestGuards(`#/fach/${subjectId}/${yearId}/${topicId}`);
+  // B3 Sophie-QA-Fix (2026-05-08): Test-Hash = die ACTUAL location.hash, nicht
+  // ein konstruierter '#/fach/...'-Pfad. Custom-Topic-Tests laufen unter
+  // '#/meine-inhalte/<id>' (subjectId == '_custom' wäre falscher Lockhash =
+  // 404-Route nach replaceState bei Backdrop-Klick).
+  _setupMidTestGuards(location.hash || `#/fach/${subjectId}/${yearId}/${topicId}`);
   testState = {
     questions, timeMinutes, subjectId, yearId, topicId,
     subjectName: subject.name, topicName: topic.name,
@@ -6963,6 +7009,9 @@ function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, su
       </div>
       <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
       <div id="questionsContainer" style="margin-top:20px"></div>
+      <!-- V2-01 (Casey): Sticky-Bottom-Submit nur Mobile (CSS @media). Spart
+           den 5x-hoch-scrollen-Schmerz. Triggert denselben submitTest-Handler. -->
+      <button class="btn btn-primary test-submit-sticky" onclick="window.LF.submitTest()">Test abgeben</button>
     </div>`;
 
   renderAllQuestions(questions);
@@ -7028,6 +7077,9 @@ window.LF.submitTest = async () => {
   const { questions, answers, timeMinutes, subjectId, yearId, topicId, subjectName, topicName, startTime } = testState;
   const timeUsed        = Math.round((Date.now() - startTime) / 1000);
   const effectiveAns    = penalty ? new Array(questions.length).fill(null) : answers;
+  // V-22: Outer-scope-Slot fuer prevAttempt — wird im if(currentUser)-Branch
+  // gesetzt VOR dem saveGrade-Call und dann an renderResults durchgereicht.
+  let _prevAttemptForResults = null;
 
   document.getElementById('testArea').innerHTML = `
     <div style="text-align:center;padding:40px">
@@ -7055,6 +7107,13 @@ window.LF.submitTest = async () => {
     userData.grades = userData.grades || {};
     const key      = `${subjectId}__${yearId}__${topicId}`;
     const existing = userData.grades[key] || {};
+    // V-22 (Casey, motivation): Note des letzten abgeschlossenen Versuchs
+    // — VOR dem Save-Step erfassen, damit renderResults die Vorher/Nachher-
+    // Vergleichsbasis hat. existing.history ist das alte Array, der letzte
+    // Eintrag = letzter Versuch.
+    if (existing.history && existing.history.length > 0) {
+      _prevAttemptForResults = existing.history[existing.history.length - 1];
+    }
 
     if (isTestAccount || isCustomTopic) {
       // Lokal-Pfad: Test-Accounts und Custom-Topics gehen NIE in die Cloud-Function.
@@ -7242,7 +7301,7 @@ window.LF.submitTest = async () => {
   // verlassen kann.
   if (testState) testState.results = true;
   _teardownMidTestGuards();
-  renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty });
+  renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty, prevAttempt: _prevAttemptForResults });
   } finally {
     if (testState) testState._submitting = false;
     // B3 Sophie-Audit-Fix (2026-05-08): wenn evaluateAnswers/CF wirft, hat
@@ -7257,6 +7316,27 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
   const secs = timeUsed % 60;
   const date = new Date().toLocaleDateString('de-DE');
   const pct  = Math.round(total/max*100);
+
+  // V-22 (Casey, motivation): Vorher/Nachher-Vergleich anzeigen.
+  // Note: kleinere Zahl = bessere Note (1 = beste, 6 = schlechteste).
+  // Penalty (Tab-Wechsel = automatisch Note 6) blendet Banner aus —
+  // der User sieht eh schon die rote Penalty-Bar.
+  let improvementBanner = '';
+  if (meta.prevAttempt && !meta.penalty) {
+    const prevG = meta.prevAttempt.grade;
+    const newG  = grade.grade;
+    // V-27 (Ramsey, drive-by self-XSS sweep): prevG/newG kommen aus
+    // grades.history[].grade (User-self-write erlaubt). Self-only,
+    // aber escapeHtml gehört zum V-23-Sweep dazu.
+    const safePrev = escapeHtml(String(prevG));
+    const safeNew  = escapeHtml(String(newG));
+    if (newG < prevG) {
+      improvementBanner = `<div class="result-improvement-banner">Verbesserung! Letztes Mal hattest du Note ${safePrev}, jetzt Note ${safeNew}.</div>`;
+    } else if (newG === prevG) {
+      improvementBanner = `<div class="result-constant-banner">Konstant — wieder Note ${safeNew}.</div>`;
+    }
+    // newG > prevG → kein Banner (demotiviert; Note ist schon sichtbar).
+  }
 
   const resultItems = questions.map((q, i) => {
     const r   = results[i];
@@ -7341,6 +7421,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <div class="grade-label">${grade.label}</div>
           <div class="grade-points">${total} von ${max} Punkten · ${pct}%</div>
         </div>
+        ${improvementBanner}
         <div class="section-title">Aufgaben im Detail</div>
         <div class="results-list">${resultItems}</div>
         ${wrongSection}

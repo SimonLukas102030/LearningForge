@@ -43,6 +43,16 @@
   --grade-5: #ef4444;
   --grade-6: #7f1d1d;
 
+  /* Status-Akzente (Cycle-1 UX): semantische Farben fuer Improvement-Banner,
+     Streak-Warnings, Save-Pills usw. Bewusst eigene Variable statt Grade-Color
+     — diese sind Status, nicht Bewertung. */
+  --success:        #10b981;        /* emerald-500 */
+  --success-subtle: #d1fae5;        /* emerald-100 */
+  --success-text:   #065f46;        /* emerald-800 */
+  --warning:        #f59e0b;        /* amber-500 */
+  --warning-subtle: #fef3c7;        /* amber-100 */
+  --warning-text:   #78350f;        /* amber-900 */
+
   /* Rarity colors (Mission 7 — Locked-Cards-V2 stripes/tints).
      Absolute Anker: Common=grau, Rare=blau, Epic=lila, Legendary=Gold.
      Mit-themen sie NICHT — sonst sehen alle Rarities im aktiven Theme gleich aus. */
@@ -105,6 +115,14 @@
   --rarity-rare:      #60a5fa;   /* blue-400 */
   --rarity-epic:      #c084fc;   /* purple-400 */
   --rarity-legendary: #fbbf24;   /* amber-400 */
+
+  /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
+  --success:        #34d399;        /* emerald-400 */
+  --success-subtle: #064e3b;        /* emerald-900 */
+  --success-text:   #6ee7b7;        /* emerald-300 */
+  --warning:        #fbbf24;        /* amber-400 */
+  --warning-subtle: #422006;        /* amber-950 */
+  --warning-text:   #fde68a;        /* amber-200 */
 
   /* Icon-Color (Mission 8) — same fallback pattern as :root, but resolves to dark-theme --text. */
   --icon-color: var(--text);
@@ -736,6 +754,11 @@ input, textarea, select { font-family: var(--font); }
 [data-theme="dark"] .timer.warning { background: #2d2000; }
 [data-theme="dark"] .timer.danger  { background: #2d0f0f; }
 
+/* V2-01 (Casey, Cycle-2): Sticky-Bottom-Submit für aktiven Test.
+   Desktop = versteckt (Topbar-Submit reicht). Mobile-Override im
+   @media (max-width:768px)-Block weiter unten. */
+.test-submit-sticky { display: none; }
+
 .question-card {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
@@ -1331,6 +1354,30 @@ input, textarea, select { font-family: var(--font); }
   .test-topbar { flex-direction: column; gap: 8px; text-align: center; }
   .stats-section-grid { grid-template-columns: 1fr; }
   .profile-grid { grid-template-columns: 1fr; }
+
+  /* V2-01 (Casey, Cycle-2): Sticky-Bottom-Submit ueber Bottom-Tab-Bar.
+     Bottom-Tab-Bar ist ~64px; +16px Abstand + safe-area = 80px. */
+  .test-submit-sticky {
+    display: block;
+    position: fixed;
+    bottom: calc(80px + env(safe-area-inset-bottom));
+    left: 16px;
+    right: 16px;
+    z-index: 200;
+    box-shadow: var(--shadow-lg);
+  }
+  /* Damit der Sticky-Submit nicht die letzte Frage ueberlappt. */
+  #questionsContainer { padding-bottom: 80px; }
+
+  /* V2-02 (Casey, Cycle-2): Pomodoro-FAB war unter Bottom-Tab-Bar versteckt.
+     Bug-FAB sitzt schon bei right:16px / bottom:72px+safe-area, also Pomodoro
+     auf left:16px statt rechts stapeln. Notiert im Commit. */
+  .pomo-widget {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    left: 16px;
+    right: auto;
+    align-items: flex-start;
+  }
 }
 
 /* Dynamic nav collapse (B2 / 2026-05-08) — JS adds these classes in two stages.
@@ -1362,6 +1409,12 @@ input, textarea, select { font-family: var(--font); }
   gap: 4px;
   border-bottom: 2px solid var(--border);
   margin-bottom: 20px;
+  /* V2-03 (Casey, Cycle-2): horizontal scroll bei Overflow (Englisch-Topic
+     mit 6 Tabs auf 360px-Galaxy bricht sonst um). */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
 }
 .tab-btn {
   padding: 10px 20px;
@@ -1373,6 +1426,9 @@ input, textarea, select { font-family: var(--font); }
   margin-bottom: -2px;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   transition: color var(--transition), border-color var(--transition), background var(--transition);
+  /* V2-03: nicht schrumpfen, sonst quetscht der Tab-Text. */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .tab-btn:hover { background: var(--bg-input); color: var(--text); }
 .tab-btn.active {
@@ -4429,4 +4485,100 @@ input, textarea, select { font-family: var(--font); }
 @media (prefers-reduced-motion: reduce) {
   .lf-tour-spotlight { transition: none; }
   .lf-tour-overlay   { transition: none; }
+}
+
+/* ── Cycle-1 UX (Casey 2026-05-08) ─────────
+   Improvement-Banner (V-22), Constant-Banner (V-22),
+   Streak-Warning (V-09), Notes-Save-Pill (V-13).
+   Alle nutzen --success / --warning Variablen — keine hardcoded Farben. */
+
+.result-improvement-banner,
+.result-constant-banner {
+  margin: 16px 0 24px;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  border: 1px solid;
+}
+.result-improvement-banner {
+  background: var(--success-subtle);
+  color: var(--success-text);
+  border-color: var(--success);
+}
+.result-constant-banner {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.streak-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0;
+  padding: 14px 18px;
+  background: var(--warning-subtle);
+  border: 1px solid var(--warning);
+  border-left: 4px solid var(--warning);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.streak-warning-banner:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.streak-warning-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.streak-warning-text {
+  flex: 1;
+  min-width: 0;
+}
+.streak-warning-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--warning-text);
+  margin-bottom: 2px;
+}
+.streak-warning-sub {
+  font-size: 13px;
+  color: var(--warning-text);
+  opacity: 0.85;
+}
+.streak-warning-cta {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--warning-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@media (max-width: 540px) {
+  .streak-warning-banner { flex-wrap: wrap; }
+  .streak-warning-cta { width: 100%; text-align: right; }
+}
+
+.notes-saved-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--success-subtle);
+  color: var(--success-text);
+  border: 1px solid var(--success);
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+.notes-saved-pill-typing {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+.notes-saved-pill-fade {
+  opacity: 0;
 }
