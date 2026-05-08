@@ -162,3 +162,35 @@ export async function getParentShareReport(token) {
 export async function submitDailyChallenge(payload) {
   return await _call('submitDailyChallenge', payload);
 }
+
+// -----------------------------------------------------------
+//  submitTopicForApproval - Phase 3c (Ethan, 2026-05-08)
+//  Reicht ein customTopic fuer die Public-Library ein. Backend
+//  flippt visibility='pending-approval' + legt pendingApprovals/
+//  {autoId} Queue-Row an. Auth-Token noetig (Owner-Check Worker-
+//  side).
+//
+//  payload: { topicId: string, message?: string }
+//  returns: { ok: true, status: 'submitted' | 'already-submitted',
+//             pendingApprovalId?: string }
+// -----------------------------------------------------------
+export async function submitTopicForApproval(topicId, message = '') {
+  return await _call('submitTopicForApproval', { topicId, message });
+}
+
+// -----------------------------------------------------------
+//  approveTopicForPublic - Phase 3c (Ethan, 2026-05-08)
+//  Admin-only: flippt pending-approval → public (approve) oder
+//  pending-approval → group + rejectionNote (reject). Backend
+//  prueft Email-Whitelist gegen ID-Token.
+//
+//  payload:
+//    { topicId, action:'approve' }
+//    { topicId, action:'reject', rejectionNote: '...' }
+//  returns: { ok: true, status: 'approved' | 'rejected' }
+// -----------------------------------------------------------
+export async function approveTopicForPublic(topicId, action, rejectionNote = '') {
+  const body = { topicId, action };
+  if (action === 'reject') body.rejectionNote = rejectionNote;
+  return await _call('approveTopicForPublic', body);
+}

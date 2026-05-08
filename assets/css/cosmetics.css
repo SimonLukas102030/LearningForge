@@ -235,6 +235,60 @@
 /* ── Themes (durch 1en/2en freischaltbar) ─────────────────── */
 /* Themes überschreiben Tokens aus :root */
 
+/* Cosmetic-Modulations-Variablen (Maya v2 § "Cosmetic × Subject").
+   Cosmetic-Themes setzen drei Modulations-Achsen — diese werden in
+   subject-tokens.css als calc()-Argumente zu oklch() konsumiert,
+   sodass Subject-Akzente in jedem Cosmetic-BG passend ge-tuned
+   werden, ohne Subject-Identitaet zu verlieren. Defaults (lift=0,
+   sat=1, opacity-mult=1) stehen in main.css :root.
+   Werte aus Maya-v2-Tabelle. Themes ohne expliziten Eintrag erben
+   die :root-Identitaets-Werte (kein Effekt = neutral). */
+[data-app-theme="aurora"] {
+  --cosmetic-lift: 0.02;
+  --cosmetic-saturation: 0.85;
+  --cosmetic-pattern-opacity-multiplier: 0.6;
+}
+[data-app-theme="cyberpunk"] {
+  --cosmetic-lift: 0.05;
+  --cosmetic-saturation: 1.30;
+  --cosmetic-pattern-opacity-multiplier: 1.2;
+}
+[data-app-theme="sand"] {
+  --cosmetic-lift: 0;
+  --cosmetic-saturation: 0.95;
+  --cosmetic-pattern-opacity-multiplier: 1.0;
+}
+[data-app-theme="schiefer"] {
+  --cosmetic-lift: -0.04;
+  --cosmetic-saturation: 0.80;
+  --cosmetic-pattern-opacity-multiplier: 1.1;
+}
+[data-app-theme="carbon"] {
+  --cosmetic-lift: 0;
+  --cosmetic-saturation: 0.95;
+  --cosmetic-pattern-opacity-multiplier: 0.9;
+}
+[data-app-theme="cherry"] {
+  --cosmetic-lift: 0.01;
+  --cosmetic-saturation: 1.05;
+  --cosmetic-pattern-opacity-multiplier: 1.0;
+}
+[data-app-theme="forest"] {
+  --cosmetic-lift: -0.02;
+  --cosmetic-saturation: 1.00;
+  --cosmetic-pattern-opacity-multiplier: 1.0;
+}
+[data-app-theme="ocean"] {
+  --cosmetic-lift: 0;
+  --cosmetic-saturation: 1.00;
+  --cosmetic-pattern-opacity-multiplier: 1.0;
+}
+[data-app-theme="sunset"] {
+  --cosmetic-lift: 0.02;
+  --cosmetic-saturation: 1.10;
+  --cosmetic-pattern-opacity-multiplier: 1.0;
+}
+
 [data-app-theme="ocean"] {
   --accent: #0891b2; --accent-hover: #0e7490; --accent-subtle: #ecfeff;
   --bg: #ecfeff;

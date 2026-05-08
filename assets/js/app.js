@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, loginAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, getPublicLibraryTopics, getPendingApprovals, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, loginAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -626,6 +626,11 @@ function route() {
   } else if (parts[0] === 'meine-inhalte') {
     if (parts[1]) renderCustomTopicPage(parts[1]);
     else renderMyContent();
+  } else if (parts[0] === 'public') {
+    // Phase 3 Public-Library (Ethan, 2026-05-08): von Usern eingereichte +
+    // von Simon approved Topics, fuer alle sichtbar.
+    if (parts[1]) renderCustomTopicPage(parts[1]);
+    else renderPublicLibrary();
   } else if (parts[0] === 'gruppen') {
     if (parts[1]) renderGroupDetail(parts[1]);
     else renderGroups();
@@ -753,6 +758,7 @@ function renderNav(breadcrumbs = []) {
       <a class="mobile-nav-link ${act('Gruppen')}"        onclick="location.hash='#/gruppen';window.LF.closeMobileMenu()">${lfIcon('users-round')} Gruppen</a>
       <a class="mobile-nav-link ${act('Feed')}"           onclick="location.hash='#/feed';window.LF.closeMobileMenu()">${lfIcon('newspaper')} Feed</a>
       <a class="mobile-nav-link ${act('Meine Inhalte')}"  onclick="location.hash='#/meine-inhalte';window.LF.closeMobileMenu()">${lfIcon('library')} Meine Inhalte</a>
+      <a class="mobile-nav-link ${act('Public-Library')}" onclick="location.hash='#/public';window.LF.closeMobileMenu()">${lfIcon('book-open')} Public-Library</a>
       <a class="mobile-nav-link ${act('Builder')}"        onclick="location.hash='#/builder';window.LF.closeMobileMenu()">${lfIcon('hammer')} Builder</a>
       <a class="mobile-nav-link ${act('Einstellungen')}"  onclick="location.hash='#/einstellungen';window.LF.closeMobileMenu()">${lfIcon('settings')} Einstellungen</a>
       ${isAdmin() ? `<a class="mobile-nav-link" style="color:var(--accent)" onclick="location.hash='#/admin';window.LF.closeMobileMenu()">${lfIcon('crown')} Admin-Panel</a>` : ''}
@@ -1798,8 +1804,8 @@ function renderSubtopicGrid(input) {
     <div class="subtopic-card" onclick="window.LF.openSubtopic(${i})">
       <div class="subtopic-index">${i + 1}</div>
       <div class="subtopic-info">
-        <div class="subtopic-name">${st.name}</div>
-        ${st.description ? `<div class="subtopic-desc">${st.description}</div>` : ''}
+        <div class="subtopic-name">${escapeHtml(st.name || '')}</div>
+        ${st.description ? `<div class="subtopic-desc">${escapeHtml(st.description)}</div>` : ''}
       </div>
       <div class="subtopic-arrow">›</div>
     </div>`).join('');
@@ -2261,18 +2267,18 @@ function buildWissensCheck(questions, topicKey) {
   const items = questions.map((q, i) => {
     if (q.type === 'multiple_choice') {
       const opts = (q.options || []).map((o, j) =>
-        `<button class="wc-opt" onclick="window.LF.wissensCheckMC('${topicKey}',${i},${j},${q.correct})" id="wcOpt_${topicKey}_${i}_${j}">${o}</button>`
+        `<button class="wc-opt" onclick="window.LF.wissensCheckMC('${topicKey}',${i},${j},${q.correct})" id="wcOpt_${topicKey}_${i}_${j}">${escapeHtml(o || '')}</button>`
       ).join('');
       return `<div class="wc-item" id="wcItem_${topicKey}_${i}">
-        <div class="wc-q">${i+1}. ${q.question}</div>
+        <div class="wc-q">${i+1}. ${escapeHtml(q.question || '')}</div>
         <div class="wc-opts">${opts}</div>
         <div class="wc-fb" id="wcFb_${topicKey}_${i}" style="display:none"></div>
       </div>`;
     }
     return `<div class="wc-item" id="wcItem_${topicKey}_${i}">
-      <div class="wc-q">${i+1}. ${q.question}</div>
+      <div class="wc-q">${i+1}. ${escapeHtml(q.question || '')}</div>
       <button class="btn btn-ghost btn-sm" onclick="window.LF.wissensCheckReveal('${topicKey}',${i})" id="wcRevealBtn_${topicKey}_${i}">Antwort anzeigen</button>
-      <div class="wc-fb" id="wcFb_${topicKey}_${i}" style="display:none"><strong>${lfIcon('check', {cls:'sx-correct'})} ${q.answer || ''}</strong></div>
+      <div class="wc-fb" id="wcFb_${topicKey}_${i}" style="display:none"><strong>${lfIcon('check', {cls:'sx-correct'})} ${escapeHtml(q.answer || '')}</strong></div>
     </div>`;
   }).join('');
   return `
@@ -3985,12 +3991,12 @@ function renderFlashcard() {
       <div class="fc-card-inner" id="fcCardInner">
         <div class="fc-face fc-front">
           <div class="fc-label">Frage</div>
-          <div class="fc-text">${q.question}</div>
+          <div class="fc-text">${escapeHtml(q.question || '')}</div>
           <div class="fc-hint">Klicken zum Umdrehen</div>
         </div>
         <div class="fc-face fc-back">
           <div class="fc-label">Antwort</div>
-          <div class="fc-text">${correctAnswer}</div>
+          <div class="fc-text">${escapeHtml(correctAnswer || '')}</div>
         </div>
       </div>
     </div>
@@ -4835,19 +4841,68 @@ function renderCustomTopicCard(topic, canDelete) {
   const qCount = (topic.questions || []).length;
   const safeId = topic.id;
   // Wave-1-Ramsey CHEAT-21: ALLE User-controlled Felder escapen.
+  // Phase 3a (Ethan, 2026-05-08): Visibility-Status-Badge.
+  // Legacy-Compat: Topics ohne `visibility`-Field bekommen das aus groupId
+  // abgeleitet — siehe firestore.rules customTopicReadOk() Backwards-Compat-
+  // Mapping. Owner-Badge zeigen wir nur in den eigenen Topics (canDelete=true).
+  const vis = topic.visibility
+    || (topic.groupId ? 'group' : 'private');
+  const badgeHtml = canDelete ? _renderVisibilityBadge(vis, topic) : '';
+  // Re-Submit-Button ausschliesslich bei rejected (visibility wieder 'group',
+  // aber rejectionNote vorhanden — Worker setzt das). Owner-only.
+  // visibility-Check ist wichtig: nach Re-Submit ist visibility='pending-
+  // approval' und der Worker submitTopicForApproval clearet rejectionNote
+  // server-side im selben atomaren Batch (V-PHASE-E-03 — die Felder sind
+  // jetzt rules-mäßig nur Worker-writable). Bei replication-lag koennte
+  // die UI kurzzeitig den alten rejectionNote-String sehen, der visibility-
+  // Filter (== 'group') verhindert aber dass der Reject-Banner nach Re-
+  // Submit wieder erscheint.
+  const isRejected = canDelete && !!topic.rejectionNote && vis === 'group';
+  const isPending  = canDelete && vis === 'pending-approval';
   return `
     <div class="custom-topic-card">
       <div class="custom-topic-meta">${escapeHtml(topic.fach || '?')} · ${escapeHtml(topic.klasse || '?')}</div>
       <div class="custom-topic-name">${escapeHtml(topic.thema || 'Unbenannt')}</div>
       ${topic.description ? `<div class="custom-topic-desc">${escapeHtml(topic.description)}</div>` : ''}
+      ${badgeHtml}
+      ${isRejected ? `
+        <div class="custom-topic-reject">
+          <strong>Abgelehnt:</strong> ${escapeHtml(topic.rejectionNote)}
+        </div>` : ''}
       <div class="custom-topic-footer">
         <span class="custom-topic-qcount">${qCount} Frage${qCount !== 1 ? 'n' : ''}</span>
         <div class="custom-topic-actions">
           <button class="btn btn-primary btn-sm" onclick="location.hash='#/meine-inhalte/${escapeAttr(safeId)}'">Ansehen</button>
-          ${canDelete ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.deleteCustomTopicUI('${escapeAttr(safeId)}')">Löschen</button>` : ''}
+          ${isRejected ? `<button class="btn btn-secondary btn-sm" onclick="window.LF.resubmitForPublic('${escapeAttr(safeId)}')">Erneut einreichen</button>` : ''}
+          ${canDelete && !isPending ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.deleteCustomTopicUI('${escapeAttr(safeId)}')">Löschen</button>` : ''}
         </div>
       </div>
     </div>`;
+}
+
+// Phase 3a (Ethan, 2026-05-08): Visibility-Status-Badge fuer Owner-Karten.
+// Vier visuelle States — Farbe via CSS-Variablen (Theme-Regel: keine
+// hardcoded Hex-Codes, alle vier Badges nutzen die existierenden semantic
+// tokens --accent / --text-muted / --warn / --danger / --success).
+function _renderVisibilityBadge(visibility, topic) {
+  const items = {
+    'private':          { icon: 'lock',              label: 'Privat',                                cls: 'is-private' },
+    'group':            { icon: 'users-round',       label: 'Gruppe',                                cls: 'is-group' },
+    'pending-approval': { icon: 'clock',             label: 'Eingereicht — wartet auf Approval',    cls: 'is-pending' },
+    'public':           { icon: 'globe',             label: 'Public-Library',                        cls: 'is-public' }
+  };
+  // Wenn rejectionNote vorhanden → optisch als 'rejected' anzeigen, auch
+  // wenn der Worker visibility zurueck auf 'group' gesetzt hat.
+  if (topic?.rejectionNote && visibility === 'group') {
+    return `<div class="custom-topic-vis-badge is-rejected">
+      ${lfIcon('circle-x')} <span>Abgelehnt</span>
+    </div>`;
+  }
+  const it = items[visibility] || items.private;
+  return `<div class="custom-topic-vis-badge ${it.cls}">
+    ${lfIcon(it.icon)} <span>${it.label}</span>
+    ${visibility === 'pending-approval' ? '<span class="spinner-inline" style="margin-left:6px"></span>' : ''}
+  </div>`;
 }
 
 async function renderCustomTopicPage(topicId) {
@@ -5198,11 +5253,82 @@ async function renderAdmin() {
       <span>${users.filter(u=>u.isBanned).length} gesperrt</span>
       <span>${users.reduce((s,u)=>s+Object.keys(u.grades||{}).length,0)} Tests gesamt</span>
     </div>
+
+    <div class="admin-section-title">Public-Library Approval-Queue</div>
+    <div id="adminApprovalQueue"><div class="spinner" style="margin:24px auto"></div></div>
+
     <div class="admin-section-title">Hilfsmittel pro Fach</div>
     <div class="admin-tool-list">${toolRows || '<div class="empty-state">Keine F&auml;cher geladen.</div>'}</div>
     <button class="btn btn-primary" style="margin-bottom:24px" onclick="window.LF.adminSaveTools()">Hilfsmittel speichern</button>
     <div class="admin-section-title">Nutzerverwaltung</div>
     <div class="admin-user-list">${rows || '<div class="empty-state">Keine Nutzer gefunden.</div>'}</div>`;
+
+  // Phase 3b (Ethan, 2026-05-08): Approval-Queue separat laden — die Read-
+  // Rule fuer pendingApprovals ist admin-only (firestore.rules), und falls
+  // ein Nicht-Admin (z.B. tester) das Admin-Panel via testing-Route oeffnet,
+  // soll ein PERM_DENIED nicht das ganze Admin-Panel zerschiessen. Eigener
+  // try/catch + isolierter Render.
+  _renderAdminApprovalQueue();
+}
+
+async function _renderAdminApprovalQueue() {
+  const target = document.getElementById('adminApprovalQueue');
+  if (!target) return;
+  // Phase 3b: nur fuer Admin-Email sichtbar (firestore.rules erlaubt nur
+  // diese Whitelist + role:'admin'). Andere Admins sehen die Section nicht
+  // (auch wenn sie das Admin-Panel betreten).
+  if (currentUser?.email !== ADMIN_EMAIL) {
+    target.innerHTML = '<div class="empty-state">Nur fuer simonkoper27@gmail.com.</div>';
+    return;
+  }
+  let queue;
+  try { queue = await getPendingApprovals(); }
+  catch(e) {
+    target.innerHTML = `<div class="error-msg">Fehler beim Laden der Queue: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+  if (!queue.length) {
+    target.innerHTML = '<div class="empty-state">Keine offenen Einreichungen.</div>';
+    return;
+  }
+  target.innerHTML = queue.map(q => {
+    const sum = q.topicSummary || {};
+    const submittedDate = q.submittedAt?.seconds
+      ? new Date(q.submittedAt.seconds * 1000).toLocaleString('de-DE') : '–';
+    const ownerSuffix = q.ownerUid ? q.ownerUid.slice(0, 8) : '–';
+    return `
+      <div class="admin-approval-card">
+        <div class="admin-approval-head">
+          <div class="admin-approval-meta">${escapeHtml(sum.fach || '?')} · ${escapeHtml(sum.klasse || '?')}</div>
+          <div class="admin-approval-title">${escapeHtml(sum.thema || 'Unbenannt')}</div>
+          ${sum.description ? `<div class="admin-approval-desc">${escapeHtml(sum.description)}</div>` : ''}
+          <div class="admin-approval-stats">
+            <span>${sum.questionCount || 0} Frage${sum.questionCount === 1 ? '' : 'n'}</span>
+            ${sum.subtopicCount ? `<span>· ${sum.subtopicCount} Untertopics</span>` : ''}
+            <span>· eingereicht ${escapeHtml(submittedDate)}</span>
+          </div>
+          <div class="admin-approval-author">
+            ${escapeHtml(q.ownerEmail || 'Unbekannt')} · uid:${escapeHtml(ownerSuffix)}
+          </div>
+          ${q.message ? `
+            <div class="admin-approval-message">
+              <strong>Nachricht des Authors:</strong>
+              <div>${escapeHtml(q.message)}</div>
+            </div>` : ''}
+        </div>
+        <div class="admin-approval-actions">
+          <button class="btn btn-secondary btn-sm" onclick="window.LF.adminPreviewTopic('${escapeAttr(q.topicId)}')">
+            Vorschau
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="window.LF.adminApprove('${escapeAttr(q.topicId)}','${escapeAttr(sum.thema || '')}')">
+            Approve
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="window.LF.adminOpenRejectModal('${escapeAttr(q.topicId)}','${escapeAttr(sum.thema || '')}')">
+            Reject
+          </button>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ── Content-Builder ───────────────────────
@@ -5227,7 +5353,7 @@ const BUILDER_SNIPPETS = {
 
 function renderBuilder() {
   if (!builderState) {
-    builderState = { step: 1, mode: null, fach: '', klasse: '', thema: '', description: '', content: '', blocks: [], questions: [] };
+    builderState = { step: 1, mode: null, fach: '', klasse: '', thema: '', description: '', content: '', blocks: [], questions: [], visibility: 'private' };
   }
   const { step } = builderState;
 
@@ -5377,43 +5503,49 @@ function renderBuilderStep(step) {
     </div>`;
 
   if (step === 5) {
-    const fachFolder   = builderState.fach.replace(/\s+/g, '-');
-    const klasseFolder = builderState.klasse.replace(/\s+/g, '-');
-    const themaFolder  = builderState.thema.replace(/\s+/g, '-');
+    // Phase 3a (Ethan, 2026-05-08): Visibility-Picker als Single-Source-of-
+    // Truth fuer den Veroeffentlichungs-Modus. builderState.visibility steuert
+    // welcher Submit-Pfad beim Klick laeuft (privat / group / public). Default
+    // = 'private', siehe builderState-Init oben + builderSetVisibility().
+    if (!builderState.visibility) builderState.visibility = 'private';
+    const v = builderState.visibility;
     return `
       <div class="builder-card">
         <h2>Fertig! Veröffentlichen</h2>
         <div class="builder-export-info">
-          <div class="builder-export-row"><span class="builder-export-lbl">Fach:</span> <strong>${builderState.fach}</strong></div>
-          <div class="builder-export-row"><span class="builder-export-lbl">Klasse:</span> <strong>${builderState.klasse}</strong></div>
-          <div class="builder-export-row"><span class="builder-export-lbl">Thema:</span> <strong>${builderState.thema}</strong></div>
+          <div class="builder-export-row"><span class="builder-export-lbl">Fach:</span> <strong>${escapeHtml(builderState.fach)}</strong></div>
+          <div class="builder-export-row"><span class="builder-export-lbl">Klasse:</span> <strong>${escapeHtml(builderState.klasse)}</strong></div>
+          <div class="builder-export-row"><span class="builder-export-lbl">Thema:</span> <strong>${escapeHtml(builderState.thema)}</strong></div>
           <div class="builder-export-row"><span class="builder-export-lbl">Fragen:</span> <strong>${builderState.questions.length}</strong></div>
         </div>
 
         <div class="builder-publish-section">
-          <h3>In der App hochladen</h3>
-          <p class="sub">Sofort spielbar — kein ZIP, keine Mail nötig.</p>
-          <div class="builder-publish-btns">
-            <button class="btn btn-primary" onclick="window.LF.builderUploadPersonal()">
-              Nur für mich hochladen
-            </button>
-            <div id="builderGroupSection">
-              <div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>
-            </div>
+          <h3>Sichtbarkeit</h3>
+          <p class="sub">Wer soll dein Thema sehen können?</p>
+          <div class="builder-vis-picker" id="builderVisPicker">
+            <!-- option-buttons werden via initBuilderExport() gefuellt
+                 (group-disabled-Status haengt von userData.groupIds ab,
+                 das ist async-load). Static fallback hier ist 'privat':
+                 picker-buttons werden bei step-mount durch JS ersetzt. -->
+            <div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>
           </div>
-          <div id="builderUploadMsg"></div>
+
+          <div class="builder-vis-action">
+            <button class="btn btn-primary btn-lg" id="builderVisPublishBtn"
+                    onclick="window.LF.builderPublish()">
+              ${v === 'public' ? 'Für Public-Library einreichen' :
+                v === 'group'  ? 'Für Gruppe veröffentlichen'    :
+                                 'Privat speichern'}
+            </button>
+          </div>
+          <div id="builderUploadMsg" style="margin-top:12px"></div>
         </div>
 
-        <div class="builder-export-divider"><span>oder per Mail einreichen</span></div>
+        <div class="builder-export-divider"><span>oder ZIP exportieren</span></div>
 
         <div>
-          <p class="sub" style="margin-bottom:12px">ZIP herunterladen und an <strong>simonkoper27@gmail.com</strong> senden — dann wird das Thema für alle freigeschaltet.</p>
-          <div class="builder-export-steps">
-            <div class="builder-export-step"><span class="builder-export-num">1</span> ZIP herunterladen</div>
-            <div class="builder-export-step"><span class="builder-export-num">2</span> An <strong>simonkoper27@gmail.com</strong> senden</div>
-            <div class="builder-export-step"><span class="builder-export-num">3</span> Betreff: <code>${builderState.fach} / ${builderState.klasse} / ${builderState.thema}</code></div>
-          </div>
-          <button class="btn btn-secondary" onclick="window.LF.builderExport()" style="margin-top:12px">ZIP herunterladen</button>
+          <p class="sub" style="margin-bottom:12px">Lokal als ZIP herunterladen — z.B. fuer Backup oder zum Teilen per Mail.</p>
+          <button class="btn btn-secondary" onclick="window.LF.builderExport()" style="margin-top:6px">ZIP herunterladen</button>
           <div id="builderExportMsg" style="margin-top:12px"></div>
         </div>
 
@@ -5423,6 +5555,32 @@ function renderBuilderStep(step) {
         </div>
       </div>`;
   }
+}
+
+// Phase 3a (Ethan, 2026-05-08): Visibility-Picker-Markup als separater
+// Builder, damit initBuilderExport() es nach group-Load reinrendern kann
+// (group-disabled-state braucht userData.groupIds — async). builderSetVisibility
+// im handler-Block ruft das hier nach jedem Click neu, damit die active-class
+// + Button-Label updated.
+function renderBuilderVisPicker() {
+  const v = builderState?.visibility || 'private';
+  const hasGroup = (userData?.groupIds?.length || 0) > 0;
+  const opt = (id, icon, label, sub, disabled = false, hint = '') => `
+    <button class="builder-vis-opt ${v === id ? 'active' : ''} ${disabled ? 'disabled' : ''}"
+            ${disabled ? 'disabled aria-disabled="true"' : `onclick="window.LF.builderSetVisibility('${id}')"`}>
+      <div class="builder-vis-opt-icon">${lfIcon(icon)}</div>
+      <div class="builder-vis-opt-body">
+        <div class="builder-vis-opt-label">${label}</div>
+        <div class="builder-vis-opt-sub">${sub}</div>
+        ${disabled && hint ? `<div class="builder-vis-opt-hint">${hint}</div>` : ''}
+      </div>
+    </button>`;
+  return `
+    ${opt('private', 'lock', 'Privat (nur ich)', 'Nur du siehst das Thema in „Meine Inhalte&ldquo;.')}
+    ${opt('group',   'users-round', 'Meine Gruppe', 'Alle Mitglieder deiner Gruppe können es sehen und üben.',
+          !hasGroup, 'Erst einer Gruppe beitreten oder eine erstellen.')}
+    ${opt('public',  'globe', 'Public-Library', 'Einreichen — Simon prüft und schaltet es für alle frei.')}
+  `;
 }
 
 function renderBuilderQFields(type) {
@@ -5627,9 +5785,9 @@ function renderVisualCanvas() {
 function renderBuilderQList() {
   if (!builderState.questions.length) return '<div class="empty-state" style="padding:16px;font-size:14px">Noch keine Fragen hinzugefügt.</div>';
   return builderState.questions.map((q, i) => {
-    const label = q.type === 'multiple_choice' ? `MC: ${q.question}`
-                : q.type === 'free_text'       ? `Freitext: ${q.question}`
-                : `Vokabel: ${q.word} → ${q.answers?.join(', ')}`;
+    const label = q.type === 'multiple_choice' ? `MC: ${escapeHtml(q.question || '')}`
+                : q.type === 'free_text'       ? `Freitext: ${escapeHtml(q.question || '')}`
+                : `Vokabel: ${escapeHtml(q.word || '')} → ${(q.answers || []).map(a => escapeHtml(a || '')).join(', ')}`;
     return `
       <div class="builder-q-item">
         <span class="builder-q-num">${i+1}</span>
@@ -5650,7 +5808,7 @@ function renderUebenQuestion() {
   const answerHtml = q.type === 'multiple_choice'
     ? `<div class="ueben-mc-options">
         ${q.shuffledOptions.map((opt, i) => `
-          <button class="ueben-mc-option" onclick="window.LF.checkUebenMC(${i})">${opt}</button>
+          <button class="ueben-mc-option" onclick="window.LF.checkUebenMC(${i})">${escapeHtml(opt || '')}</button>
         `).join('')}
        </div>`
     : `<textarea class="form-input form-textarea" id="uebenTextarea" placeholder="Deine Antwort..."></textarea>
@@ -5666,7 +5824,7 @@ function renderUebenQuestion() {
       </div>
       <div class="question-card">
         <div class="question-num">${q.type === 'multiple_choice' ? 'Multiple Choice' : 'Freitext'}</div>
-        <div class="question-text">${q.question}</div>
+        <div class="question-text">${escapeHtml(q.question || '')}</div>
         ${answerHtml}
       </div>
       <div id="uebenFeedback"></div>
@@ -6465,6 +6623,282 @@ function checkAndShowWeeklySummary() {
   requestAnimationFrame(() => modal.classList.add('weekly-visible'));
 }
 
+// ── Admin: Topic-Preview-Modal (Phase 3b, Ethan, 2026-05-08) ──
+// Laedt das volle customTopics-doc via getCustomTopicById (nutzt service-
+// account-bypass nicht — getCustomTopicById ist client-side, aber der Admin
+// hat per firestore.rules `isAdmin()` / adminEmails-Branch volle read-rechte
+// auf customTopics. Server-source erzwingt frische Read-Daten.
+async function _openAdminTopicPreview(topicId) {
+  document.getElementById('adminPreviewModalOverlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'lf-modal-overlay';
+  overlay.id = 'adminPreviewModalOverlay';
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) window.LF.closeAdminTopicPreview();
+  });
+  overlay.innerHTML = `
+    <div class="lf-modal-card lf-modal-large">
+      <div class="lf-modal-header">
+        <h3>Topic-Vorschau</h3>
+        <button class="btn-icon" onclick="window.LF.closeAdminTopicPreview()" aria-label="Schließen">${lfIcon('x')}</button>
+      </div>
+      <div class="lf-modal-body" id="adminPreviewBody">
+        <div class="spinner" style="margin:40px auto"></div>
+      </div>
+      <div class="lf-modal-actions">
+        <button class="btn btn-ghost" onclick="window.LF.closeAdminTopicPreview()">Schließen</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  let topic;
+  try { topic = await getCustomTopicById(topicId); }
+  catch(e) {
+    document.getElementById('adminPreviewBody').innerHTML = `<div class="error-msg">Fehler: ${escapeHtml(e.message)}</div>`;
+    return;
+  }
+  if (!topic) {
+    document.getElementById('adminPreviewBody').innerHTML = `<div class="error-msg">Topic nicht gefunden.</div>`;
+    return;
+  }
+  // Inhalt sanitizen — gleiche Pipeline wie renderCustomTopicPage benutzt.
+  const safeContent = topic.content
+    ? sanitizeTopicContent(topic.content)
+    : '<p style="color:var(--text-muted)">Kein Inhalt vorhanden.</p>';
+  const qs = topic.questions || [];
+  document.getElementById('adminPreviewBody').innerHTML = `
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">
+        ${escapeHtml(topic.fach || '?')} · ${escapeHtml(topic.klasse || '?')}
+      </div>
+      <h2 style="font-size:22px;margin:6px 0 4px">${escapeHtml(topic.thema || 'Unbenannt')}</h2>
+      ${topic.description ? `<div class="sub">${escapeHtml(topic.description)}</div>` : ''}
+    </div>
+    <div class="content-body" style="max-height:340px;overflow:auto;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">
+      ${safeContent}
+    </div>
+    <div class="admin-preview-qheader">${qs.length} Frage${qs.length === 1 ? '' : 'n'}</div>
+    <div class="admin-preview-qlist">
+      ${qs.map((q, i) => `
+        <div class="admin-preview-q">
+          <div class="admin-preview-q-num">${i + 1}.</div>
+          <div class="admin-preview-q-body">
+            <div>${escapeHtml(q.question || q.word || 'Frage')}</div>
+            ${q.type === 'multiple_choice' && Array.isArray(q.options) ? `
+              <ul class="admin-preview-q-opts">
+                ${q.options.map((opt, oi) => `
+                  <li class="${oi === q.correct ? 'is-correct' : ''}">${escapeHtml(opt || '')}</li>`).join('')}
+              </ul>` : ''}
+            ${q.type === 'free_text' && q.sampleAnswer ? `
+              <div class="admin-preview-q-sample"><strong>Sample:</strong> ${escapeHtml(q.sampleAnswer)}</div>` : ''}
+            ${q.type === 'vocabulary' && Array.isArray(q.answers) ? `
+              <div class="admin-preview-q-sample"><strong>Antworten:</strong> ${q.answers.map(a => escapeHtml(a)).join(', ')}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ── Admin: Reject-Modal mit Begruendungs-Pflicht (Phase 3b) ──
+function _openAdminRejectModal(topicId, themaName) {
+  document.getElementById('adminRejectModalOverlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'lf-modal-overlay';
+  overlay.id = 'adminRejectModalOverlay';
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) window.LF.closeAdminRejectModal();
+  });
+  overlay.innerHTML = `
+    <div class="lf-modal-card">
+      <div class="lf-modal-header">
+        <h3>Ablehnen: ${escapeHtml(themaName || 'Thema')}</h3>
+        <button class="btn-icon" onclick="window.LF.closeAdminRejectModal()" aria-label="Schließen">${lfIcon('x')}</button>
+      </div>
+      <div class="lf-modal-body">
+        <p style="margin-bottom:12px;line-height:1.5">
+          Schreib eine kurze Begründung — der Author sieht sie und kann den Inhalt überarbeiten.
+        </p>
+        <label class="form-label" for="adminRejectNote">Warum ablehnen? <span style="color:var(--danger)">*</span></label>
+        <textarea class="form-input" id="adminRejectNote" rows="4" maxlength="1000"
+                  placeholder="z.B. Faktisch fehlerhaft im Abschnitt …, Rechtschreibfehler in Frage 3, fehlt Quellenangabe."></textarea>
+        <div id="adminRejectModalMsg" style="margin-top:12px"></div>
+      </div>
+      <div class="lf-modal-actions">
+        <button class="btn btn-ghost" onclick="window.LF.closeAdminRejectModal()">Abbrechen</button>
+        <button class="btn btn-danger" id="adminRejectConfirmBtn" onclick="window.LF.adminConfirmReject('${escapeAttr(topicId)}')">
+          Ablehnen &amp; Begründung senden
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('adminRejectNote')?.focus(), 50);
+}
+
+// ── Public-Library-View (Phase 3c, Ethan, 2026-05-08) ──
+// Neue Route #/public listet alle Topics mit visibility='public' (= von
+// Simon approved). Filter nach Fach + Volltextsuche im Titel/Description.
+// Per-Card-Klick navigiert zu #/public/<topicId> — der bestehende
+// renderCustomTopicPage-Renderer kann das laden, weil die firestore.rules
+// public-Topics fuer alle authed user lesbar machen.
+let _publicLibraryCache = null;     // { topics: [...], loadedAt: ms }
+let _publicLibraryFilters = { fach: '', q: '' };
+
+async function renderPublicLibrary() {
+  document.getElementById('app').innerHTML = `
+    ${renderNav([{ label: 'Public-Library' }])}
+    <div class="page">
+      <div class="page-header">
+        <h1>Public-Library</h1>
+        <div class="sub">Themen, die von der Community erstellt und freigegeben wurden.</div>
+      </div>
+      <div class="public-lib-toolbar">
+        <div class="public-lib-search">
+          <span class="public-lib-search-icon">${lfIcon('search')}</span>
+          <input class="form-input" id="publicLibSearch" placeholder="Titel oder Beschreibung suchen…"
+                 oninput="window.LF.publicLibFilter()" value="${escapeAttr(_publicLibraryFilters.q || '')}">
+        </div>
+        <select class="form-input public-lib-fach-select" id="publicLibFach"
+                onchange="window.LF.publicLibFilter()">
+          <option value="">Alle Fächer</option>
+        </select>
+      </div>
+      <div id="publicLibBody">${skeletonCustomCards(6)}</div>
+    </div>`;
+  // Cache fuer 60s — Public-Library aendert sich selten + spart Firestore-Reads.
+  const now = Date.now();
+  if (!_publicLibraryCache || (now - _publicLibraryCache.loadedAt) > 60_000) {
+    try {
+      const topics = await getPublicLibraryTopics();
+      _publicLibraryCache = { topics, loadedAt: now };
+    } catch(e) {
+      document.getElementById('publicLibBody').innerHTML =
+        `<div class="error-msg">Fehler beim Laden: ${escapeHtml(e.message)}</div>`;
+      return;
+    }
+  }
+  // Fach-Dropdown anhand der vorkommenden Faecher fuellen.
+  const select = document.getElementById('publicLibFach');
+  if (select) {
+    const faecher = Array.from(new Set(_publicLibraryCache.topics
+      .map(t => t.fach).filter(Boolean))).sort();
+    select.innerHTML = `<option value="">Alle Fächer</option>` +
+      faecher.map(f => `<option value="${escapeAttr(f)}" ${_publicLibraryFilters.fach === f ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('');
+  }
+  _renderPublicLibraryList();
+}
+
+function _renderPublicLibraryList() {
+  const body = document.getElementById('publicLibBody');
+  if (!body || !_publicLibraryCache) return;
+  const q = (_publicLibraryFilters.q || '').toLowerCase().trim();
+  const fach = _publicLibraryFilters.fach || '';
+  const filtered = _publicLibraryCache.topics.filter(t => {
+    if (fach && t.fach !== fach) return false;
+    if (q) {
+      const hay = `${t.thema || ''} ${t.description || ''} ${t.fach || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  if (!filtered.length) {
+    body.innerHTML = renderEmptyState({
+      icon: 'book-open',
+      title: _publicLibraryCache.topics.length === 0
+        ? 'Noch keine Public-Library-Themen'
+        : 'Keine Treffer für deine Filter',
+      sub: _publicLibraryCache.topics.length === 0
+        ? 'Du kannst der erste sein! Im Builder erstellen + einreichen.'
+        : 'Probier andere Filter oder lösche den Suchbegriff.',
+      ctaLabel: _publicLibraryCache.topics.length === 0 ? 'Builder öffnen' : null,
+      ctaAction: _publicLibraryCache.topics.length === 0 ? "location.hash='#/builder'" : null
+    });
+    return;
+  }
+  body.innerHTML = `<div class="custom-topic-grid">
+    ${filtered.map(t => _renderPublicCard(t)).join('')}
+  </div>`;
+}
+
+function _renderPublicCard(topic) {
+  const qCount = (topic.questions || []).length;
+  // Subject-Token-Adoption (Maya-Spec): data-subject Attribut auf der Card,
+  // damit per-subject-color/font Tokens auf die Subject-Identity reagieren.
+  // Wir mappen anhand t.fach auf den subjectId — wenn structure den Fach-
+  // Namen kennt. Sonst kein data-subject (Card faellt auf default tokens).
+  let subjectId = '';
+  if (topic.fach && structure) {
+    const match = Object.values(structure).find(s =>
+      (s.name || '').toLowerCase() === topic.fach.toLowerCase()
+      || s.id === topic.fach);
+    if (match) subjectId = match.id;
+  }
+  const subjAttr = subjectId ? ` data-subject="${escapeAttr(subjectId)}"` : '';
+  return `
+    <div class="custom-topic-card public-lib-card"${subjAttr}>
+      <div class="custom-topic-meta">${escapeHtml(topic.fach || '?')} · ${escapeHtml(topic.klasse || '?')}</div>
+      <div class="custom-topic-name">${escapeHtml(topic.thema || 'Unbenannt')}</div>
+      ${topic.description ? `<div class="custom-topic-desc">${escapeHtml(topic.description)}</div>` : ''}
+      <div class="custom-topic-vis-badge is-public">
+        ${lfIcon('globe')} <span>Public</span>
+      </div>
+      <div class="custom-topic-footer">
+        <span class="custom-topic-qcount">${qCount} Frage${qCount !== 1 ? 'n' : ''}</span>
+        <div class="custom-topic-actions">
+          <button class="btn btn-primary btn-sm" onclick="location.hash='#/public/${escapeAttr(topic.id)}'">Topic öffnen</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Public-Library-Submit-Modal (Phase 3a, Ethan, 2026-05-08) ──
+// Wird sowohl beim First-Submit (vom Builder Step-5, kein topicId noch) als
+// auch beim Re-Submit nach Reject (mit topicId) genutzt.
+// opts:
+//   { topicId?: string, isResubmit?: boolean }
+// Bei isResubmit=true ruft der Confirm-Click builderConfirmResubmit(topicId);
+// sonst builderConfirmPublic() (das save+submit zusammen macht).
+function _openPublicSubmitModal(opts = {}) {
+  const { topicId = null, isResubmit = false } = opts;
+  // Doppelt-oeffnen verhindern
+  document.getElementById('publicSubmitModalOverlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'lf-modal-overlay';
+  overlay.id = 'publicSubmitModalOverlay';
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) window.LF.closePublicSubmitModal();
+  });
+  const confirmAttr = isResubmit
+    ? `onclick="window.LF.builderConfirmResubmit('${escapeAttr(topicId)}')"`
+    : `onclick="window.LF.builderConfirmPublic()"`;
+  overlay.innerHTML = `
+    <div class="lf-modal-card">
+      <div class="lf-modal-header">
+        <h3>${isResubmit ? 'Erneut einreichen' : 'In die Public-Library einreichen'}</h3>
+        <button class="btn-icon" onclick="window.LF.closePublicSubmitModal()" aria-label="Schließen">${lfIcon('x')}</button>
+      </div>
+      <div class="lf-modal-body">
+        <p style="margin-bottom:14px;line-height:1.5">
+          Wenn dein Thema in die <strong>Public-Library</strong> kommt, sehen es <strong>alle</strong> Nutzer
+          von LearningForge. Simon prüft jede Einreichung manuell — meistens innerhalb von ein paar Tagen.
+        </p>
+        <ul style="margin:0 0 14px 18px;padding:0;color:var(--text-muted);font-size:14px;line-height:1.7">
+          <li>Inhalte sollten lehrplankonform und für andere nützlich sein.</li>
+          <li>Korrekte Rechtschreibung &amp; saubere Quellen helfen.</li>
+          <li>Bei Ablehnung erhältst du eine Begründung und kannst überarbeiten.</li>
+        </ul>
+        <label class="form-label" for="publicSubmitMessage">Warum sollte das in die Public-Library? (optional)</label>
+        <textarea class="form-input" id="publicSubmitMessage" rows="4"
+                  maxlength="1000"
+                  placeholder="z.B. Lehrplanbezug, Zielgruppe, was es besonders macht…"></textarea>
+        <div id="publicSubmitModalMsg" style="margin-top:12px"></div>
+      </div>
+      <div class="lf-modal-actions">
+        <button class="btn btn-ghost" onclick="window.LF.closePublicSubmitModal()">Abbrechen</button>
+        <button class="btn btn-primary" id="publicSubmitConfirmBtn" ${confirmAttr}>Einreichen</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('publicSubmitMessage')?.focus(), 50);
+}
+
 window.LF = {
   toggleTheme,
   toggleUserMenu: (e) => {
@@ -7181,6 +7615,66 @@ window.LF = {
     }
   },
 
+  // ── Admin: Public-Library Approval (Phase 3b, Ethan, 2026-05-08) ──
+  adminPreviewTopic: (topicId) => {
+    if (!topicId) return;
+    _openAdminTopicPreview(topicId);
+  },
+
+  closeAdminTopicPreview: () => {
+    document.getElementById('adminPreviewModalOverlay')?.remove();
+  },
+
+  adminApprove: async (topicId, themaName) => {
+    if (!topicId) return;
+    if (!confirm(`„${themaName || 'Thema'}" wirklich freigeben? Es wird dann in der Public-Library für ALLE sichtbar.`)) return;
+    try {
+      await cf.approveTopicForPublic(topicId, 'approve');
+      showToast('Freigegeben — Topic ist jetzt public.', 'success');
+      _renderAdminApprovalQueue();
+    } catch(e) {
+      showToast('Fehler: ' + e.message, 'error');
+    }
+  },
+
+  adminOpenRejectModal: (topicId, themaName) => {
+    if (!topicId) return;
+    _openAdminRejectModal(topicId, themaName || '');
+  },
+
+  closeAdminRejectModal: () => {
+    document.getElementById('adminRejectModalOverlay')?.remove();
+  },
+
+  // Public-Library-Filter (Phase 3c, Ethan)
+  publicLibFilter: () => {
+    _publicLibraryFilters.q    = document.getElementById('publicLibSearch')?.value || '';
+    _publicLibraryFilters.fach = document.getElementById('publicLibFach')?.value   || '';
+    _renderPublicLibraryList();
+  },
+
+  adminConfirmReject: async (topicId) => {
+    const ta = document.getElementById('adminRejectNote');
+    const note = (ta?.value || '').trim();
+    const msgArea = document.getElementById('adminRejectModalMsg');
+    if (note.length < 5) {
+      if (msgArea) msgArea.innerHTML = `<div class="error-msg">Begründung mit mindestens 5 Zeichen ist Pflicht.</div>`;
+      return;
+    }
+    const btn = document.getElementById('adminRejectConfirmBtn');
+    if (btn) btn.disabled = true;
+    if (msgArea) msgArea.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
+    try {
+      await cf.approveTopicForPublic(topicId, 'reject', note);
+      window.LF.closeAdminRejectModal();
+      showToast('Abgelehnt — Author wird die Begründung sehen.', 'info');
+      _renderAdminApprovalQueue();
+    } catch(e) {
+      if (msgArea) msgArea.innerHTML = `<div class="error-msg">Fehler: ${escapeHtml(e.message)}</div>`;
+      if (btn) btn.disabled = false;
+    }
+  },
+
   // ── Builder ──────────────────────────────
   builderNext: () => {
     if (builderState.step === 1) {
@@ -7372,42 +7866,192 @@ window.LF = {
     }
   },
 
-  // ── Builder Upload ──────────────────────
+  // ── Builder Upload (Phase 3a, Ethan, 2026-05-08) ─────────
+  // Visibility-Picker: alle drei Optionen leben in einem Block,
+  // initBuilderExport rendert den Picker async (sobald userData.groupIds
+  // bekannt ist, weil die "Meine Gruppe"-Option davon abhaengt).
   initBuilderExport: async () => {
-    const section = document.getElementById('builderGroupSection');
-    if (!section) return;
-    const groupIds = userData?.groupIds || [];
-    if (!groupIds.length) { section.innerHTML = ''; return; }
-    const groups = await getUserGroups(groupIds);
-    if (!groups.length) { section.innerHTML = ''; return; }
-    // Wave-1-Ramsey CHEAT-24: Group-Name escapen (User-controlled).
-    section.innerHTML = groups.map(g => `
-      <button class="btn btn-secondary" onclick="window.LF.builderUploadGroup('${escapeAttr(g.id)}','${escapeAttr(g.name || '')}')">
-        Für Gruppe „${escapeHtml(g.name || '')}" hochladen
-      </button>`).join('');
+    const picker = document.getElementById('builderVisPicker');
+    if (!picker) return;
+    picker.innerHTML = renderBuilderVisPicker();
   },
 
-  builderUploadPersonal: async () => {
+  // Picker-Click → builderState.visibility setzen + UI re-rendern (active-class
+  // + Publish-Button-Label updaten). Wir re-rendern den Picker und das Label
+  // gezielt, NICHT die ganze Seite (sonst gehen Step-5-Inputs verloren — gibt
+  // hier zwar keine, aber konsistent mit dem Rest des Builders).
+  builderSetVisibility: (vis) => {
+    if (!['private', 'group', 'public'].includes(vis)) return;
+    // Group nur wenn der User mindestens 1 Gruppe hat (Defense-in-depth —
+    // der Disabled-State im Markup verhindert den Click bereits, aber falls
+    // jemand das via Console aufruft).
+    if (vis === 'group' && !(userData?.groupIds?.length)) {
+      showToast('Du bist in keiner Gruppe.', 'error');
+      return;
+    }
+    builderState.visibility = vis;
+    const picker = document.getElementById('builderVisPicker');
+    if (picker) picker.innerHTML = renderBuilderVisPicker();
+    const btn = document.getElementById('builderVisPublishBtn');
+    if (btn) {
+      btn.textContent =
+        vis === 'public' ? 'Für Public-Library einreichen' :
+        vis === 'group'  ? 'Für Gruppe veröffentlichen'    :
+                           'Privat speichern';
+    }
+  },
+
+  // Master-Submit-Handler. Branch nach builderState.visibility:
+  //   private → saveCustomTopic(uid, state, null, 'private')
+  //   group   → Gruppe waehlen (wenn >1) + saveCustomTopic(..., groupId, 'group')
+  //   public  → Modal mit Begruendungs-Textarea + Worker-Submit beim Bestaetigen.
+  builderPublish: async () => {
+    const v = builderState.visibility || 'private';
+    if (v === 'public') {
+      // Public-Pfad: erst Modal mit Erklaerung + Begruendung, dann
+      // 2-Schritt-Submit (1. saveCustomTopic mit visibility='group' damit
+      // der Worker einen Owner-Check bestehen kann; 2. submitTopicForApproval
+      // flippt auf 'pending-approval' + queue-row).
+      _openPublicSubmitModal();
+      return;
+    }
+    if (v === 'group') {
+      // Wenn der User in mehreren Gruppen ist, muessen wir auswaehlen lassen.
+      // Bei genau 1 Gruppe -> direkt diese benutzen.
+      const groupIds = userData?.groupIds || [];
+      if (!groupIds.length) {
+        showToast('Du bist in keiner Gruppe.', 'error');
+        return;
+      }
+      if (_blockClaudeWrite('Gruppen-Uploads')) return;
+      let groups;
+      try { groups = await getUserGroups(groupIds); }
+      catch(e) { showToast('Gruppen konnten nicht geladen werden: ' + e.message, 'error'); return; }
+      if (!groups.length) {
+        showToast('Du bist in keiner Gruppe.', 'error'); return;
+      }
+      if (groups.length === 1) {
+        await window.LF._builderDoUpload(groups[0].id, groups[0].name || 'Gruppe', 'group');
+        return;
+      }
+      // Multi-Group: kleines Inline-Picker-UI als success-msg-Replacement
+      const msg = document.getElementById('builderUploadMsg');
+      if (msg) {
+        msg.innerHTML = `
+          <div class="builder-group-picker">
+            <div class="builder-group-picker-label">Welche Gruppe?</div>
+            ${groups.map(g => `
+              <button class="btn btn-secondary"
+                      onclick="window.LF._builderDoUpload('${escapeAttr(g.id)}', '${escapeAttr(g.name || 'Gruppe')}', 'group')">
+                ${escapeHtml(g.name || 'Gruppe')}
+              </button>`).join('')}
+          </div>`;
+      }
+      return;
+    }
+    // private
+    await window.LF._builderDoUpload(null, '', 'private');
+  },
+
+  // Interner Helper — kapselt den eigentlichen saveCustomTopic-Call +
+  // Toast/Spinner/Routing. Wird sowohl vom private-Pfad als auch vom
+  // group-Pfad (single-group ODER nach group-pick) genutzt.
+  _builderDoUpload: async (groupId, groupName, visibility) => {
+    if (visibility === 'group' && _blockClaudeWrite('Gruppen-Uploads')) return;
     const msg = document.getElementById('builderUploadMsg');
     if (msg) msg.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
     try {
-      await saveCustomTopic(currentUser.uid, builderState, null);
+      const id = await saveCustomTopic(currentUser.uid, builderState, groupId, visibility);
+      // XP nur fuer den ersten privaten Build vergeben (group + public sind
+      // Folge-Aktionen). Achievement-Check macht der Worker spaeter ohnehin
+      // anhand customTopicCreated-Counters.
       grantXPAndAchievements({ xp: 50, customCreated: true }).catch(console.error);
-      if (msg) msg.innerHTML = `<div class="success-msg">Hochgeladen! <a onclick="location.hash='#/meine-inhalte'" style="color:var(--accent);cursor:pointer;text-decoration:underline">Jetzt in Meine Inhalte ansehen →</a></div>`;
+      if (msg) {
+        const where = visibility === 'group'
+          ? `Für Gruppe „${escapeHtml(groupName)}&ldquo; hochgeladen!`
+          : 'Privat gespeichert!';
+        msg.innerHTML = `<div class="success-msg">${where}
+          <a onclick="location.hash='#/meine-inhalte'" style="color:var(--accent);cursor:pointer;text-decoration:underline">Jetzt in Meine Inhalte ansehen →</a></div>`;
+      }
     } catch(e) {
       if (msg) msg.innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
     }
   },
 
-  builderUploadGroup: async (groupId, groupName) => {
-    if (_blockClaudeWrite('Gruppen-Uploads')) return;
-    const msg = document.getElementById('builderUploadMsg');
-    if (msg) msg.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
+  // Public-Submit-Modal-Aktionen ─────────────────────────────
+  closePublicSubmitModal: () => {
+    document.getElementById('publicSubmitModalOverlay')?.remove();
+  },
+
+  // Bestaetigungs-Click im Modal: zuerst saveCustomTopic mit visibility=
+  // 'group' falls Topic noch nicht existiert (neuer-Topic-Pfad — das ist
+  // der haeufige Fall: User klickt durch den Builder-Wizard und reicht
+  // direkt ein), DANN submitTopicForApproval-Worker. Wir brauchen die
+  // saveCustomTopic-Round-Trip damit der Worker einen Owner-Check
+  // ausfuehren kann (er liest customTopics/{id}.ownerUid). Visibility
+  // kommt nach dem Worker-Call auf 'pending-approval' (Worker setzt das).
+  builderConfirmPublic: async () => {
+    const msgArea = document.getElementById('publicSubmitModalMsg');
+    const messageInput = document.getElementById('publicSubmitMessage');
+    const message = messageInput?.value.trim() || '';
+    const submitBtn = document.getElementById('publicSubmitConfirmBtn');
+    if (submitBtn) submitBtn.disabled = true;
+    if (msgArea) msgArea.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
     try {
-      await saveCustomTopic(currentUser.uid, builderState, groupId);
-      if (msg) msg.innerHTML = `<div class="success-msg">Für Gruppe „${groupName}" hochgeladen! <a onclick="location.hash='#/meine-inhalte'" style="color:var(--accent);cursor:pointer;text-decoration:underline">Ansehen →</a></div>`;
+      // 1. Topic anlegen — initial visibility='group' (mit groupId=null wird
+      //    daraus 'private' im saveCustomTopic-Default; wir wollen aber dass
+      //    der Owner es sieht, also passt 'private' gut). Owner-Check fuer
+      //    den Worker funktioniert mit jedem visibility-State, der Worker
+      //    flippt das selbst auf 'pending-approval'.
+      const topicId = await saveCustomTopic(currentUser.uid, builderState, null, 'private');
+      // 2. Worker-Submit
+      await cf.submitTopicForApproval(topicId, message);
+      grantXPAndAchievements({ xp: 50, customCreated: true }).catch(console.error);
+      window.LF.closePublicSubmitModal();
+      const msg = document.getElementById('builderUploadMsg');
+      if (msg) {
+        msg.innerHTML = `<div class="success-msg">Eingereicht — Simon prüft das. Du siehst den Status in
+          <a onclick="location.hash='#/meine-inhalte'" style="color:var(--accent);cursor:pointer;text-decoration:underline">Meine Inhalte</a>.</div>`;
+      }
+      showToast('Eingereicht — Simon prüft das.', 'success');
     } catch(e) {
-      if (msg) msg.innerHTML = `<div class="error-msg">Fehler: ${e.message}</div>`;
+      if (msgArea) msgArea.innerHTML = `<div class="error-msg">Fehler: ${escapeHtml(e.message)}</div>`;
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  },
+
+  // Re-Submit nach Reject (von renderCustomTopicCard's "Erneut einreichen"-Button).
+  // Topic existiert bereits; wir clearen die rejectionNote (damit die UI nicht
+  // mehr "Abgelehnt" anzeigt) und oeffnen das Public-Submit-Modal mit
+  // Topic-Re-Submit-Mode aktiv.
+  resubmitForPublic: async (topicId) => {
+    if (!topicId) return;
+    _openPublicSubmitModal({ topicId, isResubmit: true });
+  },
+
+  // Worker-Submit fuer den Re-Submit-Pfad (Topic existiert bereits). Wird vom
+  // Modal aufgerufen wenn isResubmit=true gesetzt ist.
+  //
+  // V-PHASE-E-03 (Marcus, 2026-05-08): die rejectionNote/rejectedAt-Felder
+  // werden jetzt server-side im Worker submitTopicForApproval als Teil
+  // des atomaren Batches geclearet (set+merge mit null). Der frontend-side
+  // clearRejectionNote-Wrapper wurde entfernt — die Audit-Trail-Felder
+  // sind jetzt rules-mäßig nur fuer den Worker schreibbar.
+  builderConfirmResubmit: async (topicId) => {
+    const msgArea = document.getElementById('publicSubmitModalMsg');
+    const messageInput = document.getElementById('publicSubmitMessage');
+    const message = messageInput?.value.trim() || '';
+    const submitBtn = document.getElementById('publicSubmitConfirmBtn');
+    if (submitBtn) submitBtn.disabled = true;
+    if (msgArea) msgArea.innerHTML = '<div class="spinner" style="margin:8px auto;width:20px;height:20px"></div>';
+    try {
+      await cf.submitTopicForApproval(topicId, message);
+      window.LF.closePublicSubmitModal();
+      showToast('Erneut eingereicht — Simon prüft das.', 'success');
+      renderMyContent();
+    } catch(e) {
+      if (msgArea) msgArea.innerHTML = `<div class="error-msg">Fehler: ${escapeHtml(e.message)}</div>`;
+      if (submitBtn) submitBtn.disabled = false;
     }
   },
 
@@ -7542,7 +8186,7 @@ window.LF = {
       else if (i === selectedIdx && !ok) el.classList.add('ueben-wrong');
     });
     document.getElementById('uebenFeedback').innerHTML =
-      `<div class="ueben-feedback-box ${ok?'ok':'fail'}">${ok ? 'Richtig!' : `Falsch. Richtige Antwort: <strong>${q.shuffledOptions[q.shuffledCorrectIndex]}</strong>`}</div>`;
+      `<div class="ueben-feedback-box ${ok?'ok':'fail'}">${ok ? 'Richtig!' : `Falsch. Richtige Antwort: <strong>${escapeHtml(q.shuffledOptions[q.shuffledCorrectIndex] || '')}</strong>`}</div>`;
     document.getElementById('uebenNext').style.display = 'block';
   },
 
@@ -7551,7 +8195,7 @@ window.LF = {
     const answer = document.getElementById('uebenTextarea')?.value?.trim() || '';
     document.getElementById('uebenFeedback').innerHTML =
       `<div class="ueben-feedback-box info">
-        ${q.sampleAnswer ? `<strong>Musterantwort:</strong><br>${q.sampleAnswer}` : 'Vergleiche deine Antwort mit dem Lerninhalt.'}
+        ${q.sampleAnswer ? `<strong>Musterantwort:</strong><br>${escapeHtml(q.sampleAnswer)}` : 'Vergleiche deine Antwort mit dem Lerninhalt.'}
       </div>`;
     document.getElementById('uebenNext').style.display = 'block';
     document.getElementById('uebenCheckBtn').style.display = 'none';
@@ -7607,7 +8251,7 @@ window.LF = {
         ← Zurück zur Übersicht
       </button>
       <div class="subtopic-detail">
-        <h2 class="subtopic-detail-title">${st.name}</h2>
+        <h2 class="subtopic-detail-title">${escapeHtml(st.name || '')}</h2>
         <div class="content-body">${renderBlocks(st.blocks)}</div>
       </div>`;
     // Physik-Simulationen ggf. initialisieren
@@ -7623,8 +8267,8 @@ window.LF = {
       <div class="subtopic-card" onclick="window.LF.openSubtopic(${i})">
         <div class="subtopic-index">${i + 1}</div>
         <div class="subtopic-info">
-          <div class="subtopic-name">${st.name}</div>
-          ${st.description ? `<div class="subtopic-desc">${st.description}</div>` : ''}
+          <div class="subtopic-name">${escapeHtml(st.name || '')}</div>
+          ${st.description ? `<div class="subtopic-desc">${escapeHtml(st.description)}</div>` : ''}
         </div>
         <div class="subtopic-arrow">›</div>
       </div>`).join('');
@@ -8157,14 +8801,14 @@ function renderAllQuestions(questions) {
     <div class="question-card" id="qcard${i}">
       <div class="question-num">Aufgabe ${i+1} von ${questions.length}</div>
       <div class="question-points">${q.type==='multiple_choice' ? (q.points||2) : q.maxPoints} Punkte</div>
-      <div class="question-text">${q.question}</div>
+      <div class="question-text">${escapeHtml(q.question || '')}</div>
       ${q.type === 'multiple_choice'
         ? `<div class="mc-options">
             ${q.shuffledOptions.map((opt, j) => `
               <label class="mc-option" id="opt${i}_${j}">
                 <input type="radio" name="q${i}" value="${j}"
                   onchange="window.LF.setAnswer(${i}, ${j}); document.querySelectorAll('#qcard${i} .mc-option').forEach(el=>el.classList.remove('selected')); document.getElementById('opt${i}_${j}').classList.add('selected')">
-                ${opt}
+                ${escapeHtml(opt || '')}
               </label>`).join('')}
            </div>`
         : `<textarea class="form-input form-textarea" placeholder="Deine Antwort hier..."
@@ -8708,10 +9352,10 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     return `
       <div class="result-item">
         <div class="r-header">
-          <div class="r-question">${q.question}</div>
+          <div class="r-question">${escapeHtml(q.question || '')}</div>
           <div class="r-pts ${cls}">${pts}/${r.maxPoints}</div>
         </div>
-        <div class="r-answer">Antwort: ${answerText}</div>
+        <div class="r-answer">Antwort: ${escapeHtml(String(answerText || ''))}</div>
         <div class="r-feedback">${r.feedback}</div>
       </div>`;
   }).join('');
@@ -8823,9 +9467,9 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
       : '';
     return `
       <div class="wrong-item">
-        <div class="wrong-q">${q.question}</div>
-        <div class="wrong-user">Deine Antwort: <span class="wrong-val">${userAnswer}</span></div>
-        <div class="wrong-correct">Richtige Antwort: <span class="correct-val">${correctAnswer}</span></div>
+        <div class="wrong-q">${escapeHtml(q.question || '')}</div>
+        <div class="wrong-user">Deine Antwort: <span class="wrong-val">${escapeHtml(String(userAnswer || ''))}</span></div>
+        <div class="wrong-correct">Richtige Antwort: <span class="correct-val">${escapeHtml(String(correctAnswer || ''))}</span></div>
         ${explainRow}
       </div>`;
   }).filter(Boolean).join('');
@@ -8975,8 +9619,8 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <span class="print-q-num">Aufgabe ${i+1}</span>
           <span class="print-q-pts">${r.points}/${r.maxPoints} Punkte</span>
         </div>
-        <div class="print-q-text">${q.question}</div>
-        <div class="print-q-answer"><strong>Antwort:</strong> ${answerText}</div>
+        <div class="print-q-text">${escapeHtml(q.question || '')}</div>
+        <div class="print-q-answer"><strong>Antwort:</strong> ${escapeHtml(String(answerText || ''))}</div>
         <div class="print-q-feedback"><strong>Feedback:</strong> ${r.feedback}</div>
       </div>`;
   }).join('');
@@ -9469,7 +10113,7 @@ window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
       const opts = (q.shuffledOptions || q.options || []).map((opt, j) =>
         `<div class="pdf-mc-opt">
            <span class="pdf-mc-box"></span>
-           <span>${String.fromCharCode(65 + j)}) ${opt}</span>
+           <span>${String.fromCharCode(65 + j)}) ${escapeHtml(opt || '')}</span>
          </div>`
       ).join('');
       return `
@@ -9478,7 +10122,7 @@ window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
             <span class="pdf-q-num">Aufgabe ${i + 1}</span>
             <span class="pdf-q-pts">${pts} Punkt${pts !== 1 ? 'e' : ''}</span>
           </div>
-          <div class="pdf-q-text">${q.question}</div>
+          <div class="pdf-q-text">${escapeHtml(q.question || '')}</div>
           <div class="pdf-mc-options">${opts}</div>
         </div>`;
     } else {
@@ -9490,7 +10134,7 @@ window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
             <span class="pdf-q-num">Aufgabe ${i + 1}</span>
             <span class="pdf-q-pts">${pts} Punkt${pts !== 1 ? 'e' : ''}</span>
           </div>
-          <div class="pdf-q-text">${q.question}</div>
+          <div class="pdf-q-text">${escapeHtml(q.question || '')}</div>
           <div class="pdf-answer-lines">${lineHtml}</div>
         </div>`;
     }

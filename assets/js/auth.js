@@ -511,11 +511,29 @@ export async function getUserGroups(groupIds) {
 }
 
 // ── Eigene Inhalte ────────────────────────
-export async function saveCustomTopic(uid, data, groupId = null) {
+// Phase 3a (Ethan, 2026-05-08): saveCustomTopic schreibt jetzt explizit
+// `visibility`. Der 4-State-Schluessel auf der Server-Seite ist:
+//   'private'           — nur Owner sieht es        (default, groupId=null)
+//   'group'             — Group-Members sehen es    (groupId gesetzt)
+//   'pending-approval'  — wird auf Public eingereicht (Worker-only)
+//   'public'            — Public-Library            (Worker-only nach Approval)
+//
+// Wir erlauben dem Frontend hier nur 'private' / 'group' (rules-konform —
+// firestore.rules `clientWritableVisibility()` blockt alles andere am
+// create-time). Der Public-Submit-Pfad geht ueber den Worker
+// submitTopicForApproval.
+export async function saveCustomTopic(uid, data, groupId = null, visibility = null) {
+  // Visibility default leitet sich aus groupId ab (Backwards-Compat mit den
+  // existierenden builderUploadPersonal/builderUploadGroup-Aufrufen).
+  // Explizite visibility-Param ueberschreibt das, falls der Caller das
+  // selbst setzen will.
+  const finalVisibility = visibility
+    || (groupId ? 'group' : 'private');
   const ref = _db.collection('customTopics').doc();
   await ref.set({
     ownerUid:    uid,
     groupId:     groupId || null,
+    visibility:  finalVisibility,
     fach:        data.fach        || '',
     klasse:      data.klasse      || '',
     thema:       data.thema       || '',
@@ -525,6 +543,54 @@ export async function saveCustomTopic(uid, data, groupId = null) {
     createdAt:   firebase.firestore.FieldValue.serverTimestamp()
   });
   return ref.id;
+}
+
+// V-PHASE-E-03 (Ramsey Cycle-E, P1, Marcus, 2026-05-08): the previous
+// `clearRejectionNote(topicId)` wrapper wrote `rejectionNote:null +
+// rejectedAt:null` directly from the client. Both fields are now Worker-
+// only at the rules layer (audit-trail integrity — owner cannot erase a
+// rejection). The re-submit-flow's "clear the rejection-banner" UX is
+// now done server-side inside submitTopicForApproval (the Worker writes
+// the null markers as part of the same atomic batch that flips
+// visibility to 'pending-approval'). The frontend simply calls
+// cf.submitTopicForApproval(topicId, message) and the Worker handles
+// both the queue-row + the field reset. clearRejectionNote was removed
+// here as dead-code; app.js's resubmit-handler no longer imports it.
+
+// Phase 3 Public-Library (Ethan, 2026-05-08): Lese-Wrapper fuer Topics
+// mit visibility='public'. Wird vom Public-Library-View benutzt. Server-
+// side Query — kein Cache. orderBy('approvedAt') ist auf der approve-
+// Seite vom Worker gesetzt; legacy public-Topics ohne approvedAt
+// koennen rausfallen, aber pre-Phase-3c gab es keine 'public'-Topics
+// (das Visibility-Field wurde mit dieser Phase eingefuehrt) — kein
+// Backfill noetig.
+export async function getPublicLibraryTopics() {
+  const snap = await _db.collection('customTopics')
+    .where('visibility', '==', 'public')
+    .orderBy('approvedAt', 'desc')
+    .get({ source: 'server' });
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Phase 3b Admin-Queue (Ethan, 2026-05-08): Read-only Queue-Liste fuer
+// Simon's Admin-UI. Filter status='open' versteckt resolved-Eintraege
+// (Hard rule 5 — die werden nicht geloescht, nur als resolved markiert).
+// Rules erlauben den Read nur fuer simonkoper27@gmail.com (oder role:'admin').
+//
+// V-PHASE-E-04 (Ramsey Cycle-E, P1, Marcus, 2026-05-08): defense-in-depth
+// .limit(50) so even if the Worker rate-limit is bypassed somehow (or a
+// future change relaxes it) the Admin-UI never tries to render thousands
+// of pending rows in one shot. The Worker caps OPEN pending rows at 5
+// per user; with N users the practical max is bounded but unbounded in
+// theory — 50 is generous enough that Simon never hits it under normal
+// load and small enough that a queue-flood doesn't kill the page.
+export async function getPendingApprovals() {
+  const snap = await _db.collection('pendingApprovals')
+    .where('status', '==', 'open')
+    .orderBy('submittedAt', 'desc')
+    .limit(50)
+    .get({ source: 'server' });
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export async function getMyCustomTopics(uid) {

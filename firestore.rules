@@ -61,6 +61,22 @@ service cloud.firestore {
       return ['bohmrobin797@gmail.com'];
     }
 
+    // V-PHASE-E-05 (Ramsey Cycle-E, P1, 2026-05-08): defense-in-depth
+    // email-verification gate on the admin-email whitelist. The Firebase
+    // Auth ID-token already carries `email_verified`; without this check
+    // a freshly-registered (or password-reset) account using one of the
+    // whitelisted email addresses but with `email_verified=false` would
+    // pass the email-string match. That's a thin attack surface (Simon's
+    // email is verified), but matching the Worker's check (which also
+    // pins email_verified) keeps the layers consistent and blocks the
+    // unverified-impersonation case. Used by every rule that checks
+    // `request.auth.token.email in adminEmails()`.
+    function isAdminEmail() {
+      return isAuth()
+          && request.auth.token.email_verified == true
+          && request.auth.token.email in adminEmails();
+    }
+
     // Explicit allow-list of user-doc fields a normal owner may write to
     // their own doc. EXCLUDES role, isBanned, isClaude, isHacker — those
     // are role-sensitive and only writable via the admin-whitelist branch
@@ -327,8 +343,11 @@ service cloud.firestore {
                           && dailyCompletedDeltaOk()
                           && srsReviewsDeltaOk()
                           && totalQAnsweredDeltaOk())
-                        // Case B-admin: full Case-B power for the admin whitelist
-                        || (isOwner(uid) && request.auth.token.email in adminEmails())
+                        // Case B-admin: full Case-B power for the admin whitelist.
+                        // V-PHASE-E-05 (2026-05-08): isAdminEmail() now requires
+                        // email_verified=true on the ID token (defense-in-depth
+                        // against unverified-email impersonation).
+                        || (isOwner(uid) && isAdminEmail())
                         // Case B-tester: owner-safe-fields without soft-caps.
                         // May ALSO write `role` if and only if the new value is
                         // 'tester' (so syncUserRole in auth.js can self-set the
@@ -596,11 +615,220 @@ service cloud.firestore {
     }
 
     // ── customTopics ──────────────────────────────────────────────────────
+    // Phase 3c (Marcus, 2026-05-08): Public-Library-Approval-Workflow.
+    // The `visibility` field is now a 4-state machine:
+    //   'private'           — only owner reads (default for new topics)
+    //   'group'             — owner + members of topic.groupId read
+    //   'pending-approval'  — owner-only read while in queue (admin reads
+    //                          via service-account / Worker bypass)
+    //   'public'            — every authed user reads (Public-Library)
+    //
+    // Legacy topics (pre-Phase-3c) without a `visibility` field are
+    // treated as 'private' for read-purposes — backwards-compat with
+    // the pre-visibility schema where the only readers were owner +
+    // group via the `groupId` field. Owners can still always read.
+    //
+    // Client writes:
+    //   - create: ownerUid must match auth.uid AND visibility (if set)
+    //             must be in the client-writable subset 'private'|'group'.
+    //             Worker-only states ('pending-approval', 'public') are
+    //             blocked at create-time so a malicious client can't
+    //             skip the queue.
+    //   - update: owner may write any field EXCEPT setting visibility
+    //             to a worker-only state. Setting visibility to
+    //             'private' or 'group' is fine (covers group-share
+    //             toggle from the Builder UI). Admin/admin-email keeps
+    //             full power. Approval-state transitions ('pending-approval'
+    //             -> 'public', '-> 'group' on reject) come from the
+    //             approveTopicForPublic Worker which uses a service
+    //             account and bypasses these rules.
+    //   - delete: owner only (admin keeps power).
+    //
+    // List queries: stay open for now — the auth.js wrappers
+    // (getMyCustomTopics / getGroupCustomTopics) already filter by
+    // ownerUid/groupId so legitimate queries are scoped. A future
+    // hardening could split list into dedicated where-clause checks
+    // (mission-3 followup).
+    // Inlined (no `let`) to match the rest of the file's style — every
+    // other rules-helper here uses straight expression chains, and the
+    // Firestore rules-engine evaluator inlines them anyway. The triple
+    // resource.data.get(...) lookups are cheap (no doc reads — they
+    // operate on the already-loaded existing-doc snapshot).
+    //
+    // Legacy-compat (Phase 3c, Marcus, 2026-05-08): topics created BEFORE
+    // the `visibility` field was added have no `visibility` set on their
+    // doc. We map them to a synthetic visibility based on `groupId`:
+    //   - groupId == null  -> 'private' (matches old getMyCustomTopics
+    //                         query where('groupId','==',null))
+    //   - groupId != null  -> 'group'   (matches old getGroupCustomTopics
+    //                         query where('groupId','==',X))
+    // Without this mapping, legacy group-shared topics would silently
+    // lose read-access for group-members the moment this rule deploys
+    // (the old rule `allow read,list: if isAuth()` was wide-open). New
+    // topics from the Phase-3a builder always set `visibility` explicitly
+    // so the legacy branch is never hit for them.
+    function customTopicReadOk() {
+      return (
+        // Owner always reads.
+        request.auth.uid == resource.data.get('ownerUid', null)
+        // Public — every authed user reads.
+        || resource.data.get('visibility', 'private') == 'public'
+        // Group — caller must have topic.groupId in their groupIds.
+        // Includes the legacy-compat mapping: a doc with no `visibility`
+        // field but a non-null `groupId` is treated as 'group'-shared.
+        // We collapse the legacy-vs-new check into one expression by
+        // using `resource.data.get('visibility', 'group')` ONLY when
+        // groupId is non-null — that way the default for "groupId set,
+        // no visibility" is 'group', and for "groupId null, no visibility"
+        // is moot (the AND guard fails on groupId==null anyway).
+        // The per-rule `get(/users/{uid})` is the same pattern the
+        // friendRequests cross-check uses (line 406-413) so we know
+        // it works in production. One server-side doc read per evaluation.
+        || (
+             resource.data.get('groupId', null) != null
+             && resource.data.get('visibility', 'group') == 'group'
+             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             && resource.data.groupId in get(/databases/$(database)/documents/users/$(request.auth.uid))
+                            .data.get('groupIds', [])
+           )
+        // Admin-role reads everything.
+        || isAdmin()
+      );
+    }
+    // The set of `visibility` values a non-admin client may write. Worker-
+    // only states ('pending-approval', 'public') are intentionally absent
+    // — those transitions come from submitTopicForApproval and
+    // approveTopicForPublic respectively.
+    function clientWritableVisibility(v) {
+      return v == 'private' || v == 'group';
+    }
     match /customTopics/{topicId} {
-      allow read, list: if isAuth();
-      allow create:     if isAuth() && request.resource.data.ownerUid == request.auth.uid;
-      allow update:     if isAuth() && (resource.data.ownerUid == request.auth.uid || isAdmin());
-      allow delete:     if isAuth() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+      allow get:    if isAuth() && customTopicReadOk();
+      // V-PHASE-E-09 (Ramsey Cycle-E, P2 documented for Mission-13,
+      // 2026-05-08): `list: isAuth()` lets every authed user enumerate
+      // metadata of EVERY customTopic doc in the collection — including
+      // private/pending-approval ones (which fail get-rule but show up
+      // in list-snapshots until the per-doc filter runs). Mitigation
+      // here is a no-op (Mission-13 fix: dedicated Worker endpoint
+      // `getCustomTopicsForUser(scope)` returns scope-filtered results
+      // via service-account; client list-query then deleted entirely).
+      // Marker comment + TODO so the audit-trail is visible.
+      // TODO(Mission-13): tighten customTopics.list to scope-filtered
+      //                   Worker endpoint; remove this rule case.
+      allow list:   if isAuth();
+      allow create: if isAuth()
+                     && request.resource.data.ownerUid == request.auth.uid
+                     && (
+                          !('visibility' in request.resource.data)
+                          || clientWritableVisibility(request.resource.data.visibility)
+                        );
+      // V-PHASE-E-02 / V-PHASE-E-03 / V-PHASE-E-06 (Ramsey Cycle-E, P1,
+      // 2026-05-08, Marcus):
+      //
+      //  V-02 — Post-approval content swap (rugpull XSS): without a freeze
+      //  on public-state edits, an owner could approve a topic, then
+      //  `set({content, questions:[<malicious>]}, {merge:true})` and the
+      //  Public-Library would silently serve the poisoned content (rules
+      //  can't enforce per-character sanitisation; the only meaningful
+      //  bound is "don't let content drift after approval"). Fix:
+      //  whenever resource.data.visibility == 'public', the owner can ONLY
+      //  perform a self-unpublish — i.e. visibility-only diff, new value
+      //  in ('private'|'group'). Any other edit on a public topic is
+      //  denied; owner has to unpublish, edit, re-submit, re-approve.
+      //
+      //  V-03 — rejectionNote bypass: the queue audit-trail fields
+      //  (rejectionNote, rejectedAt, approvedAt, approvedBy,
+      //  pendingApprovalId) and the queue-submission fields (submittedAt)
+      //  are Worker-only. Without this block an owner could
+      //  `set({rejectionNote: null}, {merge:true})` directly and erase
+      //  the rejection audit-trail — UI would render "no rejection" again
+      //  and the next submitTopicForApproval would have no history.
+      //  All five flow exclusively through approveTopicForPublic /
+      //  submitTopicForApproval (service-account writes that bypass
+      //  these rules).
+      //
+      //  V-06 — submittedMessage size cap: defense-in-depth bound on the
+      //  size of submittedMessage. The Worker already caps at 1000 chars,
+      //  this is the matching rule-level guard for any bypass we missed.
+      //  We allow up to 1500 here so a future Worker bump to a higher
+      //  cap doesn't immediately collide.
+      allow update: if isAuth() && (
+                       isAdmin()
+                       || isAdminEmail()
+                       || (
+                            resource.data.ownerUid == request.auth.uid
+                            // V-03: Worker-only fields are off-limits to
+                            // the owner. submittedAt is added too because
+                            // the queue-status timestamp is part of the
+                            // audit-trail (faking it back-dates queue
+                            // priority). submittedMessage stays owner-
+                            // writable because (a) the legitimate path
+                            // is Worker-set on submit, (b) V-06 caps it,
+                            // and (c) future re-submit flows might reuse
+                            // it for an "edit-and-resubmit" UX.
+                            && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                                 'rejectionNote', 'rejectedAt',
+                                 'approvedAt', 'approvedBy',
+                                 'pendingApprovalId', 'submittedAt'
+                               ])
+                            // V-02: post-approval freeze. If the existing
+                            // doc is 'public', the only legal owner-write
+                            // is a self-unpublish (visibility-only diff
+                            // moving to 'private' or 'group'). Any other
+                            // diff on a public doc is denied — public
+                            // content is immutable until the owner cycles
+                            // back through unpublish + re-submit + admin.
+                            && (
+                                 resource.data.get('visibility', 'private') != 'public'
+                                 || (
+                                      onlyChanged(['visibility'])
+                                      && clientWritableVisibility(request.resource.data.visibility)
+                                    )
+                               )
+                            // Visibility writes from non-public state stay
+                            // in the client-writable set (no skip-the-queue
+                            // by self-promoting to 'public' or 'pending-
+                            // approval'). Worker writes via service-account.
+                            && (
+                                 !('visibility' in request.resource.data.diff(resource.data).affectedKeys())
+                                 || clientWritableVisibility(request.resource.data.visibility)
+                               )
+                            // V-06: defense-in-depth size cap on
+                            // submittedMessage. Worker cap is 1000; we
+                            // allow some headroom (1500) so a Worker
+                            // bump doesn't immediately bite this rule.
+                            && (
+                                 !('submittedMessage' in request.resource.data.diff(resource.data).affectedKeys())
+                                 || request.resource.data.get('submittedMessage', '').size() <= 1500
+                               )
+                          )
+                     );
+      allow delete: if isAuth() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+    }
+
+    // ── pendingApprovals ──────────────────────────────────────────────────
+    // Phase 3c (Marcus, 2026-05-08): admin-only queue collection. Rows
+    // are created by the submitTopicForApproval Worker (service-account,
+    // bypasses these rules) and resolved by the approveTopicForPublic
+    // Worker. NO client write surface — every state transition flows
+    // through a Worker so we keep server-side validation centralised.
+    //
+    // Read access: admin-email whitelist OR users with role:'admin' on
+    // their user-doc. The Admin-UI in app.js polls this collection
+    // every N seconds; the auth-email check via the verified ID-token
+    // is enough — leaked tester credentials cannot promote to admin
+    // (V-03 split, see adminEmails() / testerEmails() above).
+    //
+    // Owner-of-topic does NOT need read access here: the topic itself
+    // carries `submittedAt`/`pendingApprovalId`/`rejectionNote` so the
+    // builder UI shows the queue-status without touching this collection.
+    match /pendingApprovals/{queueId} {
+      // V-PHASE-E-05 (2026-05-08): isAdminEmail() now requires
+      // email_verified=true (defense-in-depth against unverified-email
+      // impersonation, matches the Worker's check in approveTopicForPublic).
+      allow read, list: if isAuth() && (isAdminEmail() || isAdmin());
+      // No client writes. Worker has service-account credentials and
+      // bypasses these rules.
     }
 
     // ── pendingTopics ─────────────────────────────────────────────────────

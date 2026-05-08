@@ -1,39 +1,44 @@
 /* ══════════════════════════════════════════
    LearningForge — Subject Tokens (Layer 2)
    ══════════════════════════════════════════
-   Per-Subject Design-Token-Cascade, 3-Layer-Modell:
+   Per-Subject Design-Token-Cascade, 4-Layer-Modell (v2):
 
        Layer 1 — Theme-Tokens (main.css + cosmetics.css)
+                 → setzt --cosmetic-lift / --cosmetic-saturation /
+                   --cosmetic-pattern-opacity-multiplier
        Layer 2 — Subject-Tokens (this file)            ← here
-       Layer 3 — Topic-Tokens   (Phase 2, separate)
+                 → liefert --subject-accent / -accent-soft /
+                   -icon-stroke / -radius-feel / -motion-feel /
+                   -pattern-bg / -font (+ -font-mono fuer Informatik)
+       Layer 3 — Topic-Tokens   (Phase 3, separate)
+       Layer 4 — User-Override  (Phase 2, user-subject-colors.css)
 
-   Spec:  .claude/company/specs/per-subject-design-tokens.md  (Maya)
-   ADR:   docs/adr/<ADR-Subject-Tokens>                       (Marcus)
-   Roadmap: phase-2-vision-roadmap.md                         (Priya)
+   Spec:  .claude/company/specs/per-subject-design-tokens-v2.md  (Maya v2)
 
-   Phase B1 (this file):
-   - Pilot subject **Mathematik** is fully tokenized:
-     all 6 tokens (--subject-accent, --subject-accent-soft,
-     --subject-icon-stroke, --subject-radius-feel,
-     --subject-motion-feel, --subject-pattern-bg)
-     in light + dark.
-   - The other 12 subjects are scaffolded with --subject-accent
-     and --subject-accent-soft only. The remaining four tokens
-     fall back to existing layer-1 vars until Phase 2 fills them.
+   Phase 1.5 (this file, v2-Refactor):
+   - Subject-Akzente werden aus --subject-base-l/c/h berechnet, mit
+     Cosmetic-Modulation via calc(... + var(--cosmetic-lift)) bzw.
+     calc(... * var(--cosmetic-saturation)). So tragen Subject und
+     Cosmetic gleichzeitig — Aurora + Mathe = aurora-saturierter
+     Mathe-Akzent, nicht entweder/oder. (Simon Q8: Integration statt
+     Hierarchie.)
+   - Approach: oklch() mit calc()-Argumenten direkt — KEIN
+     `oklch(from ...)` Relative-Color-Syntax (Browser-Support fuer
+     calc() in oklch ist weiter als from-syntax und reicht voll).
+   - --subject-font Stack pro Fach (Maya v2 Tabelle). Informatik
+     bekommt zusaetzlich --subject-font-mono fuer Code-Bloecke.
+   - Cyberpunk-Neutralisierung GESTRICHEN — Cyberpunk moduliert
+     ueber --cosmetic-saturation:1.30 saturierter, aber Subject-
+     Identitaet bleibt erkennbar.
 
    Cascade-Konsumenten consumieren über Var-Fallback:
-       color:        var(--topic-accent,
-                         var(--subject-accent,
-                             var(--accent)));
-       border-radius: var(--topic-radius-feel,
-                          var(--subject-radius-feel,
-                              var(--radius)));
+       color:        var(--user-subject-accent,
+                         var(--topic-accent,
+                             var(--subject-accent,
+                                 var(--accent))));
+       font-family:  var(--subject-font, var(--font));
 
    Order in <head>:  main.css → subject-tokens.css → cosmetics.css
-   Subject-Tokens überschreiben Layer-1 (gewünscht — Subject = Inhalts-
-   Identität). Cosmetic.css steht NACH dieser Datei und kann gezielt
-   neutralisieren (z.B. cyberpunk → Subject-Tokens werden überstimmt).
-
    Werte: alle Akzente in oklch(), kein Hex (Theme-Compatibility).
    ══════════════════════════════════════════ */
 
@@ -43,11 +48,26 @@
               eckige 90°-Linien. */
 
 [data-subject="Mathematik"] {
-  --subject-accent:        oklch(48% 0.18 252);
-  --subject-accent-soft:   oklch(96% 0.03 252);
+  --subject-base-l: 0.48;
+  --subject-base-c: 0.18;
+  --subject-base-h: 252;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.03;
+
+  --subject-accent: oklch(
+    calc(var(--subject-base-l) + var(--cosmetic-lift, 0))
+    calc(var(--subject-base-c) * var(--cosmetic-saturation, 1))
+    var(--subject-base-h)
+  );
+  --subject-accent-soft: oklch(
+    calc(var(--subject-soft-l) + var(--cosmetic-lift, 0) * 0.3)
+    calc(var(--subject-soft-c) * var(--cosmetic-saturation, 1))
+    var(--subject-base-h)
+  );
   --subject-icon-stroke:   var(--subject-accent);
   --subject-radius-feel:   8px;
   --subject-motion-feel:   0.15s cubic-bezier(.4, 0, .2, 1);
+  --subject-pattern-opacity-base: 0.05;
   --subject-pattern-bg:
     linear-gradient(
       135deg,
@@ -56,140 +76,269 @@
       var(--subject-accent-soft) 50.5%,
       transparent 50.5%
     );
+  --subject-font: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 [data-theme="dark"] [data-subject="Mathematik"] {
-  --subject-accent:        oklch(72% 0.14 252);
-  --subject-accent-soft:   oklch(20% 0.04 252);
-  /* Pattern-bg erbt automatisch — referenziert --subject-accent-soft. */
+  --subject-base-l: 0.72;
+  --subject-base-c: 0.14;
+  --subject-soft-l: 0.20;
+  --subject-soft-c: 0.04;
+  /* h bleibt 252 */
 }
 
 
-/* ── Stub-Subjects (Phase B1 minimal scaffold) ─────────
-   Nur --subject-accent + --subject-accent-soft. Restliche
-   Tokens (icon-stroke, radius-feel, motion-feel, pattern-bg)
-   fallen via Cascade-Fallback auf Layer 1, bis Phase 2 sie
-   pro Subject definiert.
-   Werte aus Mayas Token-Tabelle (per-subject-design-tokens.md). */
+/* ── Stub-Subjects (v2-Refactor) ───────────────────────
+   Alle Faecher mit --subject-base-l/c/h + --subject-font.
+   Formel fuer accent + accent-soft kommt aus dem Mathe-
+   Block oben — wir setzen hier nur die Basis-Werte. Die
+   accent-Berechnung wird unten als shared rule zentral
+   appliziert (siehe Block "Shared accent calc"). */
 
 /* 2. Deutsch — navy ink */
 [data-subject="Deutsch"] {
-  --subject-accent:       oklch(42% 0.12 240);
-  --subject-accent-soft:  oklch(95% 0.02 240);
+  --subject-base-l: 0.42;
+  --subject-base-c: 0.12;
+  --subject-base-h: 240;
+  --subject-soft-l: 0.95;
+  --subject-soft-c: 0.02;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Deutsch"] {
-  --subject-accent:       oklch(70% 0.10 240);
-  --subject-accent-soft:  oklch(22% 0.03 240);
+  --subject-base-l: 0.70;
+  --subject-base-c: 0.10;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.03;
 }
 
 /* 3. Englisch — royal blue */
 [data-subject="Englisch"] {
-  --subject-accent:       oklch(40% 0.18 264);
-  --subject-accent-soft:  oklch(95% 0.04 264);
+  --subject-base-l: 0.40;
+  --subject-base-c: 0.18;
+  --subject-base-h: 264;
+  --subject-soft-l: 0.95;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Englisch"] {
-  --subject-accent:       oklch(72% 0.15 264);
-  --subject-accent-soft:  oklch(22% 0.05 264);
+  --subject-base-l: 0.72;
+  --subject-base-c: 0.15;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.05;
 }
 
-/* 4. Geschichte — sepia bronze */
+/* 4. Geschichte — sepia bronze, klassische Serif */
 [data-subject="Geschichte"] {
-  --subject-accent:       oklch(58% 0.13 60);
-  --subject-accent-soft:  oklch(96% 0.03 60);
+  --subject-base-l: 0.58;
+  --subject-base-c: 0.13;
+  --subject-base-h: 60;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.03;
+  --subject-font: 'Crimson Text', 'Charter', Georgia, serif;
 }
 [data-theme="dark"] [data-subject="Geschichte"] {
-  --subject-accent:       oklch(75% 0.10 60);
-  --subject-accent-soft:  oklch(24% 0.04 60);
+  --subject-base-l: 0.75;
+  --subject-base-c: 0.10;
+  --subject-soft-l: 0.24;
+  --subject-soft-c: 0.04;
 }
 
 /* 5. Biologie — emerald-leaf */
 [data-subject="Biologie"] {
-  --subject-accent:       oklch(55% 0.16 152);
-  --subject-accent-soft:  oklch(96% 0.04 152);
+  --subject-base-l: 0.55;
+  --subject-base-c: 0.16;
+  --subject-base-h: 152;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Biologie"] {
-  --subject-accent:       oklch(72% 0.14 152);
-  --subject-accent-soft:  oklch(22% 0.05 152);
+  --subject-base-l: 0.72;
+  --subject-base-c: 0.14;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.05;
 }
 
-/* 6. Latein — stone-red brick */
+/* 6. Latein — stone-red brick, klassische Serif */
 [data-subject="Latein"] {
-  --subject-accent:       oklch(48% 0.16 25);
-  --subject-accent-soft:  oklch(96% 0.03 25);
+  --subject-base-l: 0.48;
+  --subject-base-c: 0.16;
+  --subject-base-h: 25;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.03;
+  --subject-font: 'Crimson Text', 'Charter', Georgia, serif;
 }
 [data-theme="dark"] [data-subject="Latein"] {
-  --subject-accent:       oklch(70% 0.13 25);
-  --subject-accent-soft:  oklch(22% 0.04 25);
+  --subject-base-l: 0.70;
+  --subject-base-c: 0.13;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.04;
 }
 
 /* 7. Chemie — violet-chem */
 [data-subject="Chemie"] {
-  --subject-accent:       oklch(54% 0.16 290);
-  --subject-accent-soft:  oklch(96% 0.04 290);
+  --subject-base-l: 0.54;
+  --subject-base-c: 0.16;
+  --subject-base-h: 290;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Chemie"] {
-  --subject-accent:       oklch(74% 0.13 290);
-  --subject-accent-soft:  oklch(22% 0.05 290);
+  --subject-base-l: 0.74;
+  --subject-base-c: 0.13;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.05;
 }
 
 /* 8. Physik — electric cyan-blue */
 [data-subject="Physik"] {
-  --subject-accent:       oklch(58% 0.16 220);
-  --subject-accent-soft:  oklch(96% 0.04 220);
+  --subject-base-l: 0.58;
+  --subject-base-c: 0.16;
+  --subject-base-h: 220;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Physik"] {
-  --subject-accent:       oklch(75% 0.14 220);
-  --subject-accent-soft:  oklch(22% 0.05 220);
+  --subject-base-l: 0.75;
+  --subject-base-c: 0.14;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.05;
 }
 
 /* 9. Geographie — teal-globe */
 [data-subject="Geographie"] {
-  --subject-accent:       oklch(56% 0.15 165);
-  --subject-accent-soft:  oklch(96% 0.03 165);
+  --subject-base-l: 0.56;
+  --subject-base-c: 0.15;
+  --subject-base-h: 165;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.03;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Geographie"] {
-  --subject-accent:       oklch(73% 0.13 165);
-  --subject-accent-soft:  oklch(22% 0.04 165);
+  --subject-base-l: 0.73;
+  --subject-base-c: 0.13;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.04;
 }
 
-/* 10. Informatik — electric cyan (light), terminal-green (dark) */
+/* 10. Informatik — electric cyan (light), terminal-green (dark)
+       Sonderfall: zwei Font-Stacks — UI-Text in Inter, Code in Mono. */
 [data-subject="Informatik"] {
-  --subject-accent:       oklch(58% 0.18 195);
-  --subject-accent-soft:  oklch(96% 0.04 195);
+  --subject-base-l: 0.58;
+  --subject-base-c: 0.18;
+  --subject-base-h: 195;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
+  --subject-font-mono:
+    'JetBrains Mono', 'Fira Code', 'Cascadia Code',
+    'Consolas', ui-monospace, monospace;
 }
 [data-theme="dark"] [data-subject="Informatik"] {
-  --subject-accent:       oklch(75% 0.18 152);
-  --subject-accent-soft:  oklch(20% 0.06 152);
+  --subject-base-l: 0.75;
+  --subject-base-c: 0.18;
+  --subject-base-h: 152;        /* hue switch: cyan → terminal-green im dark */
+  --subject-soft-l: 0.20;
+  --subject-soft-c: 0.06;
+}
+
+/* Carbon × Informatik — gezielter Override gegen Verschmelzung
+   (Maya v2 Spec, "Cosmetic × Subject-Spezialfälle"). Carbon ist
+   grau-gruen, Informatik-Default ist terminal-cyan/-green —
+   ohne Override wuerden sie ineinanderlaufen. */
+[data-app-theme="carbon"] [data-subject="Informatik"] {
+  --subject-base-l: 0.78;
+  --subject-base-c: 0.20;
 }
 
 /* 11. Musik — warm amber */
 [data-subject="Musik"] {
-  --subject-accent:       oklch(65% 0.16 50);
-  --subject-accent-soft:  oklch(96% 0.03 50);
+  --subject-base-l: 0.65;
+  --subject-base-c: 0.16;
+  --subject-base-h: 50;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.03;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Musik"] {
-  --subject-accent:       oklch(78% 0.14 50);
-  --subject-accent-soft:  oklch(24% 0.04 50);
+  --subject-base-l: 0.78;
+  --subject-base-c: 0.14;
+  --subject-soft-l: 0.24;
+  --subject-soft-c: 0.04;
 }
 
 /* 12. Kunst — coral-orange-pop */
 [data-subject="Kunst"] {
-  --subject-accent:       oklch(62% 0.20 35);
-  --subject-accent-soft:  oklch(96% 0.04 35);
+  --subject-base-l: 0.62;
+  --subject-base-c: 0.20;
+  --subject-base-h: 35;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Kunst"] {
-  --subject-accent:       oklch(76% 0.17 35);
-  --subject-accent-soft:  oklch(24% 0.05 35);
+  --subject-base-l: 0.76;
+  --subject-base-c: 0.17;
+  --subject-soft-l: 0.24;
+  --subject-soft-c: 0.05;
 }
 
 /* 13. Sport — athletic yellow-amber */
 [data-subject="Sport"] {
-  --subject-accent:       oklch(72% 0.18 90);
-  --subject-accent-soft:  oklch(96% 0.04 90);
+  --subject-base-l: 0.72;
+  --subject-base-c: 0.18;
+  --subject-base-h: 90;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
 }
 [data-theme="dark"] [data-subject="Sport"] {
-  --subject-accent:       oklch(80% 0.16 90);
-  --subject-accent-soft:  oklch(24% 0.05 90);
+  --subject-base-l: 0.80;
+  --subject-base-c: 0.16;
+  --subject-soft-l: 0.24;
+  --subject-soft-c: 0.05;
+}
+
+
+/* ── Shared accent calc — alle Stub-Subjects ──────────
+   Statt jeden Subject-Block die accent-Berechnung zu wiederholen,
+   appliziert dieser Selector die Modulations-Formel auf alle
+   data-subject-Elemente. Mathematik hat oben schon eine eigene
+   pattern-bg-Definition, die Berechnung hier ueberschreibt das
+   nicht (gleicher Output). */
+[data-subject] {
+  --subject-accent: oklch(
+    calc(var(--subject-base-l, 0.5) + var(--cosmetic-lift, 0))
+    calc(var(--subject-base-c, 0.15) * var(--cosmetic-saturation, 1))
+    var(--subject-base-h, 250)
+  );
+  --subject-accent-soft: oklch(
+    calc(var(--subject-soft-l, 0.95) + var(--cosmetic-lift, 0) * 0.3)
+    calc(var(--subject-soft-c, 0.03) * var(--cosmetic-saturation, 1))
+    var(--subject-base-h, 250)
+  );
+}
+
+
+/* ── Subject-Font-Adoption auf Identity-Surfaces ──────
+   Maya v2 § "Wo --subject-font greift": NICHT alle Components,
+   sondern gezielt Topic-Header + Subtopic-Card-Heading. Body-Font
+   bleibt --font (Inter). Settings/Profile/Friends/Leaderboard/
+   Builder behalten harten --font Override (siehe main.css falls
+   noetig — aktuell durch Default-Cascade abgedeckt). */
+[data-subject] .topic-header h1,
+[data-subject] .subtopic-name {
+  font-family: var(--subject-font, var(--font));
+}
+
+/* Informatik-Sonderfall: Code-Bloecke (Formula-Pending zeigt LaTeX-
+   Source als Code-Tag) bekommen den Mono-Stack. Andere Faecher
+   behalten den Default-Mono-Stack aus main.css. */
+[data-subject="Informatik"] .lf-formula-pending {
+  font-family: var(--subject-font-mono,
+                   ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace);
 }
 
 
@@ -198,7 +347,7 @@
    setzt body.classList.add('subject-themes-off'). Hier
    neutralisieren wir die Layer-2-Tokens auf Layer-1,
    damit alles auf das Theme-Default fällt (Konzentrations-
-   Modus, Spec § "Constraint C — Settings-Override"). */
+   Modus, v1-Spec § "Constraint C — Settings-Override"). */
 
 body.subject-themes-off [data-subject],
 body.subject-themes-off[data-subject] {
@@ -208,6 +357,8 @@ body.subject-themes-off[data-subject] {
   --subject-radius-feel:  var(--radius);
   --subject-motion-feel:  var(--transition);
   --subject-pattern-bg:   none;
+  --subject-font:         var(--font);
+  --subject-font-mono:    ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 }
 
 

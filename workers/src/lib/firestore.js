@@ -374,6 +374,96 @@ export function buildWriteFor(env, path, set) {
 }
 
 // =============================================================
+//  firestoreQuery(env, collection, opts)
+// -------------------------------------------------------------
+//  Minimal :runQuery wrapper for the rate-limit / count use-case
+//  in submitTopicForApproval (V-PHASE-E-04). Supports:
+//    - opts.where  : Array<[fieldPath, op, value]>
+//                    op in 'EQUAL'|'==' (alias), 'NOT_EQUAL'|'!=',
+//                    'LESS_THAN'|'<', 'LESS_THAN_OR_EQUAL'|'<=',
+//                    'GREATER_THAN'|'>', 'GREATER_THAN_OR_EQUAL'|'>='
+//    - opts.limit  : integer (default 100)
+//
+//  Multiple where-clauses are AND-composed (Firestore default).
+//  Returns an array of { name, fields, createTime, updateTime }
+//  rows with `fields` already converted to plain JS values.
+//
+//  For more complex query shapes (orderBy / startAt / cursor /
+//  composite filters) extend this helper inline; we deliberately
+//  keep the surface small until a second caller needs more.
+// =============================================================
+const _OP_ALIAS = {
+  '==': 'EQUAL',
+  '!=': 'NOT_EQUAL',
+  '<':  'LESS_THAN',
+  '<=': 'LESS_THAN_OR_EQUAL',
+  '>':  'GREATER_THAN',
+  '>=': 'GREATER_THAN_OR_EQUAL'
+};
+export async function firestoreQuery(env, collection, opts = {}) {
+  const token = await getAccessToken(env);
+  const where = Array.isArray(opts.where) ? opts.where : [];
+  const limit = Number.isInteger(opts.limit) ? opts.limit : 100;
+
+  // Build the structuredQuery body. With a single where-clause we use
+  // a fieldFilter; with N>=2 we wrap them in a compositeFilter (AND).
+  const fieldFilters = where.map(([fieldPath, op, value]) => {
+    const fsOp = _OP_ALIAS[op] || op;
+    return {
+      fieldFilter: {
+        field: { fieldPath },
+        op:    fsOp,
+        value: toFsValue(value)
+      }
+    };
+  });
+  const structuredQuery = {
+    from:  [{ collectionId: collection }],
+    limit
+  };
+  if (fieldFilters.length === 1) {
+    structuredQuery.where = fieldFilters[0];
+  } else if (fieldFilters.length >= 2) {
+    structuredQuery.where = {
+      compositeFilter: {
+        op:      'AND',
+        filters: fieldFilters
+      }
+    };
+  }
+
+  // :runQuery is rooted at the parent of the collection; for a
+  // top-level collection that's the (default) database root.
+  const url = `${FS_BASE}/projects/${env.PROJECT_ID}/databases/(default)/documents:runQuery`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization:  `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ structuredQuery })
+  });
+  if (!res.ok) {
+    throw httpError(502, `Firestore :runQuery ${collection} fehlgeschlagen (HTTP ${res.status}).`);
+  }
+  // The response is a JSON array of { document: {name, fields, ...} }
+  // wrappers. An empty result-set still returns a single object with
+  // no `document` key (the readTime-only marker), filter that out.
+  const arr = await res.json();
+  const out = [];
+  for (const row of arr) {
+    if (!row || !row.document) continue;
+    out.push({
+      name:       row.document.name,
+      fields:     fromFsFields(row.document.fields || {}),
+      createTime: row.document.createTime || null,
+      updateTime: row.document.updateTime || null
+    });
+  }
+  return out;
+}
+
+// =============================================================
 //  firestoreCreate(env, collection, set)
 // -------------------------------------------------------------
 //  Create-with-auto-ID for the feed collection (where each test

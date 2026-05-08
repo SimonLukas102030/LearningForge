@@ -6,6 +6,14 @@
 :root {
   --font: 'Inter', system-ui, sans-serif;
 
+  /* Cosmetic-Modulations-Defaults (Layer 1, Maya v2).
+     Cosmetic-Themes ueberschreiben diese in cosmetics.css.
+     subject-tokens.css liest sie zur Laufzeit in oklch(calc(...)).
+     Identitaets-Werte: lift=0, saturation=1, opacity-mult=1 → kein Effekt. */
+  --cosmetic-lift: 0;
+  --cosmetic-saturation: 1;
+  --cosmetic-pattern-opacity-multiplier: 1;
+
   /* Light Mode */
   --bg: #f0f2f5;
   --bg-card: #ffffff;
@@ -5501,3 +5509,303 @@ input, textarea, select { font-family: var(--font); }
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════════════════════════
+   Section 99: Phase 3 — Public-Library Approval-Workflow
+   (Ethan, 2026-05-08)
+   ══════════════════════════════════════════════════════════════
+   Visibility-Picker im Builder, Status-Badges in Meine Inhalte,
+   Admin-Approval-Queue, Public-Library-View. Theme-konform via
+   --accent / --success / --warning / --danger Tokens, kein Hex.
+   Mobile-first (360px+) via flex-wrap statt fester Spaltenzahlen.
+   ══════════════════════════════════════════════════════════════ */
+
+/* — Builder Step-5 Visibility-Picker — */
+.builder-vis-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.builder-vis-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.builder-vis-opt:hover:not(.disabled) {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.builder-vis-opt.active {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.builder-vis-opt.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--bg-input);
+}
+.builder-vis-opt-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.builder-vis-opt-icon svg { width: 22px; height: 22px; }
+.builder-vis-opt-body { flex: 1; min-width: 0; }
+.builder-vis-opt-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.builder-vis-opt-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.builder-vis-opt-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--warning-text);
+  background: var(--warning-subtle);
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+.builder-vis-action {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+.builder-vis-action .btn-lg { min-width: 240px; }
+.builder-group-picker {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.builder-group-picker-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+/* — Custom-Topic-Card Visibility-Status-Badge — */
+.custom-topic-vis-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+}
+.custom-topic-vis-badge svg { width: 14px; height: 14px; }
+.custom-topic-vis-badge.is-private {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+.custom-topic-vis-badge.is-group {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.custom-topic-vis-badge.is-pending {
+  background: var(--warning-subtle);
+  color: var(--warning-text);
+  border-color: var(--warning);
+}
+.custom-topic-vis-badge.is-public {
+  background: var(--success-subtle);
+  color: var(--success-text);
+  border-color: var(--success);
+}
+.custom-topic-vis-badge.is-rejected {
+  background: var(--danger-subtle);
+  color: var(--danger-text);
+  border-color: var(--danger);
+}
+.custom-topic-reject {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--danger);
+  background: var(--danger-subtle);
+  color: var(--danger-text);
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: 6px;
+}
+.custom-topic-reject strong { font-weight: 700; }
+
+/* — Admin Approval-Queue — */
+.admin-approval-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (min-width: 720px) {
+  .admin-approval-card {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .admin-approval-head { flex: 1; min-width: 0; }
+  .admin-approval-actions { flex-shrink: 0; }
+}
+.admin-approval-meta {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.admin-approval-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.admin-approval-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.admin-approval-stats {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.admin-approval-author {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-family: monospace;
+}
+.admin-approval-message {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--accent-subtle);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.admin-approval-message strong { display: block; margin-bottom: 4px; font-size: 12px; color: var(--text-muted); }
+.admin-approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* — Admin Topic-Preview-Modal — */
+.admin-preview-qheader {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin: 8px 0;
+}
+.admin-preview-qlist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.admin-preview-q {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.admin-preview-q-num {
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.admin-preview-q-body { flex: 1; font-size: 14px; line-height: 1.4; }
+.admin-preview-q-opts {
+  margin: 6px 0 0 18px;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.admin-preview-q-opts li.is-correct {
+  color: var(--success-text);
+  font-weight: 600;
+}
+.admin-preview-q-sample {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* — Public-Library-View — */
+.public-lib-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+  align-items: stretch;
+}
+.public-lib-search {
+  flex: 1 1 240px;
+  position: relative;
+}
+.public-lib-search .form-input { padding-left: 38px; }
+.public-lib-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  display: flex;
+}
+.public-lib-search-icon svg { width: 16px; height: 16px; }
+.public-lib-fach-select {
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+.public-lib-card { position: relative; }
+@media (max-width: 480px) {
+  .public-lib-toolbar .public-lib-fach-select { width: 100%; }
+}
