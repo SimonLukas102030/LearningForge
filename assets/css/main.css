@@ -2960,7 +2960,12 @@ input, textarea, select { font-family: var(--font); }
   display: flex; gap: 10px; flex-wrap: wrap;
 }
 @media (max-width: 480px) {
-  .pomo-widget { right: 12px; bottom: 16px; }
+  /* V2-02 follow-up (Sophie QA Cycle-3): die V2-02-Override im 768px-Block
+     setzt left:16px / right:auto / bottom:calc(72px+safe). Die alten 480px-
+     Regeln hier (right:12px / bottom:16px) wuerden wegen identischer
+     Specificity + spaeterem source-position diese V2-02-Werte killen — das
+     gibt eine Pomodoro/Bug-FAB-Kollision und packt den Widget wieder unter
+     die Bottom-Tab-Bar. Nur die .pomo-panel-Verkleinerung ueberlebt. */
   .pomo-panel  { width: 210px; }
 }
 
@@ -3648,7 +3653,7 @@ input, textarea, select { font-family: var(--font); }
 }
 .ai-summary-box {
   margin-top: 12px;
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 14px 16px;
@@ -3665,7 +3670,7 @@ input, textarea, select { font-family: var(--font); }
   right: 24px;
   width: 340px;
   max-height: 480px;
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0,0,0,.18);
@@ -3743,7 +3748,7 @@ input, textarea, select { font-family: var(--font); }
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-left: 3px solid var(--subject-color, var(--accent));
   border-radius: 8px;
@@ -3794,7 +3799,7 @@ input, textarea, select { font-family: var(--font); }
   margin-top: 16px;
 }
 .lernplan-card {
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 14px 16px;
@@ -3810,7 +3815,7 @@ input, textarea, select { font-family: var(--font); }
 
 /* F-46: Share-Link & Bericht */
 .share-link-card {
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 16px 20px;
@@ -3833,7 +3838,7 @@ input, textarea, select { font-family: var(--font); }
   max-width: 100%;
 }
 .share-report-box {
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
@@ -4581,4 +4586,193 @@ input, textarea, select { font-family: var(--font); }
 }
 .notes-saved-pill-fade {
   opacity: 0;
+}
+
+/* ── Cycle-3 UX (Casey/Maya 2026-05-08) ─────
+   V-04 Lernen "Meine Klasse"-Filter Pill,
+   V-01 SRS-Auto-Banner,
+   V-02 Post-Test-Action-Cards.
+   Alle nutzen Theme-Variablen — keine hardcoded Farben. */
+
+/* V-04: Klassen-Filter-Pill (zwei Haelften, eine aktiv) */
+.lernen-class-toggle {
+  display: inline-flex;
+  margin: 14px 0 4px;
+  padding: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  gap: 2px;
+}
+.lernen-class-toggle-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.lernen-class-toggle-btn:hover {
+  color: var(--text);
+}
+.lernen-class-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* V-04: Subject-Card-Filter — wenn Klassen-Filter ODER Such-Filter "0" ist,
+   blende die Karte aus. Beide Filter zusammen = additiv (beide muessen "1"
+   fuer Anzeige). */
+.subject-card[data-class-match="0"],
+.subject-card[data-search-match="0"] {
+  display: none;
+}
+
+/* V-01: SRS-Auto-Banner auf Result-Page */
+.srs-auto-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 16px 0 24px;
+  padding: 14px 18px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  animation: fadeIn 200ms ease;
+}
+.srs-auto-banner-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+}
+.srs-auto-banner-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.srs-auto-banner-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.srs-auto-banner-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+.srs-auto-banner-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.srs-auto-banner .btn {
+  flex: 0 0 auto;
+}
+
+/* V-02: Post-Test-Action-Cards */
+.action-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+.action-card,
+.action-card-primary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform var(--transition), box-shadow var(--transition);
+  text-align: left;
+  min-height: 88px;
+  animation: fadeIn 240ms ease both;
+}
+.action-cards-grid > *:nth-child(1) { animation-delay: 0ms; }
+.action-cards-grid > *:nth-child(2) { animation-delay: 80ms; }
+.action-cards-grid > *:nth-child(3) { animation-delay: 160ms; }
+.action-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.action-card-primary {
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent);
+  color: var(--text);
+}
+.action-card:hover,
+.action-card-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.action-card-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-input);
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+.action-card-primary .action-card-icon {
+  background: var(--accent);
+  color: #fff;
+}
+.action-card-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.action-card-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.action-card-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+.action-card-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.action-card-arrow {
+  flex: 0 0 auto;
+  font-size: 22px;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.action-card-primary .action-card-arrow {
+  color: var(--accent);
+}
+
+/* Mobile: Action-Cards stack full-width, Tap-Target groesser */
+@media (max-width: 480px) {
+  .action-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .action-card,
+  .action-card-primary {
+    min-height: 64px;
+  }
 }

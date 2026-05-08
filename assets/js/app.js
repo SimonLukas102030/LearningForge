@@ -1268,20 +1268,44 @@ function renderSubject(subjectId) {
   const subject = structure?.[subjectId];
   if (!subject) { location.hash = '#/'; return; }
 
-  const years = Object.values(subject.years || {});
+  const allYears = Object.values(subject.years || {});
   const grades = userData?.grades || {};
 
-  const yearCards = years.length === 0
-    ? `<div class="empty-state"><div class="empty-icon">${lfIcon('calendar')}</div>Noch keine Klassen vorhanden.</div>`
-    : years.map(y => {
-        const topicCount = Object.keys(y.topics || {}).length;
-        const doneCount  = Object.keys(y.topics || {}).filter(tid => grades[`${subjectId}__${y.id}__${tid}`]).length;
-        return `
-          <div class="year-card" onclick="location.hash='#/fach/${subjectId}/${y.id}'">
-            <div class="y-name">${y.name}</div>
-            <div class="y-count">${topicCount} Themen · ${doneCount} getestet</div>
-          </div>`;
-      }).join('');
+  // V-04b (Casey/Cycle-3): Klassen-Filter respektieren — nur Klasse-N + nicht-
+  // klassen-spezifische Years (z.B. "Grammatik") sichtbar wenn Toggle ON.
+  const userKlasse  = userData?.klasse || null;
+  const filterOn    = !!userKlasse && getLernenKlasseFilter();
+  const isClassYearRe = /^Klasse[-_]?\d+$/i;
+  const klPattern  = filterOn ? new RegExp(`^Klasse[-_]?${userKlasse}$`, 'i') : null;
+  const years = filterOn
+    ? allYears.filter(y => {
+        const isClassYear = isClassYearRe.test(y.id);
+        if (!isClassYear) return true;
+        return klPattern.test(y.id);
+      })
+    : allYears;
+
+  let yearCards;
+  if (allYears.length === 0) {
+    yearCards = `<div class="empty-state"><div class="empty-icon">${lfIcon('calendar')}</div>Noch keine Klassen vorhanden.</div>`;
+  } else if (years.length === 0) {
+    // Filter aktiv, aber keine Klassen passen — Empty-State mit Toggle-Off-Link.
+    yearCards = `<div class="empty-state">
+      <div class="empty-icon">${lfIcon('calendar')}</div>
+      Keine Themen f\xfcr Klasse ${escapeHtml(String(userKlasse))}.
+      <div style="margin-top:12px"><a href="#" onclick="event.preventDefault();window.LF.toggleLernenKlassenFilter('0')">Alle Klassen anzeigen</a></div>
+    </div>`;
+  } else {
+    yearCards = years.map(y => {
+      const topicCount = Object.keys(y.topics || {}).length;
+      const doneCount  = Object.keys(y.topics || {}).filter(tid => grades[`${subjectId}__${y.id}__${tid}`]).length;
+      return `
+        <div class="year-card" onclick="location.hash='#/fach/${subjectId}/${y.id}'">
+          <div class="y-name">${y.name}</div>
+          <div class="y-count">${topicCount} Themen · ${doneCount} getestet</div>
+        </div>`;
+    }).join('');
+  }
 
   document.getElementById('app').innerHTML = `
     ${renderNav([{ label: subject.name }])}
@@ -1726,6 +1750,55 @@ function getRecommendations() {
   return all.sort((a, b) => b.priority - a.priority).slice(0, 5);
 }
 
+// ── V-02 (Casey/Cycle-3): Naechstes Topic im selben Fach+Jahr ────
+// Reihenfolge = alphabetisch ueber Object.keys(year.topics) (gleicher
+// Sort wie renderYear's Topic-Liste). Wenn am Ende der Liste → erstes
+// Topic der naechsten Klassenstufe (Klasse-N+1) im selben Fach. Wenn
+// auch das fehlt → null.
+function getNextTopic(subjectId, yearId, topicId) {
+  const subject = structure?.[subjectId];
+  if (!subject) return null;
+  const year = subject.years?.[yearId];
+  if (!year) return null;
+  const topicIds = Object.keys(year.topics || {}).sort();
+  const idx = topicIds.indexOf(topicId);
+  if (idx >= 0 && idx + 1 < topicIds.length) {
+    const nextId = topicIds[idx + 1];
+    return {
+      subjectId, yearId,
+      topicId: nextId,
+      topic: year.topics[nextId],
+      year, subject,
+      sameYear: true
+    };
+  }
+  // Fallback: erstes Topic der naechsten Klassenstufe.
+  const classMatch = /^Klasse[-_]?(\d+)$/i.exec(yearId);
+  if (classMatch) {
+    const nextClassNum = parseInt(classMatch[1], 10) + 1;
+    const candidates = Object.keys(subject.years || {})
+      .filter(yid => /^Klasse[-_]?\d+$/i.test(yid))
+      .map(yid => ({ yid, n: parseInt((/^Klasse[-_]?(\d+)$/i.exec(yid) || [])[1] || '0', 10) }))
+      .filter(o => o.n >= nextClassNum)
+      .sort((a, b) => a.n - b.n);
+    for (const c of candidates) {
+      const y = subject.years[c.yid];
+      const tids = Object.keys(y.topics || {}).sort();
+      if (tids.length) {
+        return {
+          subjectId,
+          yearId: c.yid,
+          topicId: tids[0],
+          topic: y.topics[tids[0]],
+          year: y, subject,
+          sameYear: false
+        };
+      }
+    }
+  }
+  return null;
+}
+
 // ── F-37/38: KI-Zusammenfassung & Tutor ──
 async function callAI(prompt, maxTokens = 600) {
   if (CONFIG.groq?.apiKey) {
@@ -1843,15 +1916,38 @@ function renderTutorMessages() {
   el.scrollTop = el.scrollHeight;
 }
 
-function getSubjectProgress(subjectId) {
+// V-04 (Casey/Cycle-3): optional klasse-filter. Bei `klasse` truthy zaehlen
+// nur Topics aus passender Klasse + nicht-klassen-spezifische (z.B.
+// Latein/Grammatik). Pattern wie Daily-Challenge (`app.js` ~5125).
+// Default-Verhalten unveraendert (klasse=null = alle Klassen).
+function getSubjectProgress(subjectId, opts = {}) {
   const subject    = structure?.[subjectId];
   const grades     = userData?.grades || {};
+  const klasse     = opts.klasse || null;
+  const klPattern  = klasse ? new RegExp(`^Klasse[-_]?${klasse}$`, 'i') : null;
+  const isClassYearRe = /^Klasse[-_]?\d+$/i;
   const allTopics  = Object.values(subject?.years || {})
+    .filter(y => {
+      if (!klPattern) return true;
+      const isClassYear = isClassYearRe.test(y.id);
+      if (!isClassYear) return true; // z.B. "Grammatik" → fuer alle
+      return klPattern.test(y.id);
+    })
     .flatMap(y => Object.keys(y.topics || {}).map(tid => `${subjectId}__${y.id}__${tid}`));
   const tested     = allTopics.filter(k => grades[k]);
   const gradeVals  = tested.map(k => grades[k].grade).filter(Boolean);
   const avgGrade   = gradeVals.length ? gradeVals.reduce((a, b) => a + b, 0) / gradeVals.length : null;
   return { total: allTopics.length, tested: tested.length, avgGrade };
+}
+
+// V-04 (Casey/Cycle-3): Lernen-Tab-Filter "Meine Klasse" — localStorage-State.
+// Default ON wenn key fehlt. Wird von renderLernen + renderSubject gelesen.
+function getLernenKlasseFilter() {
+  try {
+    const v = localStorage.getItem('lf:lernenFilterMyClassOnly');
+    if (v === '0') return false;
+    return true; // default ON
+  } catch { return true; }
 }
 
 // ── SRS: Fällige Karten zählen (F-16) ──────
@@ -2139,21 +2235,34 @@ function renderLernen() {
   const bookmarks = userData?.bookmarks || [];
   const srsDue   = getSRSDueCount();
 
+  // V-04 (Casey/Cycle-3): Klassen-Filter — Toggle nur sichtbar wenn
+  // userData.klasse gesetzt. Bestand ohne Klasse → kein Toggle, voller Status quo
+  // (Maya-Spec: "KEIN Filter forcieren — sonst sieht User leeres Grid").
+  const userKlasse  = userData?.klasse || null;
+  const filterOn    = !!userKlasse && getLernenKlasseFilter();
+  const activeKlasse = filterOn ? userKlasse : null;
+
   const subjectCards = subjects.length === 0
     ? `<div class="empty-state"><div class="empty-icon">${lfIcon('folder-open')}</div>Noch keine Fächer vorhanden — füge Ordner unter <code>Fächer/</code> hinzu.</div>`
     : subjects.map(s => {
-        const prog = getSubjectProgress(s.id);
+        const prog = getSubjectProgress(s.id, { klasse: activeKlasse });
         const pct  = prog.total > 0 ? prog.tested / prog.total : 0;
         const circ = 100.48;
         const dash = pct * circ;
+        const metaLine = activeKlasse
+          ? (prog.total > 0
+              ? `Klasse ${escapeHtml(String(activeKlasse))} · ${prog.total} Themen`
+              : `Keine Themen f\xfcr Klasse ${escapeHtml(String(activeKlasse))}`)
+          : `${Object.keys(s.years||{}).length} Klassen · ${prog.total} Themen`;
         return `
-          <div class="subject-card" style="--subject-color:${getSubjectColor(s.id)}"
+          <div class="subject-card" data-class-match="1" data-search-match="1"
+               style="--subject-color:${getSubjectColor(s.id)}"
                onclick="location.hash='#/fach/${s.id}'">
             <div class="s-card-top">
               <div>
                 <div class="s-icon">${getSubjectIcon(s.id)}</div>
                 <div class="s-name">${escapeHtml(s.name)}</div>
-                <div class="s-meta">${Object.keys(s.years||{}).length} Klassen · ${prog.total} Themen</div>
+                <div class="s-meta">${metaLine}</div>
               </div>
               <svg class="progress-ring" viewBox="0 0 36 36">
                 <circle cx="18" cy="18" r="16" fill="none" stroke="var(--border)" stroke-width="3"/>
@@ -2168,6 +2277,18 @@ function renderLernen() {
             ${prog.avgGrade ? `<div class="s-avg-grade" style="background:${avgGradeColor(prog.avgGrade)}">${prog.avgGrade.toFixed(1)}</div>` : ''}
           </div>`;
       }).join('');
+
+  // V-04 Toggle-Pill — nur wenn Klasse gesetzt (Maya-Spec).
+  const klasseToggle = userKlasse
+    ? `<div class="lernen-class-toggle" role="group" aria-label="Klassen-Filter" title="Filtert Themen nach deiner Klassenstufe.">
+         <button class="lernen-class-toggle-btn ${filterOn ? 'active' : ''}"
+                 aria-pressed="${filterOn ? 'true' : 'false'}"
+                 onclick="window.LF.toggleLernenKlassenFilter('1')">Nur Klasse ${escapeHtml(String(userKlasse))}</button>
+         <button class="lernen-class-toggle-btn ${filterOn ? '' : 'active'}"
+                 aria-pressed="${filterOn ? 'false' : 'true'}"
+                 onclick="window.LF.toggleLernenKlassenFilter('0')">Alle Klassen</button>
+       </div>`
+    : '';
 
   document.getElementById('app').innerHTML = `
     ${renderNav([{ label: 'Lernen' }])}
@@ -2204,6 +2325,8 @@ function renderLernen() {
       <div class="lernen-search-row">
         <input class="form-input" id="lernenSearch" placeholder="Fach suchen…" oninput="window.LF.filterLernenGrid(this.value)">
       </div>
+
+      ${klasseToggle}
 
       <div class="section-title" style="margin-top:24px">${lfIcon('book-open')} Alle Fächer</div>
       <div class="subjects-grid" id="lernenSubjectsGrid">${subjectCards}</div>
@@ -6600,15 +6723,28 @@ window.LF.switchLbTab = (tab) => {
   renderLeaderboard();
 };
 
-// Lernen-Hub: Live-Filter-Suche
+// Lernen-Hub: Live-Filter-Suche.
+// V-04 (Casey/Cycle-3): kombiniert mit Klassen-Filter via data-search-match
+// + data-class-match. CSS hidet Karten wenn EINER der beiden Filter "0" ist.
 window.LF.filterLernenGrid = (q) => {
   const ql = String(q || '').toLowerCase().trim();
   const grid = document.getElementById('lernenSubjectsGrid');
   if (!grid) return;
   grid.querySelectorAll('.subject-card').forEach(card => {
     const name = card.querySelector('.s-name')?.textContent?.toLowerCase() || '';
-    card.style.display = (!ql || name.includes(ql)) ? '' : 'none';
+    const match = !ql || name.includes(ql);
+    card.setAttribute('data-search-match', match ? '1' : '0');
   });
+};
+
+// V-04 (Casey/Cycle-3): Toggle "Nur meine Klasse" / "Alle Klassen".
+// Persistiert in localStorage (key 'lf:lernenFilterMyClassOnly'), kein
+// Firestore-Sync (Casey: ergonomic preference). Re-rendert die aktuelle Seite
+// via route() (gleicher Hash → Subject-Year-Grid bleibt, neu gefiltert).
+window.LF.toggleLernenKlassenFilter = (value) => {
+  try { localStorage.setItem('lf:lernenFilterMyClassOnly', value === '1' ? '1' : '0'); }
+  catch {}
+  route();
 };
 
 // ── Onboarding-Wizard-Handler ─────────────
@@ -7364,6 +7500,76 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     saveWeakQuestions(currentUser.uid, wrongQIds).catch(console.error);
   }
 
+  // ── V-01 (Casey/Cycle-3): Falsche Fragen automatisch in SRS einreihen ──
+  // Schliesst den groessten ungenutzten Lern-Asset-Loop. saveWeakQuestions
+  // (Statistik-Counter) bleibt parallel — beide Pfade nebeneinander.
+  // Schreib-Pfad: saveSRS nutzt set+merge (Hard Rule 4 ✔). Lokales Update
+  // ist synchron, Firestore-Write async im Hintergrund — Banner-Count
+  // basiert auf der lokalen Mutation.
+  let srsAutoCount = 0;
+  if (wrongQIds.length > 0 && currentUser) {
+    userData = userData || {};
+    if (!userData.srs) userData.srs = {};
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    const todayStr    = today.toISOString().slice(0, 10);
+    const topicKey    = `${testState?.subjectId || ''}__${testState?.yearId || ''}__${testState?.topicId || ''}`;
+
+    wrongQuestions.forEach(q => {
+      if (!q.id) return; // skip ID-lose Fragen (existing wrongQIds.filter(Boolean)-Logik)
+      const correctAnswer = q.type === 'multiple_choice'
+        ? (q.options?.[q.correct] ?? '')                 // unshuffelte korrekte Option (SRS lebt laenger als Test)
+        : (q.sampleAnswer || q.answer || '');
+      const existing = userData.srs[q.id];
+      if (existing) {
+        // Edge-Case (Maya-Spec): bestehende SRS-Karte. Falls schon faellig
+        // (nextReview <= today) → nichts tun (Banner zaehlt sie aber). Falls
+        // nextReview > today → SM-2-Reset: gerade falsch beantwortet =
+        // Vergessens-Beweis, also auf morgen vorziehen (q < 3-Pfad).
+        if (existing.nextReview && existing.nextReview > todayStr) {
+          userData.srs[q.id] = {
+            ...existing,
+            question: q.question,
+            answer: correctAnswer || existing.answer || '',
+            topicKey: existing.topicKey || topicKey,
+            interval: 1,
+            repetitions: 0,
+            ef: existing.ef ?? 2.5,
+            nextReview: tomorrowStr
+          };
+        }
+        srsAutoCount++;
+      } else {
+        userData.srs[q.id] = {
+          question: q.question,
+          answer:   correctAnswer,
+          topicKey,
+          interval: 1,
+          repetitions: 0,
+          ef: 2.5,
+          nextReview: tomorrowStr
+        };
+        srsAutoCount++;
+      }
+    });
+
+    if (srsAutoCount > 0) {
+      saveSRS(currentUser.uid, userData.srs).catch(console.error);
+    }
+  }
+  const srsAutoBanner = srsAutoCount > 0
+    ? `<div class="srs-auto-banner">
+         <div class="srs-auto-banner-icon">${lfIcon('brain')}</div>
+         <div class="srs-auto-banner-text">
+           <div class="srs-auto-banner-title">${srsAutoCount === 1 ? '1 Karte in deiner Wiederholungs-Kiste' : `${srsAutoCount} Karten in deiner Wiederholungs-Kiste`}</div>
+           <div class="srs-auto-banner-sub">Wir sehen uns morgen.</div>
+         </div>
+         <button class="btn btn-secondary" onclick="location.hash='#/srs'">Jetzt \xfcben</button>
+       </div>`
+    : '';
+
   const wrongItems = questions.map((q, i) => {
     const r = results[i];
     if ((r.points || 0) === r.maxPoints) return '';
@@ -7386,10 +7592,111 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
        <div class="wrong-list">${wrongItems}</div>`
     : `<div class="all-correct-banner">Alle Aufgaben korrekt beantwortet!</div>`;
 
-  // ── F-04 Retry-Button ────────────────────
+  // ── F-04 Retry-Button-State (V-02-aufgehoben, aber _wrongQuestions bleibt
+  //   fuer evtl. Tools/Tests via testState-Inspect verfuegbar) ────────────
   testState._wrongQuestions = wrongQuestions;
-  const retryBtn = wrongQuestions.length > 0
-    ? `<button class="btn btn-secondary" onclick="window.LF.startRetryTest()">Falsche Fragen nochmal ueben</button>`
+
+  // ── V-02 (Casey/Cycle-3): Post-Test-Action-Cards ──────────────────────
+  // Ersetzt die flachen 3 Buttons (Nochmal/Falsche/Zurueck) durch 3
+  // kontextuelle Action-Cards. "Falsche Fragen nochmal ueben" geht in
+  // V-01 SRS-Auto-Banner auf — separater Button hier weg.
+  const subjectId = testState?.subjectId;
+  const yearId    = testState?.yearId;
+  const topicId   = testState?.topicId;
+  const subject   = structure?.[subjectId];
+  const recommendations = (typeof getRecommendations === 'function')
+    ? (getRecommendations() || [])
+    : [];
+  const topRec = recommendations[0] || null;
+  const nextTopic = (subjectId && yearId && topicId)
+    ? getNextTopic(subjectId, yearId, topicId)
+    : null;
+  const safeSubjectName = escapeHtml(meta.subjectName || '');
+  const safeTopicName   = escapeHtml(meta.topicName || '');
+  const isLowGrade  = grade.grade >= 4 || meta.penalty;
+  const isMidGrade  = grade.grade === 3;
+
+  // Card 1 — Lerninhalt nochmal lesen (immer)
+  const card1Sub = isLowGrade
+    ? `${safeTopicName} — fang an der Quelle an.`
+    : `${safeTopicName} — vertiefe was du schon kannst.`;
+  const card1Hash = (subjectId && yearId && topicId)
+    ? `#/fach/${subjectId}/${yearId}/${topicId}`
+    : '#/';
+  const card1 = {
+    key: 'read',
+    html: (cls) => `
+      <div class="${cls}" onclick="location.hash='${card1Hash}'">
+        <div class="action-card-icon">${lfIcon('book-open')}</div>
+        <div class="action-card-body">
+          <div class="action-card-title">Lerninhalt nochmal lesen</div>
+          <div class="action-card-sub">${card1Sub}</div>
+        </div>
+        <div class="action-card-arrow">›</div>
+      </div>`
+  };
+
+  // Card 2 — Schwaechstes Subtopic (nur wenn ≥1 Recommendation existiert)
+  let card2 = null;
+  if (topRec) {
+    const recSubject = structure?.[topRec.subjectId];
+    const recSubjectName = escapeHtml(recSubject?.name || topRec.subjectId);
+    const recTopicName   = escapeHtml(topRec.topic?.name || topRec.topicId);
+    const recReason      = escapeHtml(topRec.reason || '');
+    card2 = {
+      key: 'recommend',
+      html: (cls) => `
+        <div class="${cls}" onclick="location.hash='#/fach/${topRec.subjectId}/${topRec.yearId}/${topRec.topicId}'">
+          <div class="action-card-icon">${lfIcon('target')}</div>
+          <div class="action-card-body">
+            <div class="action-card-title">\xdcbe dein schw\xe4chstes Subtopic</div>
+            <div class="action-card-sub">${recReason} · ${recSubjectName} · ${recTopicName}</div>
+          </div>
+          <div class="action-card-arrow">›</div>
+        </div>`
+    };
+  }
+
+  // Card 3 — Probier das naechste Thema (nur wenn nextTopic existiert)
+  let card3 = null;
+  if (nextTopic) {
+    const nextTopicName = escapeHtml(nextTopic.topic?.name || nextTopic.topicId);
+    const nextSubjectName = escapeHtml(nextTopic.subject?.name || subject?.name || '');
+    const classMatch = /^Klasse[-_]?(\d+)$/i.exec(nextTopic.yearId);
+    const card3Sub = nextTopic.sameYear
+      ? `${nextSubjectName} · ${nextTopicName}`
+      : (classMatch
+          ? `${nextSubjectName} · Klasse ${classMatch[1]} · ${nextTopicName}`
+          : `${nextSubjectName} · ${nextTopicName}`);
+    card3 = {
+      key: 'next',
+      html: (cls) => `
+        <div class="${cls}" onclick="location.hash='#/fach/${nextTopic.subjectId}/${nextTopic.yearId}/${nextTopic.topicId}'">
+          <div class="action-card-icon" aria-hidden="true">→</div>
+          <div class="action-card-body">
+            <div class="action-card-title">Probier das n\xe4chste Thema</div>
+            <div class="action-card-sub">${card3Sub}</div>
+          </div>
+          <div class="action-card-arrow">›</div>
+        </div>`
+    };
+  }
+
+  // Reihenfolge je Note (Maya-Spec):
+  //   Note 1-2: [3 → 2 → 1]
+  //   Note 3:   [2 → 1 → 3]
+  //   Note 4-6 / Penalty: [1 → 2 → 3]
+  let order;
+  if (isLowGrade)      order = [card1, card2, card3];
+  else if (isMidGrade) order = [card2, card1, card3];
+  else                 order = [card3, card2, card1];
+
+  const visibleCards = order.filter(Boolean);
+  const actionCardsHtml = visibleCards.length
+    ? `<div class="section-title" style="margin-top:28px">Was als N\xe4chstes?</div>
+       <div class="action-cards-grid">
+         ${visibleCards.map((c, i) => c.html(i === 0 ? 'action-card-primary' : 'action-card')).join('')}
+       </div>`
     : '';
 
   // Print-Items (DIN A4)
@@ -7422,6 +7729,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <div class="grade-points">${total} von ${max} Punkten · ${pct}%</div>
         </div>
         ${improvementBanner}
+        ${srsAutoBanner}
         <div class="section-title">Aufgaben im Detail</div>
         <div class="results-list">${resultItems}</div>
         ${wrongSection}
@@ -7432,12 +7740,12 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
             <button class="btn btn-secondary" onclick="window.LF.downloadPDF()">Als PDF speichern</button>
           </div>
         </div>
-        <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="window.LF.startTest('${testState.subjectId}','${testState.yearId}','${testState.topicId}')">
+        ${actionCardsHtml}
+        <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="window.LF.startTest('${testState.subjectId}','${testState.yearId}','${testState.topicId}')">
             Nochmal testen
           </button>
-          ${retryBtn}
-          <button class="btn btn-secondary" onclick="location.hash='#/'">Zurück</button>
+          <button class="btn btn-secondary" onclick="location.hash='#/'">Zur\xfcck</button>
         </div>
       </div>
 
