@@ -90,17 +90,24 @@ export async function handleAiCall(request, env) {
           temperature
         })
       });
-      // 401 (bad key) / 429 (rate-limit) / 5xx -> fall through to Gemini.
-      // Anything else 2xx with usable text -> return.
-      if (res.ok) {
-        const data = await res.json();
-        const text = data?.choices?.[0]?.message?.content?.trim();
-        if (text) return { text, provider: 'groq', model: groqModel };
+      const raw = await res.text().catch(() => '');
+      if (!res.ok) {
+        console.error('[aiCall] Groq HTTP', res.status, raw.slice(0, 300));
+      } else {
+        try {
+          const data = JSON.parse(raw);
+          const text = data?.choices?.[0]?.message?.content?.trim();
+          if (text) return { text, provider: 'groq', model: groqModel };
+          console.error('[aiCall] Groq empty/unexpected JSON shape:', raw.slice(0, 300));
+        } catch (parseErr) {
+          console.error('[aiCall] Groq non-JSON 200 body:', raw.slice(0, 300));
+        }
       }
-      // else: fall through silently (don't leak upstream body in logs)
-    } catch {
-      // Network error - fall through.
+    } catch (err) {
+      console.error('[aiCall] Groq network error:', err?.message || err);
     }
+  } else {
+    console.error('[aiCall] GROQ_API_KEY env missing');
   }
 
   // ---- Provider 2: Gemini ----------------------------------------------
@@ -129,14 +136,24 @@ export async function handleAiCall(request, env) {
           }
         })
       });
-      if (res.ok) {
-        const data = await res.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (text) return { text, provider: 'gemini', model: geminiModel };
+      const raw = await res.text().catch(() => '');
+      if (!res.ok) {
+        console.error('[aiCall] Gemini HTTP', res.status, raw.slice(0, 300));
+      } else {
+        try {
+          const data = JSON.parse(raw);
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (text) return { text, provider: 'gemini', model: geminiModel };
+          console.error('[aiCall] Gemini empty/unexpected JSON shape:', raw.slice(0, 300));
+        } catch (parseErr) {
+          console.error('[aiCall] Gemini non-JSON 200 body:', raw.slice(0, 300));
+        }
       }
-    } catch {
-      // Network error - fall through to 503.
+    } catch (err) {
+      console.error('[aiCall] Gemini network error:', err?.message || err);
     }
+  } else {
+    console.error('[aiCall] GEMINI_API_KEY env missing');
   }
 
   // Both providers down (or no keys configured).
