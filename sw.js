@@ -2,7 +2,7 @@
 //  LearningForge — Service Worker (F-11)
 // ══════════════════════════════════════════
 
-const CACHE_NAME = 'lf-v25';
+const CACHE_NAME = 'lf-v26';
 
 // Minimales App-Shell-Precache
 const PRECACHE_URLS = ['/', '/index.html', '/manifest.json'];
@@ -11,10 +11,14 @@ const PRECACHE_URLS = ['/', '/index.html', '/manifest.json'];
 // WICHTIG: googleapis.com pauschal — Firestore-Listen-Channel läuft über
 // firestore.googleapis.com und sendet Long-Poll-Streams als GET-Requests.
 // Cachen davon korrumpiert den Stream-State → "INTERNAL ASSERTION FAILED".
+// Wave-1-Ramsey H-M11: Cloudflare-Worker auch pauschal skippen — POST/GETs
+// sind state-mutating (Cosmetic-Unlocks, Test-Account-Marks); Caching wuerde
+// stale Antworten ausliefern oder veraltete Auth-Header replayen.
 const SKIP_HOSTS = [
   'firebaseio.com', 'googleapis.com',
   'gstatic.com', 'cdnjs.cloudflare.com',
-  'fonts.gstatic.com'
+  'fonts.gstatic.com',
+  'learning-forge-api.simonkoper27.workers.dev'
 ];
 
 // ── Install: App-Shell cachen ──────────────
