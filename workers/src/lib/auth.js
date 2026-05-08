@@ -15,8 +15,10 @@
 import { httpError } from './http.js';
 
 // Google's Firebase Auth ID-token cert endpoint (x509-PEM map).
+// Path is /robot/v1/, NOT /robotservices/v1/ — the wrong path returns
+// an HTML 404 page which crashes res.json() with "Unexpected token '<'".
 const JWKS_URL_PEM =
-  'https://www.googleapis.com/robotservices/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+  'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
 
 // In-memory cache (per isolate). Not strictly required since we also
 // hit the edge cache, but spares us a round-trip on warm invocations.
@@ -82,7 +84,16 @@ async function fetchGoogleCerts() {
     res = cached;
   }
 
-  const certMap = await res.json();   // { kid: '-----BEGIN CERTIFICATE-----...' }
+  // Defensive: Google occasionally returns HTML on transient outages.
+  // Read as text and parse explicitly so we get a meaningful log.
+  const rawCerts = await res.text();
+  let certMap;
+  try {
+    certMap = JSON.parse(rawCerts);   // { kid: '-----BEGIN CERTIFICATE-----...' }
+  } catch (parseErr) {
+    console.error('[auth] Google JWKs non-JSON body:', rawCerts.slice(0, 300));
+    throw httpError(503, 'Google JWKs response not parseable.');
+  }
   const out = {};
   for (const [kid, pem] of Object.entries(certMap)) {
     out[kid] = await pemCertToPublicKey(pem);
