@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, loginAsHacker, markAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, loginAsHacker, markAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -369,6 +369,10 @@ export function startApp() {
         if (location.hash === '' || location.hash === '#/' || location.hash === '#') renderDashboard();
       });
       await loadToolsOverride();
+      // F-1: alte Klausur-Eintraege aufraeumen (date < today-7 Tage). Idempotent,
+      // schreibt nur wenn was zu loeschen ist. Defensiv im try/catch — Frontend
+      // soll auch crashen wenn cleanupPastExams den Schreibpfad nicht erreicht.
+      try { cleanupPastExams(); } catch(e) { console.warn('[cleanupPastExams]', e); }
       checkAndShowWeeklySummary();
 
       // Banned-Live-Kick (Mission 1 Open-Q-6, Adrian: JA): Real-Time-Listener
@@ -2226,6 +2230,510 @@ function renderSettings() {
     </div>`;
 }
 
+// ── F-1: Klausur-Countdown ───────────────────────────────────
+// Casey-M-Variante: Anlegen/Anzeigen/Loeschen, KEIN Edit. Daily-Boost +
+// SRS-Boost in den letzten 3 Tagen. Datenmodell siehe Maya-Spec §4.
+//
+// Defensive Reads: userData.exams kann undefined / leer / corrupted sein
+// (Bestands-User vor Migration, Manual-Console-Edit). Alle Helper geben in
+// dem Fall Empty-Default zurueck — kein Crash propagiert in Daily/SRS.
+
+const _KLAUSUR_TODAY = () => new Date().toISOString().slice(0, 10);
+
+// Hilfs-Counter fuer Tage-Diff zwischen YYYY-MM-DD-Strings, lokal-zeitfest.
+// Nutzt Date-Konstruktor mit Y-M-D-Komponenten (ignoriert TZ-Offset, was
+// genau das ist was wir wollen — der Tag rolled bei Mitternacht lokal).
+function _diffDaysFromToday(dateStr) {
+  if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const target = new Date(y, m - 1, d);
+  const today  = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / 86400000);
+}
+
+// Pure: gibt Array von exam-Objekten zurueck mit (date - today) ∈ [0, 3].
+// Defense-in-depth: filtert auch defekte Eintraege (kein topicIds-Array,
+// kein subject-string, kaputtes date) raus, damit Boost-Code clean lebt.
+function getActiveExamBoost() {
+  const exams = userData?.exams;
+  if (!Array.isArray(exams)) return [];
+  return exams.filter(ex => {
+    if (!ex || typeof ex !== 'object') return false;
+    if (typeof ex.subject !== 'string' || !ex.subject) return false;
+    if (!Array.isArray(ex.topicIds)) return false;
+    const days = _diffDaysFromToday(ex.date);
+    return days !== null && days >= 0 && days <= 3;
+  });
+}
+
+function getExamCountdown(dateStr) {
+  const days = _diffDaysFromToday(dateStr);
+  if (days === null)     return { days: NaN, label: 'unbekannt', urgency: 'past' };
+  if (days < 0)          return { days, label: 'vorbei',    urgency: 'past' };
+  if (days === 0)        return { days, label: 'heute',     urgency: 'today' };
+  if (days === 1)        return { days, label: 'morgen',    urgency: 'urgent' };
+  if (days <= 3)         return { days, label: `in ${days} Tagen`, urgency: 'urgent' };
+  return                       { days, label: `in ${days} Tagen`, urgency: 'normal' };
+}
+
+// Cleanup beim App-Start: Eintraege mit date < today-7 Tage rauswerfen.
+// Async, fire-and-forget — User wartet nicht auf den Schreibpfad.
+async function cleanupPastExams() {
+  if (!currentUser) return;
+  const exams = userData?.exams;
+  if (!Array.isArray(exams) || !exams.length) return;
+  const fresh = exams.filter(ex => {
+    const days = _diffDaysFromToday(ex?.date);
+    return days === null ? true : days >= -7;
+  });
+  if (fresh.length === exams.length) return;        // nix zu tun
+  userData.exams = fresh;
+  try {
+    await saveExams(currentUser.uid, fresh);
+  } catch (e) {
+    console.warn('[cleanupPastExams]', e);
+  }
+}
+
+// Topic-Loader fuer Modal: Subject + Klassenstufe → Liste {key, name, yearId, topicId}.
+// Klassen-neutrale Years (kein "Klasse-N"-Pattern, z.B. "Grammatik") werden mit
+// gerendert — gleiche Logik wie getDailyChallengeQuestions-Filter.
+function _loadKlausurTopics(subjectId, klasse) {
+  const subject = structure?.[subjectId];
+  if (!subject) return [];
+  const klPattern = klasse ? new RegExp(`^Klasse[-_]?${klasse}$`, 'i') : null;
+  const isClassYearRe = /^Klasse[-_]?\d+$/i;
+  const topics = [];
+  Object.values(subject.years || {}).forEach(year => {
+    const isClassYear = isClassYearRe.test(year.id);
+    if (klPattern && isClassYear && !klPattern.test(year.id)) return;
+    Object.values(year.topics || {}).forEach(t => {
+      const key = `${subject.id}__${year.id}__${t.id}`;
+      topics.push({ key, name: t.name || t.id, yearId: year.id, topicId: t.id });
+    });
+  });
+  topics.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return topics;
+}
+
+// Modal-State (in-modul, nicht auf window).
+let _klausurModalState = null;
+
+function openKlausurModal() {
+  if (_blockClaudeWrite('Klausur eintragen')) return;
+  if (document.getElementById('klausurModalOverlay')) return;
+  const today = _KLAUSUR_TODAY();
+  const defaultDate = new Date();
+  defaultDate.setDate(defaultDate.getDate() + 7);
+  _klausurModalState = {
+    date: defaultDate.toISOString().slice(0, 10),
+    subject: '',
+    klasse: userData?.klasse ? String(userData.klasse) : '',
+    topicIds: [],
+    errors: {},
+    minDate: today
+  };
+  const overlay = document.createElement('div');
+  overlay.className = 'lf-modal-overlay';
+  overlay.id = 'klausurModalOverlay';
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeKlausurModal();
+  });
+  document.body.appendChild(overlay);
+  _renderKlausurModalContent();
+}
+
+function closeKlausurModal() {
+  document.getElementById('klausurModalOverlay')?.remove();
+  _klausurModalState = null;
+}
+
+function _renderKlausurModalContent() {
+  const overlay = document.getElementById('klausurModalOverlay');
+  if (!overlay || !_klausurModalState) return;
+  const s = _klausurModalState;
+  const subjects = Object.values(structure || {});
+  const showTopicSection = !!(s.subject && s.klasse);
+  const topics = showTopicSection ? _loadKlausurTopics(s.subject, s.klasse) : [];
+  const err = (k) => s.errors[k]
+    ? `<div class="error-msg" style="margin-top:6px">${escapeHtml(s.errors[k])}</div>`
+    : '';
+  const topicListHtml = !showTopicSection
+    ? `<div class="form-hint">Waehle erst Fach und Klassenstufe.</div>`
+    : (topics.length === 0
+        ? `<div class="form-hint">Keine Themen f\xfcr Klasse ${escapeHtml(s.klasse)} in ${escapeHtml(structure?.[s.subject]?.name || s.subject)} gefunden. Wechsle die Klassenstufe oder lege erst Themen an.</div>`
+        : `<div class="klausur-topic-checklist">${topics.map(t => {
+            const checked = s.topicIds.includes(t.key) ? 'checked' : '';
+            return `
+              <label class="klausur-topic-checkbox">
+                <input type="checkbox" ${checked} onchange="window.LF.toggleKlausurTopic('${escapeHtml(t.key).replace(/'/g, '&#39;')}')">
+                <span>${escapeHtml(t.name)}</span>
+              </label>`;
+          }).join('')}</div>`);
+  overlay.innerHTML = `
+    <div class="lf-modal-card klausur-modal">
+      <div class="lf-modal-header">
+        <h3>Klausur eintragen</h3>
+        <button class="btn-icon" onclick="window.LF.closeKlausurModal()" aria-label="Schlie\xdfen">${lfIcon('x')}</button>
+      </div>
+      <div class="lf-modal-body">
+        <div class="klausur-form-row">
+          <label class="form-label">Wann ist die Klausur?</label>
+          <input type="date" class="form-input" id="klausurDate"
+                 min="${escapeHtml(s.minDate)}"
+                 value="${escapeHtml(s.date)}"
+                 oninput="window.LF.onKlausurDateChange(this.value)">
+          ${err('date')}
+        </div>
+        <div class="klausur-form-row">
+          <label class="form-label">Welches Fach?</label>
+          <select class="form-input" onchange="window.LF.onKlausurSubjectChange(this.value)">
+            <option value="">— Fach w\xe4hlen —</option>
+            ${subjects.map(sub => `<option value="${escapeHtml(sub.id)}" ${s.subject === sub.id ? 'selected' : ''}>${escapeHtml(sub.name)}</option>`).join('')}
+          </select>
+          ${err('subject')}
+        </div>
+        <div class="klausur-form-row">
+          <label class="form-label">Klassenstufe</label>
+          <select class="form-input" onchange="window.LF.onKlausurKlasseChange(this.value)">
+            <option value="">— Klasse w\xe4hlen —</option>
+            ${[5,6,7,8,9,10,11,12,13].map(k => `<option value="${k}" ${String(s.klasse) === String(k) ? 'selected' : ''}>Klasse ${k}</option>`).join('')}
+          </select>
+          ${err('klasse')}
+        </div>
+        <div class="klausur-form-row">
+          <label class="form-label">Welche Themen kommen dran?</label>
+          ${topicListHtml}
+          ${err('topicIds')}
+        </div>
+        <div class="form-hint" style="margin-top:12px">Die letzten 3 Tage vor der Klausur boosten wir deine Daily Challenge und die Wiederholungs-Kiste auf diese Themen.</div>
+      </div>
+      <div class="lf-modal-actions">
+        <button class="btn btn-ghost" onclick="window.LF.closeKlausurModal()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="window.LF.submitKlausur()">Speichern</button>
+      </div>
+    </div>`;
+}
+
+async function submitKlausur() {
+  if (!_klausurModalState) return;
+  if (_blockClaudeWrite('Klausur eintragen')) return;
+  const s = _klausurModalState;
+  s.errors = {};
+  // Validation
+  if (!s.date) {
+    s.errors.date = 'Bitte ein Datum heute oder sp\xe4ter w\xe4hlen.';
+  } else {
+    const days = _diffDaysFromToday(s.date);
+    if (days === null || days < 0) {
+      s.errors.date = 'Bitte ein Datum heute oder sp\xe4ter w\xe4hlen.';
+    }
+  }
+  if (!s.subject) s.errors.subject = 'Bitte ein Fach w\xe4hlen.';
+  if (!s.klasse)  s.errors.klasse  = 'Bitte eine Klassenstufe w\xe4hlen.';
+  if (!s.topicIds || s.topicIds.length === 0) {
+    s.errors.topicIds = 'W\xe4hle mindestens ein Thema aus.';
+  }
+  if (Object.keys(s.errors).length) {
+    _renderKlausurModalContent();
+    return;
+  }
+  if (!currentUser) {
+    showToast('Nicht eingeloggt.', 'error');
+    return;
+  }
+  const newExam = {
+    id: (crypto?.randomUUID?.() || ('exam-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10))),
+    subject: s.subject,
+    klasse: String(s.klasse),
+    date: s.date,
+    topicIds: [...s.topicIds],
+    createdAt: Date.now()
+  };
+  const oldExams = Array.isArray(userData?.exams) ? userData.exams : [];
+  const newArr   = [...oldExams, newExam];
+  try {
+    await saveExams(currentUser.uid, newArr);
+  } catch (e) {
+    console.error('[saveExams]', e);
+    showToast('Speichern fehlgeschlagen — versuch es nochmal.', 'error');
+    return;
+  }
+  userData = userData || {};
+  userData.exams = newArr;
+  closeKlausurModal();
+  showToast('Klausur gespeichert.', 'success');
+  if (location.hash === '#/lernen') renderLernen();
+}
+
+async function deleteKlausur(examId) {
+  if (_blockClaudeWrite('Klausur l\xf6schen')) return;
+  if (!confirm('Klausur wirklich l\xf6schen?')) return;
+  const oldExams = Array.isArray(userData?.exams) ? userData.exams : [];
+  const newArr = oldExams.filter(e => e?.id !== examId);
+  if (newArr.length === oldExams.length) return;        // nichts geaendert
+  if (!currentUser) return;
+  try {
+    await saveExams(currentUser.uid, newArr);
+  } catch (e) {
+    console.error('[saveExams]', e);
+    showToast('L\xf6schen fehlgeschlagen — versuch es nochmal.', 'error');
+    return;
+  }
+  userData.exams = newArr;
+  showToast('Klausur entfernt.', 'success');
+  if (location.hash === '#/lernen') renderLernen();
+}
+
+function renderKlausurCard(exam) {
+  if (!exam || typeof exam !== 'object') return '';
+  const cd = getExamCountdown(exam.date);
+  const subj = structure?.[exam.subject];
+  const subjName = subj?.name || exam.subject;
+  // Datum schoen formatieren ("Di · 14. Mai 2026")
+  let formattedDate = '';
+  try {
+    const [y, m, d] = exam.date.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const wd  = dateObj.toLocaleDateString('de-DE', { weekday: 'short' }).replace('.', '');
+    const mon = dateObj.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' });
+    formattedDate = `${wd} \xb7 ${mon}`;
+  } catch { formattedDate = exam.date; }
+  const cdClass = cd.urgency === 'today'  ? 'klausur-countdown-today'
+                : cd.urgency === 'urgent' ? 'klausur-countdown-urgent'
+                : cd.urgency === 'past'   ? 'klausur-countdown-past'
+                : '';
+  // Topic-Pills (max 4 visible + Sammler)
+  const topicIds = Array.isArray(exam.topicIds) ? exam.topicIds : [];
+  const pills = topicIds.slice(0, 4).map(key => {
+    const [sid, yid, tid] = key.split('__');
+    const topic = structure?.[sid]?.years?.[yid]?.topics?.[tid];
+    const tname = topic?.name || tid || key;
+    return `<button class="klausur-pill" onclick="location.hash='#/fach/${escapeHtml(sid)}/${escapeHtml(yid)}/${escapeHtml(tid)}'">${escapeHtml(tname)}</button>`;
+  }).join('');
+  const moreCount = topicIds.length - 4;
+  const morePill = moreCount > 0 ? `<span class="klausur-pill klausur-pill-more">+${moreCount}</span>` : '';
+  const isPast = cd.urgency === 'past';
+  const isUrgent = cd.urgency === 'urgent' || cd.urgency === 'today';
+  const boostPill = isUrgent
+    ? `<span class="klausur-boost-pill">${lfIcon('zap', { cls: 'lf-icon-sm' })} Daily-Boost aktiv</span>`
+    : '';
+  return `
+    <div class="klausur-card${isPast ? ' klausur-card-past' : ''}">
+      <div class="klausur-card-header">
+        <div class="klausur-card-title-row">
+          <span class="klausur-card-icon" style="--subject-color:${getSubjectColor(exam.subject)}">${getSubjectIcon(exam.subject)}</span>
+          <div>
+            <div class="klausur-card-title">${escapeHtml(subjName)}</div>
+            <div class="klausur-card-date">${escapeHtml(formattedDate)}</div>
+          </div>
+        </div>
+        <div class="klausur-countdown ${cdClass}">${escapeHtml(cd.label)}</div>
+      </div>
+      ${(pills || morePill) ? `<div class="klausur-topic-pills">${pills}${morePill}</div>` : ''}
+      <div class="klausur-card-footer">
+        ${boostPill}
+        <button class="btn-icon klausur-delete-btn" aria-label="Klausur l\xf6schen"
+                onclick="window.LF.deleteKlausur('${escapeHtml(exam.id).replace(/'/g, '&#39;')}')">${lfIcon('trash-2')}</button>
+      </div>
+    </div>`;
+}
+
+function renderKlausurSection() {
+  const exams = Array.isArray(userData?.exams) ? userData.exams : [];
+  if (exams.length === 0) {
+    return `
+      <div class="klausur-section">
+        <div class="klausur-empty-state" onclick="window.LF.openKlausurModal()">
+          <div class="klausur-empty-icon">${lfIcon('calendar')}</div>
+          <div class="klausur-empty-body">
+            <div class="klausur-empty-title">Klausur eintragen</div>
+            <div class="klausur-empty-sub">Trag deinen n\xe4chsten Termin ein — App boostet die letzten 3 Tage Daily und Wiederholung.</div>
+          </div>
+          <button class="btn btn-primary" onclick="event.stopPropagation();window.LF.openKlausurModal()">Klausur eintragen</button>
+        </div>
+      </div>`;
+  }
+  // Sortiert nach Datum (aufsteigend), defekte Eintraege ans Ende.
+  const sorted = [...exams].sort((a, b) => {
+    const da = _diffDaysFromToday(a?.date);
+    const db = _diffDaysFromToday(b?.date);
+    if (da === null && db === null) return 0;
+    if (da === null) return  1;
+    if (db === null) return -1;
+    return da - db;
+  });
+  return `
+    <div class="klausur-section">
+      <div class="section-title" style="margin-top:0">${lfIcon('calendar')} Deine Klausuren</div>
+      <div class="klausur-list">
+        ${sorted.map(renderKlausurCard).join('')}
+      </div>
+      <button class="btn btn-secondary klausur-add-btn" onclick="window.LF.openKlausurModal()">+ Klausur eintragen</button>
+    </div>`;
+}
+
+// ── F-4: Heute-Zuerst-Card ────────────────────────────────────
+// Pure Komposition aus existierenden Helpers. Priority-Stack siehe Maya-Spec
+// §1. Jeder Step ist defensiv — fehlende Daten = Step ueberspringen, kein
+// Crash propagiert. Step 6 (Fallback) ist immer erreichbar.
+
+function _decideStep1Klausur() {
+  const exams = Array.isArray(userData?.exams) ? userData.exams : [];
+  if (!exams.length) return null;
+  // Klausuren in [0, 7] Tagen, sortiert nach Naehe.
+  const candidates = exams
+    .map(ex => ({ ex, days: _diffDaysFromToday(ex?.date) }))
+    .filter(o => o.days !== null && o.days >= 0 && o.days <= 7
+                 && Array.isArray(o.ex.topicIds) && o.ex.topicIds.length > 0)
+    .sort((a, b) => a.days - b.days);
+  for (const { ex, days } of candidates) {
+    // Topic mit hoechster Note (>=4) zuerst, sonst Note 3, sonst nie getestet, sonst erstes.
+    const grades = userData?.grades || {};
+    const validTopics = ex.topicIds.filter(key => {
+      const [sid, yid, tid] = key.split('__');
+      return !!structure?.[sid]?.years?.[yid]?.topics?.[tid];
+    });
+    if (!validTopics.length) continue;
+    const ranked = validTopics.map(key => {
+      const g = grades[key];
+      const grade = g?.grade ?? null;
+      // "Schwaeche-Score": je groesser, desto schwaecher. nie-getestet = 5.
+      const score = grade === null ? 5 : grade;
+      return { key, score, grade };
+    }).sort((a, b) => b.score - a.score);
+    const pick = ranked[0];
+    const [sid, yid, tid] = pick.key.split('__');
+    const subj = structure?.[sid];
+    const topic = subj?.years?.[yid]?.topics?.[tid];
+    const subjName = subj?.name || sid;
+    const topicName = topic?.name || tid;
+    const allUntested = ranked.every(r => r.grade === null);
+    let sub;
+    if (days === 0) sub = `${subjName}-Klausur ist heute — letzter Schliff?`;
+    else if (allUntested) sub = `${subjName}-Klausur ${days === 1 ? 'morgen' : `in ${days} Tagen`} — fang mit ${topicName} an.`;
+    else sub = `${subjName}-Klausur ${days === 1 ? 'morgen' : `in ${days} Tagen`} — \xfcb das schw\xe4chste Thema.`;
+    return {
+      kind: 'klausur',
+      payload: { ex, days, urgent: days <= 3 },
+      icon: days <= 3 ? 'triangle-alert' : 'calendar',
+      iconUrgent: days <= 3,
+      sub,
+      cta: 'Jetzt \xfcben',
+      hash: `#/fach/${sid}/${yid}/${tid}`
+    };
+  }
+  return null;
+}
+
+function _decideStep2Daily() {
+  const today = _KLAUSUR_TODAY();
+  if (userData?.dailyChallenges?.[today]) return null;
+  return {
+    kind: 'daily',
+    icon: 'zap',
+    sub: 'Deine Daily Challenge wartet — 5 Min, 6 Fragen, Bonus-XP.',
+    cta: 'Daily starten',
+    hash: '#/daily-challenge'
+  };
+}
+
+function _decideStep3SRS() {
+  const due = getSRSDueCount();
+  if (due < 5) return null;
+  return {
+    kind: 'srs',
+    icon: 'layers',
+    sub: `${due} Karten sind heute f\xe4llig — kurz wiederholen, langfristig behalten.`,
+    cta: 'Wiederholen',
+    hash: '#/srs'
+  };
+}
+
+function _decideStep4Recommend() {
+  const recs = (typeof getRecommendations === 'function') ? (getRecommendations() || []) : [];
+  if (!recs.length) return null;
+  const r = recs[0];
+  const subj = structure?.[r.subjectId];
+  const subjName = subj?.name || r.subjectId;
+  const topicName = r.topic?.name || r.topicId;
+  return {
+    kind: 'recommend',
+    icon: 'target',
+    sub: `${r.reason} — ${subjName} \xb7 ${topicName}`,
+    cta: 'Schwachstelle \xfcben',
+    hash: `#/fach/${r.subjectId}/${r.yearId}/${r.topicId}`
+  };
+}
+
+function _decideStep5NewTopic() {
+  const klasse = userData?.klasse;
+  if (!klasse) return null;
+  const grades = userData?.grades || {};
+  const klRe = new RegExp(`^Klasse[-_]?${klasse}$`, 'i');
+  for (const subject of Object.values(structure || {})) {
+    for (const year of Object.values(subject.years || {})) {
+      if (!klRe.test(year.id)) continue;
+      const topicIds = Object.keys(year.topics || {}).sort();
+      for (const tid of topicIds) {
+        const key = `${subject.id}__${year.id}__${tid}`;
+        if (!grades[key]) {
+          const topic = year.topics[tid];
+          return {
+            kind: 'newTopic',
+            icon: 'map',
+            sub: 'Du hast deine Pflicht f\xfcr heute. Lust auf ein neues Thema?',
+            cta: 'Neues Thema entdecken',
+            hash: `#/fach/${subject.id}/${year.id}/${tid}`,
+            payload: { subjectName: subject.name, topicName: topic?.name || tid }
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function _decideStep6Fallback() {
+  return {
+    kind: 'fallback',
+    icon: 'book-open',
+    sub: 'W\xe4hle dein erstes Fach unten und leg los.',
+    cta: 'Zu den F\xe4chern',
+    hash: '#/lernen'
+  };
+}
+
+function decideHeuteZuerstStep() {
+  return _decideStep1Klausur()
+      || _decideStep2Daily()
+      || _decideStep3SRS()
+      || _decideStep4Recommend()
+      || _decideStep5NewTopic()
+      || _decideStep6Fallback();
+}
+
+function renderHeuteZuerstCard() {
+  let step;
+  try { step = decideHeuteZuerstStep(); } catch (e) {
+    console.warn('[heuteZuerst]', e);
+    step = _decideStep6Fallback();
+  }
+  const iconCls = step.iconUrgent ? 'heute-zuerst-icon heute-zuerst-icon-urgent' : 'heute-zuerst-icon';
+  return `
+    <div class="heute-zuerst-card${step.iconUrgent ? ' heute-zuerst-card-urgent' : ''}"
+         onclick="location.hash='${escapeHtml(step.hash)}'">
+      <div class="${iconCls}">${lfIcon(step.icon, { cls: 'lf-icon-lg' })}</div>
+      <div class="heute-zuerst-body">
+        <div class="heute-zuerst-eyebrow">Heute zuerst</div>
+        <div class="heute-zuerst-sub">${escapeHtml(step.sub)}</div>
+      </div>
+      <button class="btn btn-primary heute-zuerst-cta" onclick="event.stopPropagation();location.hash='${escapeHtml(step.hash)}'">${escapeHtml(step.cta)}</button>
+    </div>`;
+}
+
 // ── Lernen-Hub (Mission 1, neu) ──────────
 // Daily Challenge + SRS + Lesezeichen + Suche + komplettes Fächer-Grid.
 // Ersetzt das Fächer-Grid auf Dashboard (das nur noch Top-3-Schnellstart hat).
@@ -2297,6 +2805,9 @@ function renderLernen() {
         <h1>${lfIcon('book-open')} Lernen</h1>
         <div class="sub">Deine Lern-Aktionen auf einen Blick.</div>
       </div>
+
+      ${renderKlausurSection()}
+      ${renderHeuteZuerstCard()}
 
       <div class="lernen-quick-grid">
         <div class="lernen-quick-card lernen-quick-daily" onclick="location.hash='#/daily-challenge'">
@@ -5239,12 +5750,37 @@ async function getDailyChallengeQuestions() {
   const seed    = dateKey.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
   const rand    = _seededRand(seed);
 
-  let allTopics = Object.values(structure || {})
+  const allTopicsUnfiltered = Object.values(structure || {})
     .flatMap(s => Object.values(s.years || {})
       .flatMap(y => Object.values(y.topics || {})
         .map(t => ({ subjectId: s.id, yearId: y.id, topicId: t.id }))));
 
-  // Klassen-Filter (#7): Topics aus passender Klasse, plus solche ohne Klassenzuordnung (z.B. "Grammatik")
+  // ── F-1: Klausur-Boost (≤3 Tage) ─────────
+  // Topics aus aktiven Klausuren werden zum Pool. Spec §2.4: exam.klasse hat
+  // Vorrang vor userData.klasse — also Klausur-Topics direkt aus exam.topicIds
+  // ziehen, nicht ueber den klasse-gefilterten Pool.
+  // Try/catch: falls Boost-Pfad crasht (corrupted exams), faellt's auf den
+  // Standard-Pool zurueck — User sieht eine normale Daily statt Crash.
+  let klausurTopics = [];
+  try {
+    const activeExams = getActiveExamBoost();
+    if (activeExams.length) {
+      const klausurKeys = new Set();
+      activeExams.forEach(ex => {
+        (ex.topicIds || []).forEach(k => klausurKeys.add(k));
+      });
+      klausurTopics = allTopicsUnfiltered.filter(t =>
+        klausurKeys.has(`${t.subjectId}__${t.yearId}__${t.topicId}`)
+      );
+    }
+  } catch (e) {
+    console.warn('[daily-klausur-boost]', e);
+    klausurTopics = [];
+  }
+
+  // Klassen-Filter (#7): Topics aus passender Klasse, plus solche ohne Klassenzuordnung (z.B. "Grammatik").
+  // Auffuell-Pool fuer Klausur-Boost = klasse-gefilterter Standard-Pool.
+  let allTopics = allTopicsUnfiltered;
   const userKlasse = userData?.klasse;
   if (userKlasse) {
     const klPattern = new RegExp(`^Klasse[-_]?${userKlasse}$`, 'i');
@@ -5256,7 +5792,7 @@ async function getDailyChallengeQuestions() {
     });
   }
 
-  if (!allTopics.length) return [];
+  if (!allTopics.length && !klausurTopics.length) return [];
 
   // Deterministisch shuffeln (Fisher-Yates mit Seed) — nicht mit rand()-0.5
   const shuffled = [...allTopics];
@@ -5264,8 +5800,13 @@ async function getDailyChallengeQuestions() {
     const j = Math.floor(rand() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  // Mehr Topics einbeziehen (vorher 3 → oft zu wenig MC-Fragen für 6 Slots)
-  const picked   = shuffled.slice(0, Math.min(5, shuffled.length));
+  // Wenn Klausur-Boost: zuerst Klausur-Topics, dann Auffuell-Pool.
+  // Cap = 8 (gibt Auffuell-Spielraum fuer den ≥6-MC-Garantor).
+  const picked = klausurTopics.length > 0
+    ? [...klausurTopics, ...shuffled.filter(t =>
+        !klausurTopics.some(k => k.subjectId === t.subjectId && k.yearId === t.yearId && k.topicId === t.topicId)
+      )].slice(0, 8)
+    : shuffled.slice(0, Math.min(5, shuffled.length));
 
   // getTopicQuestions returnt ein ARRAY — nicht {questions: [...]}
   const sets = await Promise.all(
@@ -5294,10 +5835,17 @@ function renderDailyChallengeCard() {
         <div class="daily-card-grade" style="background:${gi.color}">${done.grade}</div>
       </div>`;
   }
+  // F-1: Klausur-Boost-Indikator (≤3 Tage). Defensiv im try — wenn was
+  // schief geht, faellt der Sub-Text auf den Standard-Status zurueck.
+  let boostActive = false;
+  try { boostActive = getActiveExamBoost().length > 0; } catch(e) {}
+  const subText = boostActive
+    ? '5 Min \xb7 6 Fragen \xb7 Klausur-Boost aktiv'
+    : '5 Min \xb7 6 Fragen \xb7 Bonus-XP';
   return `
-    <div class="daily-card" data-tour="daily-card" onclick="location.hash='#/daily-challenge'">
+    <div class="daily-card${boostActive ? ' daily-card-boost' : ''}" data-tour="daily-card" onclick="location.hash='#/daily-challenge'">
       <div class="daily-card-label">Daily Challenge</div>
-      <div class="daily-card-status">5 Min · 6 Fragen · Bonus-XP</div>
+      <div class="daily-card-status">${subText}</div>
       <div class="daily-card-cta">Jetzt starten</div>
     </div>`;
 }
@@ -7447,6 +7995,171 @@ window.LF.submitTest = async () => {
   }
 };
 
+// ── F-3: Erklaer-mir-warum-falsch ────────────────────────────
+// AI-Erklaerung pro falscher Frage. Cache in userData.errorExplanations[qId]
+// (Firestore set+merge via saveErrorExplanation). Cost-Cap: 20 KI-Calls/Tag/User
+// im localStorage. Bei API-Fehler: Toast + Button-State zurueck, KEIN Counter-
+// Increment (sonst kann ein lokaler API-Block den User aussperren).
+//
+// AI-Output IMMER durch escapeHtml vor innerHTML-Injection (Hard-Rule 4 Geist).
+// Counter-Read mit try/catch (Inkognito-Mode kann localStorage werfen).
+
+const _EXPLAIN_DAILY_CAP = 20;
+const _EXPLAIN_MAX_LEN   = 800;
+
+// Per-Render snapshot der Frage-Lookups: requestErrorExplanation muss
+// userAnswer + correctAnswer + Frage-Text haben — die holt der Render-Pfad
+// in den Snapshot, der window.LF-Handler liest dann aus diesem Map.
+let _explainContext = {};   // qId → { question, userAnswer, correctAnswer, subjectName, topicName, statusEl }
+
+function _getExplainCountToday() {
+  try {
+    const k = 'lf_explain_count_' + _KLAUSUR_TODAY();
+    return parseInt(localStorage.getItem(k) || '0', 10) || 0;
+  } catch { return 0; }
+}
+
+function _incrementExplainCountToday() {
+  try {
+    const k = 'lf_explain_count_' + _KLAUSUR_TODAY();
+    const cur = parseInt(localStorage.getItem(k) || '0', 10) || 0;
+    localStorage.setItem(k, String(cur + 1));
+  } catch {}
+}
+
+function _buildExplainPrompt({ question, userAnswer, correctAnswer, subjectName, topicName }) {
+  return `Du bist ein freundlicher Lehrer. Erkl\xe4re einem Sch\xfcler in 2-3 kurzen S\xe4tzen auf Deutsch, warum seine Antwort falsch ist und warum die richtige Antwort richtig ist. Keine Einleitung, keine Anrede, direkt zur Erkl\xe4rung. Fach: ${subjectName || '—'}. Thema: ${topicName || '—'}.
+
+Frage: ${question}
+Antwort des Sch\xfclers: ${userAnswer}
+Richtige Antwort: ${correctAnswer}`;
+}
+
+function _renderExplainRow(qId, q, userAnswer, correctAnswer, subjectName, topicName) {
+  if (!qId) return '';
+  // Snapshot fuer den Handler, weil testState.questions schon shuffelt und
+  // shuffledOptions mutiert ist — wir wollen die Render-Werte bewahren.
+  _explainContext[qId] = { question: q.question, userAnswer, correctAnswer, subjectName, topicName };
+  const cached = userData?.errorExplanations?.[qId];
+  const cap = _getExplainCountToday();
+  const limitReached = !cached && cap >= _EXPLAIN_DAILY_CAP;
+  const safeQid = escapeHtml(qId).replace(/'/g, '&#39;');
+  if (cached?.explanation) {
+    return `
+      <div class="explain-row" data-explain-qid="${escapeHtml(qId)}">
+        <button class="explain-btn explain-btn-toggle" onclick="window.LF.toggleErrorExplanation('${safeQid}')">
+          <span class="explain-btn-label">Erkl\xe4rung anzeigen</span>
+          <span class="explain-btn-caret">▼</span>
+        </button>
+        <div class="explain-body explain-body--collapsed">
+          ${escapeHtml(cached.explanation)}
+          <div class="explain-disclaimer">KI-Erkl\xe4rung — kann Fehler enthalten.</div>
+        </div>
+      </div>`;
+  }
+  if (limitReached) {
+    return `
+      <div class="explain-row" data-explain-qid="${escapeHtml(qId)}">
+        <button class="explain-btn explain-btn--limit" disabled
+                title="Du hast heute schon ${_EXPLAIN_DAILY_CAP} Erkl\xe4rungen abgerufen. Morgen geht's weiter.">
+          \u{1F916} Tageslimit erreicht
+        </button>
+      </div>`;
+  }
+  return `
+    <div class="explain-row" data-explain-qid="${escapeHtml(qId)}">
+      <button class="explain-btn explain-btn-ready"
+              title="Lass dir von der KI erkl\xe4ren, warum diese Antwort falsch war."
+              onclick="window.LF.requestErrorExplanation('${safeQid}')">
+        \u{1F916} Erkl\xe4r mir warum
+      </button>
+    </div>`;
+}
+
+async function requestErrorExplanation(qId) {
+  if (!qId) return;
+  const ctx = _explainContext[qId];
+  const row = document.querySelector(`.explain-row[data-explain-qid="${CSS.escape(qId)}"]`);
+  if (!ctx || !row) return;
+
+  // Cap-Check (kann race-en, aber +1-Drift ist akzeptabel — Maya-Spec).
+  const cap = _getExplainCountToday();
+  if (cap >= _EXPLAIN_DAILY_CAP) {
+    showToast('Tageslimit erreicht — morgen geht\'s weiter.', 'error');
+    row.innerHTML = `<button class="explain-btn explain-btn--limit" disabled
+        title="Du hast heute schon ${_EXPLAIN_DAILY_CAP} Erkl\xe4rungen abgerufen. Morgen geht\'s weiter.">
+        \u{1F916} Tageslimit erreicht
+      </button>`;
+    return;
+  }
+
+  // Loading-State.
+  const btn = row.querySelector('.explain-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.classList.add('explain-btn--loading');
+    btn.innerHTML = `<span class="spinner-inline"></span> KI denkt nach …`;
+  }
+
+  let aiText = '';
+  try {
+    const prompt = _buildExplainPrompt(ctx);
+    aiText = await callAI(prompt, 250);
+    if (typeof aiText !== 'string' || !aiText.trim()) {
+      throw new Error('Leere AI-Antwort');
+    }
+    aiText = aiText.trim();
+    if (aiText.length > _EXPLAIN_MAX_LEN) {
+      aiText = aiText.slice(0, _EXPLAIN_MAX_LEN - 1) + '…';
+    }
+  } catch (e) {
+    console.warn('[explainErr]', e);
+    showToast('KI gerade nicht verf\xfcgbar — versuch es sp\xe4ter.', 'error');
+    // Button zurueck auf ready (KEIN Counter-Increment).
+    row.innerHTML = `
+      <button class="explain-btn explain-btn-ready"
+              title="Lass dir von der KI erkl\xe4ren, warum diese Antwort falsch war."
+              onclick="window.LF.requestErrorExplanation('${escapeHtml(qId).replace(/'/g, '&#39;')}')">
+        \u{1F916} Erkl\xe4r mir warum
+      </button>`;
+    return;
+  }
+
+  // Success: Counter +1, lokales userData mutieren, Cache schreiben (best-effort).
+  _incrementExplainCountToday();
+  userData = userData || {};
+  if (!userData.errorExplanations) userData.errorExplanations = {};
+  userData.errorExplanations[qId] = { explanation: aiText, generatedAt: Date.now() };
+  if (currentUser && !isClaudeAccount() && !isHackerAccount()) {
+    saveErrorExplanation(currentUser.uid, qId, aiText).catch(e => console.warn('[saveExplain]', e));
+  }
+  // Re-render der Row (state: cached, expanded).
+  const safeQid = escapeHtml(qId).replace(/'/g, '&#39;');
+  row.innerHTML = `
+    <button class="explain-btn explain-btn-toggle" onclick="window.LF.toggleErrorExplanation('${safeQid}')">
+      <span class="explain-btn-label">Erkl\xe4rung ausblenden</span>
+      <span class="explain-btn-caret">▲</span>
+    </button>
+    <div class="explain-body">
+      ${escapeHtml(aiText)}
+      <div class="explain-disclaimer">KI-Erkl\xe4rung — kann Fehler enthalten.</div>
+    </div>`;
+}
+
+function toggleErrorExplanation(qId) {
+  if (!qId) return;
+  const row = document.querySelector(`.explain-row[data-explain-qid="${CSS.escape(qId)}"]`);
+  if (!row) return;
+  const body  = row.querySelector('.explain-body');
+  const label = row.querySelector('.explain-btn-label');
+  const caret = row.querySelector('.explain-btn-caret');
+  if (!body) return;
+  const wasCollapsed = body.classList.contains('explain-body--collapsed');
+  body.classList.toggle('explain-body--collapsed');
+  if (label) label.textContent = wasCollapsed ? 'Erkl\xe4rung ausblenden' : 'Erkl\xe4rung anzeigen';
+  if (caret) caret.textContent = wasCollapsed ? '▲' : '▼';
+}
+
 function renderResults(questions, answers, results, grade, total, max, timeUsed, meta) {
   const mins = Math.floor(timeUsed/60);
   const secs = timeUsed % 60;
@@ -7517,6 +8230,15 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     const todayStr    = today.toISOString().slice(0, 10);
     const topicKey    = `${testState?.subjectId || ''}__${testState?.yearId || ''}__${testState?.topicId || ''}`;
 
+    // F-1 SRS-Boost: wenn das aktuelle Topic in einer ≤3-Tage-Klausur liegt,
+    // werden neu/gepushte Karten heute statt morgen faellig.
+    let isExamBoosted = false;
+    try {
+      const active = getActiveExamBoost();
+      isExamBoosted = active.some(ex => (ex.topicIds || []).includes(topicKey));
+    } catch (e) { isExamBoosted = false; }
+    const dueDateStr = isExamBoosted ? todayStr : tomorrowStr;
+
     wrongQuestions.forEach(q => {
       if (!q.id) return; // skip ID-lose Fragen (existing wrongQIds.filter(Boolean)-Logik)
       const correctAnswer = q.type === 'multiple_choice'
@@ -7528,6 +8250,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
         // (nextReview <= today) → nichts tun (Banner zaehlt sie aber). Falls
         // nextReview > today → SM-2-Reset: gerade falsch beantwortet =
         // Vergessens-Beweis, also auf morgen vorziehen (q < 3-Pfad).
+        // F-1: bei aktivem Klausur-Boost auf heute statt morgen.
         if (existing.nextReview && existing.nextReview > todayStr) {
           userData.srs[q.id] = {
             ...existing,
@@ -7537,7 +8260,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
             interval: 1,
             repetitions: 0,
             ef: existing.ef ?? 2.5,
-            nextReview: tomorrowStr
+            nextReview: dueDateStr
           };
         }
         srsAutoCount++;
@@ -7549,7 +8272,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           interval: 1,
           repetitions: 0,
           ef: 2.5,
-          nextReview: tomorrowStr
+          nextReview: dueDateStr
         };
         srsAutoCount++;
       }
@@ -7570,6 +8293,9 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
        </div>`
     : '';
 
+  // F-3: per-render snapshot leeren — vorherige Result-Page-Render hat
+  // moeglicherweise andere Fragen drin, die shuffled-Indices waeren stale.
+  _explainContext = {};
   const wrongItems = questions.map((q, i) => {
     const r = results[i];
     if ((r.points || 0) === r.maxPoints) return '';
@@ -7579,11 +8305,17 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     const correctAnswer = q.type === 'multiple_choice'
       ? (q.shuffledOptions?.[q.shuffledCorrectIndex] ?? q.options?.[q.correct] ?? '–')
       : (q.sampleAnswer || '— siehe Musterantwort im Lerninhalt');
+    // F-3: Erklaer-Button. Nur wenn q.id existiert (alte Custom-Topic-Fragen
+    // ohne ID haben keinen stabilen Cache-Key).
+    const explainRow = q.id
+      ? _renderExplainRow(q.id, q, userAnswer, correctAnswer, meta.subjectName, meta.topicName)
+      : '';
     return `
       <div class="wrong-item">
         <div class="wrong-q">${q.question}</div>
         <div class="wrong-user">Deine Antwort: <span class="wrong-val">${userAnswer}</span></div>
         <div class="wrong-correct">Richtige Antwort: <span class="correct-val">${correctAnswer}</span></div>
+        ${explainRow}
       </div>`;
   }).filter(Boolean).join('');
 
@@ -9437,3 +10169,48 @@ window.LF.deleteBugReport = async (id) => {
     if (isClaudeAccount()) loadClaudeBugList();
   } catch(e) { showToast(e.message, 'error'); }
 };
+
+// ── Cycle 2026-05-08 — F-1 / F-3 / F-4 window.LF-Bindings ────
+
+// F-1 Klausur-Modal lifecycle
+window.LF.openKlausurModal  = openKlausurModal;
+window.LF.closeKlausurModal = closeKlausurModal;
+window.LF.submitKlausur     = submitKlausur;
+window.LF.deleteKlausur     = deleteKlausur;
+
+// F-1 Modal-Form-Updates (re-render auf jeden Change, weil Topic-Liste
+// vom (subject, klasse)-Pair abhaengt — kein partielles Update noetig).
+window.LF.onKlausurDateChange = (val) => {
+  if (!_klausurModalState) return;
+  _klausurModalState.date = val;
+  if (_klausurModalState.errors?.date) delete _klausurModalState.errors.date;
+};
+window.LF.onKlausurSubjectChange = (val) => {
+  if (!_klausurModalState) return;
+  _klausurModalState.subject = val;
+  // Subject-Wechsel invalidiert die Topic-Auswahl.
+  _klausurModalState.topicIds = [];
+  if (_klausurModalState.errors?.subject) delete _klausurModalState.errors.subject;
+  if (_klausurModalState.errors?.topicIds) delete _klausurModalState.errors.topicIds;
+  _renderKlausurModalContent();
+};
+window.LF.onKlausurKlasseChange = (val) => {
+  if (!_klausurModalState) return;
+  _klausurModalState.klasse = val;
+  // Klassen-Wechsel invalidiert die Topic-Auswahl (andere Year-Topics).
+  _klausurModalState.topicIds = [];
+  if (_klausurModalState.errors?.klasse) delete _klausurModalState.errors.klasse;
+  if (_klausurModalState.errors?.topicIds) delete _klausurModalState.errors.topicIds;
+  _renderKlausurModalContent();
+};
+window.LF.toggleKlausurTopic = (key) => {
+  if (!_klausurModalState) return;
+  const idx = _klausurModalState.topicIds.indexOf(key);
+  if (idx >= 0) _klausurModalState.topicIds.splice(idx, 1);
+  else          _klausurModalState.topicIds.push(key);
+  if (_klausurModalState.errors?.topicIds) delete _klausurModalState.errors.topicIds;
+};
+
+// F-3 KI-Erklaerung pro falscher Frage
+window.LF.requestErrorExplanation = requestErrorExplanation;
+window.LF.toggleErrorExplanation  = toggleErrorExplanation;

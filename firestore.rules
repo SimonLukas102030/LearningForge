@@ -64,7 +64,14 @@ service cloud.firestore {
         // Mission 1 settings page (Farben + Icons pro Fach)
         'settings',
         // Mission 4 (App-Tour) state — toast-trigger + completion markers
-        'tourCompletedAt', 'tourSkippedAt', 'tourPromptedAt'
+        'tourCompletedAt', 'tourSkippedAt', 'tourPromptedAt',
+        // Cycle-Features 2026-05-08: F-1 Klausur-Countdown (Array of exam
+        // entries) + F-3 Erklär-mir-warum-falsch (Map of qId -> explanation
+        // cache). Both self-write-only, no cross-user-write surface. No
+        // soft-cap in V1 — Mission-3-Followup if size becomes relevant
+        // (exams capped naturally by user behaviour ~20/year, error
+        // explanations frontend-rate-limited at 20/day via localStorage).
+        'exams', 'errorExplanations'
       ];
     }
 

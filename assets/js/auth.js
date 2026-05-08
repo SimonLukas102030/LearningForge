@@ -507,6 +507,98 @@ export async function saveSRS(uid, srsData) {
   await _db.collection('users').doc(uid).set({ srs: srsData }, { merge: true });
 }
 
+// ── Klausuren speichern (F-1, Cycle 2026-05-08) ────────────
+// Schreib-Pfad fuer userData.exams. Frontend baut den ganzen Array (anlegen
+// = append, loeschen = filter), wir setzen ihn komplett mit set+merge zurueck.
+//
+// Hard rule 4 erfuellt: set({...}, {merge:true}). Kein update() — der erste
+// Eintrag eines Bestands-Users (kein `exams`-Feld auf dem User-Doc) muss
+// sauber durchgehen, set+merge legt das Feld implizit an.
+//
+// Hard rule 5 erfuellt: kein delete(), kein FieldValue.arrayRemove(). Loeschen
+// einer Klausur = clientseitig filtern und KOMPLETTES Array zurueckschreiben.
+// arrayRemove waere semantisch eine Delete-Operation auf Array-Elementen und
+// ist gegen race-bedingte Doppel-Loesch-Probleme genauso anfaellig wie ein
+// reines delete().
+//
+// Defense-in-depth-Validierung: die Rules whitelisten nur den Field-NAMEN
+// `exams` (siehe ownerSafeFields), aber keine Struktur. Daher hier
+// clientseitig pruefen, dass kein Garbage rein kann (selbst falls jemand
+// per Console manuell ruft).
+export async function saveExams(uid, examsArray) {
+  if (!uid) throw new Error('saveExams: uid fehlt.');
+  if (!Array.isArray(examsArray)) {
+    throw new Error('saveExams: examsArray muss ein Array sein.');
+  }
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  examsArray.forEach((exam, i) => {
+    if (!exam || typeof exam !== 'object') {
+      throw new Error(`saveExams: Eintrag ${i} ist kein Objekt.`);
+    }
+    if (typeof exam.id !== 'string' || !exam.id) {
+      throw new Error(`saveExams: Eintrag ${i}.id muss non-empty string sein.`);
+    }
+    if (typeof exam.subject !== 'string' || !exam.subject) {
+      throw new Error(`saveExams: Eintrag ${i}.subject muss non-empty string sein.`);
+    }
+    if (typeof exam.klasse !== 'string'
+        || !['5','6','7','8','9','10','11','12','13'].includes(exam.klasse)) {
+      throw new Error(`saveExams: Eintrag ${i}.klasse muss string in 5..13 sein.`);
+    }
+    if (typeof exam.date !== 'string' || !dateRe.test(exam.date)) {
+      throw new Error(`saveExams: Eintrag ${i}.date muss YYYY-MM-DD sein.`);
+    }
+    if (!Array.isArray(exam.topicIds)
+        || !exam.topicIds.every(t => typeof t === 'string')) {
+      throw new Error(`saveExams: Eintrag ${i}.topicIds muss Array von strings sein.`);
+    }
+    if (typeof exam.createdAt !== 'number') {
+      throw new Error(`saveExams: Eintrag ${i}.createdAt muss number sein.`);
+    }
+  });
+  await _db.collection('users').doc(uid).set(
+    { exams: examsArray }, { merge: true }
+  );
+}
+
+// ── Erklaer-mir-warum-falsch Cache (F-3, Cycle 2026-05-08) ─
+// Schreib-Pfad fuer userData.errorExplanations[qId]. Map-Merge-Pattern
+// analog zu saveNote(uid, key, text), nur mit nested object statt string.
+//
+// Hard rule 4 erfuellt: set+merge mit dot-path-aequivalentem nested object.
+// Firestore-merge-Semantik: nur der eine qId-Key wird im Map ueberschrieben/
+// angelegt, alle anderen bleiben unangetastet. Erstaufruf bei Bestands-User
+// (kein `errorExplanations`-Feld) legt das Feld implizit an.
+//
+// Hard rule 5: nicht relevant — kein Reset-Pfad im V1. Falls in V2 ein
+// "Cache leeren" gebraucht wird: set({errorExplanations:{}}, {merge:true})
+// ueberschreibt den ganzen Map, NICHT delete().
+//
+// Validierung defense-in-depth (Rules whitelisten nur Feld-Namen, keine
+// Struktur — Cap auf Erklaerungs-Laenge verhindert AI-Halluzinations-Bombe
+// die das 1MB-User-Doc-Limit auffuellen wuerde).
+export async function saveErrorExplanation(uid, qId, explanationText) {
+  if (!uid) throw new Error('saveErrorExplanation: uid fehlt.');
+  if (typeof qId !== 'string' || !qId) {
+    throw new Error('saveErrorExplanation: qId muss non-empty string sein.');
+  }
+  if (typeof explanationText !== 'string') {
+    throw new Error('saveErrorExplanation: explanationText muss string sein.');
+  }
+  const len = explanationText.length;
+  if (len < 1 || len > 2000) {
+    throw new Error('saveErrorExplanation: explanationText length muss 1..2000 sein.');
+  }
+  const entry = {
+    explanation: explanationText,
+    generatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  await _db.collection('users').doc(uid).set(
+    { errorExplanations: { [qId]: entry } },
+    { merge: true }
+  );
+}
+
 // ── Lernzeit speichern (F-17) ──────────────
 export async function addStudyTime(uid, minutes) {
   if (!uid || minutes <= 0) return;
