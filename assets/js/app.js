@@ -5290,6 +5290,13 @@ function checkAndShowWeeklySummary() {
   // weekly-overlay hat z-index 10000 und würde die Tour begraben.
   // Casey hat den Stack-Bug aufgespürt; defensiv hier blocken.
   if (_tourState) return;
+  // Casey-UX-Audit (2026-05-08): auch nicht wenn Tour-Toast gleich kommt
+  // (Bestands-User mit pending tour-prompt). Tour-Toast hat Vortritt vor dem
+  // Wochenrückblick — Tour ist actionable + zeitkritisch, Wochenrückblick
+  // kommt bei nächstem Login derselben KW automatisch wieder.
+  if (userData?.onboardedAt && userData?.tourPromptedAt
+      && !userData?.tourCompletedAt && !userData?.tourSkippedAt
+      && !isClaudeAccount() && !isHackerAccount()) return;
   const now  = new Date();
   const d    = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));

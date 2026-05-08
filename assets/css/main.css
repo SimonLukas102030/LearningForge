@@ -3296,11 +3296,22 @@ input, textarea, select { font-family: var(--font); }
 
 /* ── Wöchentliche Zusammenfassung (F-29) ── */
 #weeklySummaryModal {
-  position: fixed; inset: 0; z-index: 10000;
+  position: fixed; inset: 0;
+  /* Casey-UX-Audit (2026-05-08): von 10000 auf 9000 — Wochenrueckblick ist
+     informational, Tour-Toast (z=9500) ist actionable. Falls beide trotz
+     Guard durchrutschen (Edge-Case), hat der Toast Vortritt. */
+  z-index: 9000;
   display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity .3s ease;
+  /* iPad-Bug-Fix (Sophie 2026-05-08): wenn nicht .weekly-visible (= entweder
+     der initiale 1-Frame vor rAF, oder die 300ms-Fade-out-Phase nach Dismiss
+     bevor el.remove() feuert) deckt das Modal mit z-index 10000 + inset: 0
+     den ganzen Viewport. Das hat den Tour-Toast (z-index 9500) komplett
+     unklickbar gemacht — Click-Events landeten im invisible-but-clicktrapping
+     Ghost. pointer-events nur ON wenn sichtbar. */
+  pointer-events: none;
 }
-#weeklySummaryModal.weekly-visible { opacity: 1; }
+#weeklySummaryModal.weekly-visible { opacity: 1; pointer-events: auto; }
 .weekly-overlay {
   position: absolute; inset: 0;
   background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
@@ -4361,9 +4372,9 @@ input, textarea, select { font-family: var(--font); }
 /* Tour-Toast fuer Bestands-User
    z-index 9500 = ueber lf-modal-overlay/wizard (9999/10000 sind Modals die
    parallel offen sein koennen, aber unter Tour-Tooltips waere falsch da Tour
-   erst nach Toast-Klick startet). 9500 reicht um WeeklySummary nicht zu
-   ueberdecken (deren 10000 ist hoeher) — Toast bleibt klickbar weil keine
-   ueberlappende Position. */
+   erst nach Toast-Klick startet). Casey-UX-Audit (2026-05-08): Toast steht
+   jetzt UEBER WeeklySummary (z=9000) — Toast hat Vortritt, Wochenrueckblick
+   ist informational. */
 .lf-tour-toast {
   position: fixed;
   left: 50%;
@@ -4407,6 +4418,12 @@ input, textarea, select { font-family: var(--font); }
     font-size: 13px;
   }
   .lf-tour-tooltip-actions .btn { min-height: 44px; }
+  /* Casey-UX-Audit (2026-05-08): Toast-Buttons sind .btn-sm (~30px). iOS-HIG
+     verlangt 44pt × 44pt fuer Touch-Targets. Auf Mobile auf 44 hochziehen. */
+  .lf-tour-toast button {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
