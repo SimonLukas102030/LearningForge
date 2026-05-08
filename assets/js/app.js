@@ -396,6 +396,16 @@ export function startApp() {
         const isOwnedT  = ownedT.includes(wantTheme) || tDef?.default === true;
         applyTheme(isOwnedT ? wantTheme : 'default');
       } catch(e) {}
+      // Phase B1 (Maya-Spec, per-subject-design-tokens.md):
+      // Settings-Toggle "Fach-Themes". Wenn userData.settings.subjectThemesOff
+      // === true → body.subject-themes-off klasse setzen, Layer-2-Subject-
+      // Tokens fallen via CSS auf Layer-1 (siehe subject-tokens.css). Default
+      // (false / undefined) = Subject-Themes ON. Marcus initialisiert das
+      // Setting parallel in auth.js.
+      try {
+        document.body.classList.toggle('subject-themes-off',
+          userData?.settings?.subjectThemesOff === true);
+      } catch(e) {}
       structure = await getStructure();
       getChangelog().then(entries => {
         changelog = entries;
@@ -557,6 +567,18 @@ function route() {
   unmountTutor();
   const hash  = location.hash.replace('#/', '') || '';
   const parts = hash.split('/').filter(Boolean);
+
+  // Phase B1 (Maya-Spec, per-subject-design-tokens.md):
+  // Layer-2 Subject-Token-Cascade aktivieren via body[data-subject]. Nur auf
+  // Subject-/Year-/Topic-Routes setzen — Dashboard, Profil, Settings, Friends
+  // etc. bleiben Theme-default. Settings-Toggle subjectThemesOff (gesetzt im
+  // onAuthStateChanged-Handler als body.subject-themes-off) neutralisiert die
+  // Tokens via CSS, der Router muss hier nichts extra prüfen.
+  if (parts[0] === 'fach' && parts[1]) {
+    document.body.dataset.subject = parts[1];
+  } else {
+    delete document.body.dataset.subject;
+  }
 
   if (parts[0] === 'bericht' && parts[1]) {
     renderShareReport(parts[1]);
@@ -1025,7 +1047,8 @@ function renderDashboard() {
         const gi     = prog.avgGrade ? calcGrade(0,1) : null; // only for color
         const avgInfo = prog.avgGrade ? calcGrade(Math.max(0,7-prog.avgGrade),6) : null;
         return `
-          <div class="subject-card" style="--subject-color:${getSubjectColor(s.id)}"
+          <div class="subject-card" data-subject="${escapeAttr(s.id)}"
+               style="--subject-color:${getSubjectColor(s.id)}"
                onclick="location.hash='#/fach/${s.id}'">
             <div class="s-card-top">
               <div>
@@ -1487,21 +1510,22 @@ async function renderTopic(subjectId, yearId, topicId) {
   const prevGrade = grades[`${subjectId}__${yearId}__${topicId}`];
   const color     = getSubjectColor(subjectId);
 
-  let lernenTab;
-  if (meta.subtopics?.length > 0) {
-    currentSubtopics = meta.subtopics;
-    lernenTab = renderSubtopicGrid(meta.subtopics);
-  } else if (meta.content) {
-    currentSubtopics = null;
-    lernenTab = `<div class="content-block"><div class="content-body">${meta.content}</div></div>
-      <div class="ai-summary-area" id="aiSummaryArea">
-        <button class="btn btn-ghost btn-sm ai-summary-btn" onclick="window.LF.generateSummary()">KI-Zusammenfassung erstellen</button>
-        <div class="ai-summary-box" id="aiSummaryBox" style="display:none"></div>
-      </div>`;
-  } else {
-    currentSubtopics = null;
-    lernenTab = `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
-  }
+  // Phase-1 Subtopic-Schema: getSubtopics normalisiert legacy + new in das
+  // gleiche Array-of-{id,name,description,blocks}. renderSubtopicGrid
+  // entscheidet selbst ueber Legacy-Single-Wrap vs. Grid.
+  const normalizedSubtopics = getSubtopics(meta);
+  const isLegacyWrap = normalizedSubtopics.length === 1
+                    && normalizedSubtopics[0].id === 'main'
+                    && !normalizedSubtopics[0].name;
+  // currentSubtopics nur fuer multi-subtopic-Faelle setzen — bei Legacy-Wrap
+  // kein Click-Aufklapp-Verhalten, also kein State noetig.
+  currentSubtopics = (normalizedSubtopics.length > 0 && !isLegacyWrap)
+    ? normalizedSubtopics
+    : null;
+
+  const lernenTab = normalizedSubtopics.length > 0
+    ? renderSubtopicGrid(meta)
+    : `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
 
   const uebenTab = questions.length > 0
     ? renderUebenStart(questions, subjectId, yearId, topicId)
@@ -1630,7 +1654,146 @@ async function renderTopic(subjectId, yearId, topicId) {
   }
 }
 
-function renderSubtopicGrid(subtopics) {
+// ── Phase-1 Subtopic-Schema (ADR 0002 / Marcus + Maya) ─────
+// Backwards-compat reader. Toleriert drei Formen:
+//   a) topicMeta.subtopics: [{ id, name, description, blocks: [...] }]   (new)
+//   b) topicMeta.subtopics: [{ name, description, content: '<HTML>' }]   (legacy-array)
+//   c) topicMeta.content:   '<HTML>'                                     (legacy-single)
+// Bei (a)+(c) gleichzeitig gewinnt (a) — Migration-Phase. Bei (b) wird der
+// content-String 1:1 in einen text-Block gewrappt, sodass der Block-Renderer
+// uneingeschraenkt arbeiten kann.
+function getSubtopics(topicMeta) {
+  if (!topicMeta) return [];
+
+  if (Array.isArray(topicMeta.subtopics) && topicMeta.subtopics.length > 0) {
+    return topicMeta.subtopics.map((st, i) => {
+      // Bereits new-schema (hat blocks) — durchreichen.
+      if (Array.isArray(st.blocks)) {
+        return {
+          id:          st.id || `subtopic-${i}`,
+          name:        st.name || '',
+          description: st.description || '',
+          blocks:      st.blocks
+        };
+      }
+      // Legacy-Array-Subtopic: { name, description, content } → wrap content
+      // als single text-Block (HTML-entity-encoded, Hard-Rule #3).
+      return {
+        id:          st.id || `subtopic-${i}`,
+        name:        st.name || '',
+        description: st.description || '',
+        blocks:      st.content ? [{ type: 'text', content: st.content }] : []
+      };
+    });
+  }
+
+  if (typeof topicMeta.content === 'string' && topicMeta.content.length > 0) {
+    return [{
+      id:          'main',
+      name:        '',
+      description: '',
+      blocks:      [{ type: 'text', content: topicMeta.content }]
+    }];
+  }
+
+  return [];
+}
+
+// MVP-5 Widget-Whitelist (siehe ADR 0002 / Phase-2-Roadmap).
+const _LF_WIDGET_WHITELIST = new Set([
+  'predict-reveal', 'drag-sort', 'drag-match', 'number-slider', 'hot-spot'
+]);
+const _LF_WIDGET_TOAST_FIRED = new Set();
+
+// Block-Renderer. Switch auf block.type. Phase-1: text + formula-pending +
+// image + code (kein Highlight) + widget-pending. Hard-Rule #3: text/code-
+// content ist HTML-entity-encoded und geht 1:1 ins innerHTML — kein
+// escapeHtml() darauf, das wuerde Entities doppelt-encoden.
+//   Ausnahme: code-content wird *doch* escaped, weil dort meist Roh-Quelltext
+//   mit `<` / `>` steht (kein Entity-encoded-Lesetext). Same call rendert
+//   `<` als `&lt;` korrekt im <pre><code>.
+function renderBlock(block) {
+  if (!block || typeof block !== 'object') return '';
+  const type = block.type;
+
+  if (type === 'text') {
+    // HTML-entity-encoded content direkt in innerHTML (Hard-Rule #3).
+    return `<div class="lf-block lf-block-text">${block.content || ''}</div>`;
+  }
+
+  if (type === 'formula') {
+    // Phase-2: KaTeX-Integration. Phase-1 zeigt LaTeX-Source als Code-Tag.
+    return `<code class="lf-formula-pending">${escapeHtml(block.latex || '')}</code>`;
+  }
+
+  if (type === 'image') {
+    const src     = escapeAttr(block.src || '');
+    const alt     = escapeAttr(block.alt || '');
+    const caption = block.caption
+      ? `<figcaption>${escapeHtml(block.caption)}</figcaption>`
+      : '';
+    return `<figure class="lf-image-block"><img src="${src}" alt="${alt}">${caption}</figure>`;
+  }
+
+  if (type === 'code') {
+    // Phase-2: Syntax-Highlighting (z.B. Prism). Phase-1 = plain <pre><code>.
+    // Code-Content ist Roh-Quelltext, daher escapeHtml (vs. text-block).
+    const lang = escapeAttr(block.lang || '');
+    return `<pre class="lf-code-block" data-lang="${lang}"><code>${escapeHtml(block.content || '')}</code></pre>`;
+  }
+
+  if (type === 'widget') {
+    const wt = block.widgetType || 'unknown';
+    if (_LF_WIDGET_WHITELIST.has(wt) && !_LF_WIDGET_TOAST_FIRED.has(wt)) {
+      _LF_WIDGET_TOAST_FIRED.add(wt);
+      // showToast existiert ist erst spaeter im File definiert — defer auf
+      // naechsten Tick, sonst feuert das vor App-Bootstrap.
+      try { setTimeout(() => showToast(`Coming soon: ${wt}`, 'info'), 0); } catch(e) {}
+    }
+    return `<div class="lf-widget-pending">Widget-Slot: ${escapeHtml(wt)} (Phase 2)</div>`;
+  }
+
+  console.warn('[renderBlock] Unknown block type — skipped:', type, block);
+  return '';
+}
+
+// Hilfsfunktion fuer openSubtopic/closeSubtopic + renderSubtopicGrid:
+// rendert alle Bloecke eines Subtopics. Falls keine Bloecke da sind, leerer
+// String.
+function renderBlocks(blocks) {
+  if (!Array.isArray(blocks) || blocks.length === 0) return '';
+  return blocks.map(renderBlock).join('');
+}
+
+// renderSubtopicGrid akzeptiert nun das gesamte topicMeta-Objekt (oder, fuer
+// Backwards-Compat mit Aufrufern die noch Arrays uebergeben, ein Array). Die
+// Aufgabe: bei einem einzelnen Legacy-Wrap-Subtopic (id 'main') gleich expanded
+// rendern (Grid-Wrap waere visuell unsinnig fuer 1 Card). Bei einem Subtopics-
+// Array > 1 das gewohnte Index-Card-Grid.
+function renderSubtopicGrid(input) {
+  // Tolerant: alter Aufrufer hat raw-array uebergeben.
+  const subtopics = Array.isArray(input)
+    ? getSubtopics({ subtopics: input })
+    : getSubtopics(input);
+
+  if (subtopics.length === 0) {
+    return `<div class="empty-state" style="padding:40px">Kein Lerninhalt für dieses Thema vorhanden.</div>`;
+  }
+
+  // Legacy-Wrap (single subtopic, id='main', kein name): direkt expanded —
+  // kein Grid drum, kein Klick-Aufklapp-Verhalten.
+  const isLegacyWrap = subtopics.length === 1 && subtopics[0].id === 'main' && !subtopics[0].name;
+  if (isLegacyWrap) {
+    return `
+      <div class="subtopic-grid" id="subtopicGrid">
+        <div class="content-block"><div class="content-body">${renderBlocks(subtopics[0].blocks)}</div></div>
+      </div>
+      <div class="ai-summary-area" id="aiSummaryArea">
+        <button class="btn btn-ghost btn-sm ai-summary-btn" onclick="window.LF.generateSummary()">KI-Zusammenfassung erstellen</button>
+        <div class="ai-summary-box" id="aiSummaryBox" style="display:none"></div>
+      </div>`;
+  }
+
   const cards = subtopics.map((st, i) => `
     <div class="subtopic-card" onclick="window.LF.openSubtopic(${i})">
       <div class="subtopic-index">${i + 1}</div>
@@ -2869,6 +3032,7 @@ function renderLernen() {
           : `${Object.keys(s.years||{}).length} Klassen · ${prog.total} Themen`;
         return `
           <div class="subject-card" data-class-match="1" data-search-match="1"
+               data-subject="${escapeAttr(s.id)}"
                style="--subject-color:${getSubjectColor(s.id)}"
                onclick="location.hash='#/fach/${s.id}'">
             <div class="s-card-top">
@@ -7434,13 +7598,17 @@ window.LF = {
     if (!st) return;
     const grid = document.getElementById('subtopicGrid');
     if (!grid) return;
+    // Phase-1: Subtopics haben jetzt blocks[]. Block-Renderer entscheidet pro
+    // Block-Type (text/formula/image/code/widget). Backwards-Compat ueber
+    // getSubtopics() — wenn Legacy-Subtopic-Array reinkam, wurde content
+    // bereits in einen text-Block gewrappt.
     grid.innerHTML = `
       <button class="btn btn-ghost btn-sm" onclick="window.LF.closeSubtopic()" style="margin-bottom:16px">
         ← Zurück zur Übersicht
       </button>
       <div class="subtopic-detail">
         <h2 class="subtopic-detail-title">${st.name}</h2>
-        <div class="content-body">${st.content}</div>
+        <div class="content-body">${renderBlocks(st.blocks)}</div>
       </div>`;
     // Physik-Simulationen ggf. initialisieren
     initPhysikSimulations(grid.querySelector('.content-body'));

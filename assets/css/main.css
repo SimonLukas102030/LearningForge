@@ -485,16 +485,23 @@ input, textarea, select { font-family: var(--font); }
   animation: fadeIn 0.3s ease both;
 }
 .subject-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+/* Phase-1 Subject-Tokens (Maya): die Subject-Card traegt jetzt ein
+   data-subject-Attribut. subject-tokens.css bindet darauf --subject-accent
+   pro Fach. Cascade-Konsumenten verwenden var(--subject-accent, …) mit
+   doppeltem Fallback auf das alte --subject-color (Hex aus subjects-config)
+   und schliesslich auf --accent. Das macht Mathematik (vollstaendig in
+   subject-tokens.css) sofort sichtbar; alle anderen Faecher fallen weiter
+   auf das Hex aus subjects-config zurueck bis Phase-2 die Tokens fuellt. */
 .subject-card::before {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 4px;
-  background: var(--subject-color, var(--accent));
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
 }
 .subject-card .s-icon {
   font-size: 32px; margin-bottom: 12px;
   /* Mission 8: Lucide-Icons inherit color via currentColor. Tint with the
      subject's brand-color (set via inline --subject-color on the card). */
-  color: var(--subject-color, var(--icon-color));
+  color: var(--subject-accent, var(--subject-color, var(--icon-color)));
 }
 .subject-card .s-name {
   font-size: 17px; font-weight: 700; margin-bottom: 4px;
@@ -525,9 +532,14 @@ input, textarea, select { font-family: var(--font); }
 
 /* Topic cards */
 .topics-list { display: flex; flex-direction: column; gap: 10px; }
+/* Phase-1 Subject-Tokens (Maya): Topic-Card bekommt einen Subject-Accent
+   Border-Left. Body[data-subject] ist auf der Year-/Topic-Route gesetzt,
+   also greift hier die Layer-2-Token-Cascade. Fallback-Chain identisch
+   zur subject-card oben. */
 .topic-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
   border-radius: var(--radius);
   padding: 16px 20px;
   cursor: pointer;
@@ -903,7 +915,8 @@ input, textarea, select { font-family: var(--font); }
 /* ── 16. Subject color accent bar ────────── */
 .subject-color-bar {
   height: 6px; border-radius: var(--radius-pill);
-  background: var(--subject-color, var(--accent));
+  /* Phase-1 Subject-Tokens (Maya): Subject-Accent zuerst, dann Hex-Fallback. */
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
   margin-bottom: 20px;
 }
 
@@ -1966,6 +1979,10 @@ input, textarea, select { font-family: var(--font); }
   padding: 8px 0;
 }
 
+/* Phase-1 Subject-Tokens (Maya): Subtopic-Card-Border + Index-BG nutzen
+   Subject-Accent. Cascade zuerst Layer-3 (Topic) → Layer-2 (Subject) →
+   Layer-1 Hex --subject-color → globaler --accent. Body[data-subject] ist
+   auf der Topic-Route gesetzt, also greift Layer-2 in den meisten Faellen. */
 .subtopic-card {
   display: flex;
   align-items: center;
@@ -1973,13 +1990,14 @@ input, textarea, select { font-family: var(--font); }
   padding: 18px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
   border-radius: var(--radius);
   cursor: pointer;
   transition: var(--transition);
 }
 
 .subtopic-card:hover {
-  border-color: var(--subject-color, var(--accent));
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
   box-shadow: 0 4px 16px rgba(0,0,0,.08);
   transform: translateY(-1px);
 }
@@ -1988,7 +2006,7 @@ input, textarea, select { font-family: var(--font); }
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--subject-color, var(--accent));
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
   color: #fff;
   font-weight: 700;
   font-size: 15px;
@@ -2017,6 +2035,72 @@ input, textarea, select { font-family: var(--font); }
   color: var(--text-muted);
   font-weight: 300;
   line-height: 1;
+}
+
+/* ── Phase-1 Block-Renderer (ADR 0002 / Marcus + Maya) ────
+   Block-Types: text, formula (pending), image, code (pending), widget
+   (pending). Alle Theme-Variablen, kein hardcoded Hex.
+   Subject-Tokens via var(--subject-accent, …) Cascade. */
+
+.lf-block { margin-bottom: 12px; }
+.lf-block:last-child { margin-bottom: 0; }
+
+.lf-formula-pending {
+  display: inline-block;
+  padding: 4px 8px;
+  margin: 4px 0;
+  background: var(--bg-input);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.lf-image-block {
+  margin: 16px 0;
+  text-align: center;
+}
+.lf-image-block img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.lf-image-block figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.lf-code-block {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+.lf-code-block code {
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.lf-widget-pending {
+  padding: 16px 20px;
+  margin: 12px 0;
+  background: var(--bg-input);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
 }
 
 .subtopic-detail-title {

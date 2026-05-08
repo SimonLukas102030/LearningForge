@@ -41,7 +41,12 @@ export async function registerWithEmail(email, password, displayName) {
     name:      displayName,
     email,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    grades:    {}
+    grades:    {},
+    // Phase-2-Vision (ADR 0002 / Subject-Tokens-Spec, Marcus 2026-05-08):
+    // explicit default for new users so the toggle UI (Mission-11-Kandidat)
+    // sees a known-good shape. Bestands-User read via `?? false` fallback —
+    // no migration script (forward-only per CLAUDE.md hard rule 7).
+    settings:  { subjectThemesOff: false }
   });
   return cred;
 }
@@ -67,7 +72,10 @@ export async function loginWithGoogle() {
       name:      cred.user.displayName || 'Nutzer',
       email:     cred.user.email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      grades:    {}
+      grades:    {},
+      // Phase-2-Vision (ADR 0002 / Subject-Tokens, Marcus 2026-05-08):
+      // explicit default for new users — see registerWithEmail comment.
+      settings:  { subjectThemesOff: false }
     });
   }
   return cred;
@@ -148,7 +156,9 @@ export async function loginAsClaude() {
         name: 'Claude (Test)',
         email: creds.email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        grades: {}
+        grades: {},
+        // Phase-2-Vision default — see registerWithEmail comment.
+        settings: { subjectThemesOff: false }
       });
     } else {
       throw e;
@@ -206,7 +216,9 @@ export async function loginAsHacker() {
         name: 'Hacker (Test)',
         email: creds.email,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        grades: {}
+        grades: {},
+        // Phase-2-Vision default — see registerWithEmail comment.
+        settings: { subjectThemesOff: false }
       });
     } else {
       throw e;

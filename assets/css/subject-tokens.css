@@ -1,0 +1,220 @@
+/* ══════════════════════════════════════════
+   LearningForge — Subject Tokens (Layer 2)
+   ══════════════════════════════════════════
+   Per-Subject Design-Token-Cascade, 3-Layer-Modell:
+
+       Layer 1 — Theme-Tokens (main.css + cosmetics.css)
+       Layer 2 — Subject-Tokens (this file)            ← here
+       Layer 3 — Topic-Tokens   (Phase 2, separate)
+
+   Spec:  .claude/company/specs/per-subject-design-tokens.md  (Maya)
+   ADR:   docs/adr/<ADR-Subject-Tokens>                       (Marcus)
+   Roadmap: phase-2-vision-roadmap.md                         (Priya)
+
+   Phase B1 (this file):
+   - Pilot subject **Mathematik** is fully tokenized:
+     all 6 tokens (--subject-accent, --subject-accent-soft,
+     --subject-icon-stroke, --subject-radius-feel,
+     --subject-motion-feel, --subject-pattern-bg)
+     in light + dark.
+   - The other 12 subjects are scaffolded with --subject-accent
+     and --subject-accent-soft only. The remaining four tokens
+     fall back to existing layer-1 vars until Phase 2 fills them.
+
+   Cascade-Konsumenten consumieren über Var-Fallback:
+       color:        var(--topic-accent,
+                         var(--subject-accent,
+                             var(--accent)));
+       border-radius: var(--topic-radius-feel,
+                          var(--subject-radius-feel,
+                              var(--radius)));
+
+   Order in <head>:  main.css → subject-tokens.css → cosmetics.css
+   Subject-Tokens überschreiben Layer-1 (gewünscht — Subject = Inhalts-
+   Identität). Cosmetic.css steht NACH dieser Datei und kann gezielt
+   neutralisieren (z.B. cyberpunk → Subject-Tokens werden überstimmt).
+
+   Werte: alle Akzente in oklch(), kein Hex (Theme-Compatibility).
+   ══════════════════════════════════════════ */
+
+
+/* ── Pilot-Subject: Mathematik (vollständig) ───────────
+   Charakter: präzise, geometrisch, deep-blue, snappy,
+              eckige 90°-Linien. */
+
+[data-subject="Mathematik"] {
+  --subject-accent:        oklch(48% 0.18 252);
+  --subject-accent-soft:   oklch(96% 0.03 252);
+  --subject-icon-stroke:   var(--subject-accent);
+  --subject-radius-feel:   8px;
+  --subject-motion-feel:   0.15s cubic-bezier(.4, 0, .2, 1);
+  --subject-pattern-bg:
+    linear-gradient(
+      135deg,
+      transparent 49.5%,
+      var(--subject-accent-soft) 49.5%,
+      var(--subject-accent-soft) 50.5%,
+      transparent 50.5%
+    );
+}
+
+[data-subject="Mathematik"][data-theme="dark"] {
+  --subject-accent:        oklch(72% 0.14 252);
+  --subject-accent-soft:   oklch(20% 0.04 252);
+  /* Pattern-bg erbt automatisch — referenziert --subject-accent-soft. */
+}
+
+
+/* ── Stub-Subjects (Phase B1 minimal scaffold) ─────────
+   Nur --subject-accent + --subject-accent-soft. Restliche
+   Tokens (icon-stroke, radius-feel, motion-feel, pattern-bg)
+   fallen via Cascade-Fallback auf Layer 1, bis Phase 2 sie
+   pro Subject definiert.
+   Werte aus Mayas Token-Tabelle (per-subject-design-tokens.md). */
+
+/* 2. Deutsch — navy ink */
+[data-subject="Deutsch"] {
+  --subject-accent:       oklch(42% 0.12 240);
+  --subject-accent-soft:  oklch(95% 0.02 240);
+}
+[data-subject="Deutsch"][data-theme="dark"] {
+  --subject-accent:       oklch(70% 0.10 240);
+  --subject-accent-soft:  oklch(22% 0.03 240);
+}
+
+/* 3. Englisch — royal blue */
+[data-subject="Englisch"] {
+  --subject-accent:       oklch(40% 0.18 264);
+  --subject-accent-soft:  oklch(95% 0.04 264);
+}
+[data-subject="Englisch"][data-theme="dark"] {
+  --subject-accent:       oklch(72% 0.15 264);
+  --subject-accent-soft:  oklch(22% 0.05 264);
+}
+
+/* 4. Geschichte — sepia bronze */
+[data-subject="Geschichte"] {
+  --subject-accent:       oklch(58% 0.13 60);
+  --subject-accent-soft:  oklch(96% 0.03 60);
+}
+[data-subject="Geschichte"][data-theme="dark"] {
+  --subject-accent:       oklch(75% 0.10 60);
+  --subject-accent-soft:  oklch(24% 0.04 60);
+}
+
+/* 5. Biologie — emerald-leaf */
+[data-subject="Biologie"] {
+  --subject-accent:       oklch(55% 0.16 152);
+  --subject-accent-soft:  oklch(96% 0.04 152);
+}
+[data-subject="Biologie"][data-theme="dark"] {
+  --subject-accent:       oklch(72% 0.14 152);
+  --subject-accent-soft:  oklch(22% 0.05 152);
+}
+
+/* 6. Latein — stone-red brick */
+[data-subject="Latein"] {
+  --subject-accent:       oklch(48% 0.16 25);
+  --subject-accent-soft:  oklch(96% 0.03 25);
+}
+[data-subject="Latein"][data-theme="dark"] {
+  --subject-accent:       oklch(70% 0.13 25);
+  --subject-accent-soft:  oklch(22% 0.04 25);
+}
+
+/* 7. Chemie — violet-chem */
+[data-subject="Chemie"] {
+  --subject-accent:       oklch(54% 0.16 290);
+  --subject-accent-soft:  oklch(96% 0.04 290);
+}
+[data-subject="Chemie"][data-theme="dark"] {
+  --subject-accent:       oklch(74% 0.13 290);
+  --subject-accent-soft:  oklch(22% 0.05 290);
+}
+
+/* 8. Physik — electric cyan-blue */
+[data-subject="Physik"] {
+  --subject-accent:       oklch(58% 0.16 220);
+  --subject-accent-soft:  oklch(96% 0.04 220);
+}
+[data-subject="Physik"][data-theme="dark"] {
+  --subject-accent:       oklch(75% 0.14 220);
+  --subject-accent-soft:  oklch(22% 0.05 220);
+}
+
+/* 9. Geographie — teal-globe */
+[data-subject="Geographie"] {
+  --subject-accent:       oklch(56% 0.15 165);
+  --subject-accent-soft:  oklch(96% 0.03 165);
+}
+[data-subject="Geographie"][data-theme="dark"] {
+  --subject-accent:       oklch(73% 0.13 165);
+  --subject-accent-soft:  oklch(22% 0.04 165);
+}
+
+/* 10. Informatik — electric cyan (light), terminal-green (dark) */
+[data-subject="Informatik"] {
+  --subject-accent:       oklch(58% 0.18 195);
+  --subject-accent-soft:  oklch(96% 0.04 195);
+}
+[data-subject="Informatik"][data-theme="dark"] {
+  --subject-accent:       oklch(75% 0.18 152);
+  --subject-accent-soft:  oklch(20% 0.06 152);
+}
+
+/* 11. Musik — warm amber */
+[data-subject="Musik"] {
+  --subject-accent:       oklch(65% 0.16 50);
+  --subject-accent-soft:  oklch(96% 0.03 50);
+}
+[data-subject="Musik"][data-theme="dark"] {
+  --subject-accent:       oklch(78% 0.14 50);
+  --subject-accent-soft:  oklch(24% 0.04 50);
+}
+
+/* 12. Kunst — coral-orange-pop */
+[data-subject="Kunst"] {
+  --subject-accent:       oklch(62% 0.20 35);
+  --subject-accent-soft:  oklch(96% 0.04 35);
+}
+[data-subject="Kunst"][data-theme="dark"] {
+  --subject-accent:       oklch(76% 0.17 35);
+  --subject-accent-soft:  oklch(24% 0.05 35);
+}
+
+/* 13. Sport — athletic yellow-amber */
+[data-subject="Sport"] {
+  --subject-accent:       oklch(72% 0.18 90);
+  --subject-accent-soft:  oklch(96% 0.04 90);
+}
+[data-subject="Sport"][data-theme="dark"] {
+  --subject-accent:       oklch(80% 0.16 90);
+  --subject-accent-soft:  oklch(24% 0.05 90);
+}
+
+
+/* ── Settings-Toggle: Subject-Themes off ───────────────
+   userData.settings.subjectThemesOff === true → app.js
+   setzt body.classList.add('subject-themes-off'). Hier
+   neutralisieren wir die Layer-2-Tokens auf Layer-1,
+   damit alles auf das Theme-Default fällt (Konzentrations-
+   Modus, Spec § "Constraint C — Settings-Override"). */
+
+body.subject-themes-off [data-subject],
+body.subject-themes-off[data-subject] {
+  --subject-accent:       var(--accent);
+  --subject-accent-soft:  var(--accent-subtle);
+  --subject-icon-stroke:  var(--accent);
+  --subject-radius-feel:  var(--radius);
+  --subject-motion-feel:  var(--transition);
+  --subject-pattern-bg:   none;
+}
+
+
+/* ── Reduced-Motion ────────────────────────────────────
+   prefers-reduced-motion respektieren — Subject-Motion
+   wird auf instant gesetzt, alle anderen Tokens bleiben.
+   Spec § Edge case 11. */
+@media (prefers-reduced-motion: reduce) {
+  [data-subject] { --subject-motion-feel: 0s linear; }
+}
