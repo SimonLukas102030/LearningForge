@@ -167,6 +167,18 @@ export async function handleSubmitDailyChallenge(request, env) {
   if (!_validDateKey(date)) {
     throw httpError(400, 'date muss YYYY-MM-DD sein.');
   }
+  // V-01 (Ramsey audit cycle 2026-05-08): server-clock is the source of truth.
+  // Without this, the dynamic-path accepted ANY past/future YYYY-MM-DD and a
+  // user could grind ~110 XP per fake-day plus seed fake entries into
+  // dailyScores/{date}/users/{uid}. Curated days are also locked: the curated
+  // map is chronological, so submitting yesterday's curated date today would
+  // be a backfill cheat. The xpLog key (see line below) is keyed by SERVER
+  // today, not client `date` — that asymmetry is what made the inflation
+  // possible. Hard-lock here removes the divergence.
+  const todayKeyServer = new Date().toISOString().slice(0, 10);
+  if (date !== todayKeyServer) {
+    throw httpError(400, 'date muss der aktuelle Tag (UTC) sein.');
+  }
   if (!Array.isArray(answers)) {
     throw httpError(400, 'answers muss ein Array sein.');
   }

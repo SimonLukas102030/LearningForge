@@ -25,11 +25,25 @@ service cloud.firestore {
                                 && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }
     function onlyChanged(fs) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fs); }
 
-    // Hardcoded admin/tester whitelist for role-sensitive self-writes
-    // (so syncUserRole / markAsClaude / markAsHacker keep working for
-    // Simon and the test accounts without going through a Cloud Function).
-    function adminOrTesterEmail() {
-      return ['simonkoper27@gmail.com', 'bohmrobin797@gmail.com'];
+    // V-03 (Ramsey audit cycle 2026-05-08): hardcoded admin/tester whitelist
+    // split into two tiers so a tester credential cannot self-promote to
+    // admin. Previously a single adminOrTesterEmail() set granted Case-B
+    // (arbitrary self-writes incl. role/isBanned/isClaude/isHacker) to BOTH
+    // Simon and the tester account — a leaked tester password would have
+    // been an admin-promotion vector via the Firebase console.
+    //
+    //   adminEmails()  = full Case-B (role-sensitive self-writes)
+    //   testerEmails() = Case-B-tester (owner-safe-fields without soft-caps,
+    //                    but NOT role/isBanned/isClaude/isHacker)
+    //
+    // The previous adminOrTesterEmail() union helper was removed because no
+    // rule references it after the split; reintroduce as
+    // `adminEmails().concat(testerEmails())` if a rule ever needs the union.
+    function adminEmails() {
+      return ['simonkoper27@gmail.com'];
+    }
+    function testerEmails() {
+      return ['bohmrobin797@gmail.com'];
     }
 
     // Explicit allow-list of user-doc fields a normal owner may write to
@@ -87,6 +101,39 @@ service cloud.firestore {
           || (request.resource.data.achievements.size() - resource.data.get('achievements', []).size() <= 2);
     }
 
+    // V-25 (Ramsey Cycle-2 audit, P2 MED, 2026-05-08): studyTime is a
+    // map { 'YYYY-MM-DD': minutes } that was previously uncapped via
+    // ownerSafeFields(). A user could `set({studyTime: {'2026-05-08':
+    // 9999999, '2026-05-07': 9999999, ...}}, {merge:true})` directly
+    // from the browser console and fake-fill the entire Heatmap, inflate
+    // the leaderboard `studyMins` display, and trigger time-based
+    // achievements (the Worker re-derives those from studyTime on the
+    // next submitTestResult).
+    //
+    // FIRESTORE-RULES LIMITATION: rules cannot iterate a map's values
+    // with a lambda (no `.all(v => ...)` syntax) and cannot index a map
+    // by a runtime-determined key. The proper per-day value cap (e.g.
+    // <= 1440 min/day) requires server-side validation. Mission 3 ADR.
+    //
+    // What we CAN enforce here, and what blocks the bulk-fake attack:
+    //   - At most 1 top-level key in studyTime is affected per write.
+    //   - The studyTime map grows by at most 1 entry per write.
+    // Combined: a user can only legitimise one new day-key per write,
+    // so faking a green Heatmap requires N sequential writes (one per
+    // day) — detectable, rate-limitable, no longer a single-shot bulk
+    // attack. Per-day VALUE cap stays in the Worker.
+    function studyTimeDeltaOk() {
+      return !('studyTime' in request.resource.data.diff(resource.data).affectedKeys())
+          || (
+               request.resource.data.studyTime is map
+               && request.resource.data.studyTime
+                    .diff(resource.data.get('studyTime', {}))
+                    .affectedKeys().size() <= 1
+               && request.resource.data.studyTime.size()
+                    - resource.data.get('studyTime', {}).size() <= 1
+             );
+    }
+
     // ── users ─────────────────────────────────────────────────────────────
     // Read:    any auth'd user may .get() a single user doc (needed for
     //          friend lookups, comment-author display, etc.).
@@ -98,12 +145,29 @@ service cloud.firestore {
     //      AND klasse stays in 5..13
     //      AND xp delta <= 200
     //      AND outlines/themes/achievements grow by <= 2 per write
-    //   B) owner is on the admin/tester email whitelist — may also write
-    //      role-sensitive fields to their own doc (markAsClaude etc.)
+    //   B-admin) owner is on the admin email whitelist — may also write
+    //      role-sensitive fields to their own doc (markAsClaude etc.).
+    //   B-tester) owner is on the tester email whitelist — may write the
+    //      full ownerSafeFields() set without soft-caps (so testWipeAll /
+    //      testSetXP / testUnlockAllThemes can ignore xpDelta/outlines/
+    //      themes/achievements growth limits). May ADDITIONALLY write
+    //      `role` to their own doc, but ONLY with value 'tester' — never
+    //      'admin' / 'hacker' (so a leaked tester credential cannot
+    //      self-promote). Must still NOT touch isBanned / isClaude /
+    //      isHacker. (V-03 fix 2026-05-07; tester-role-sync re-enabled
+    //      2026-05-08 after Sophie's Cycle-2 P0 finding — syncUserRole
+    //      in auth.js writes role:'tester' on every login and was
+    //      blanket-denied by the previous version of this case.)
     //   C) any user with role:'admin' on their own doc — full access
-    //   D) cross-user friend/group writes: friendRequests, friendIds,
-    //      groupIds (used by acceptFriendRequest, kickFromGroup,
-    //      group deletion ripple).
+    //   D-friendRequests) cross-user friendRequests-only write where
+    //      the requesting user only touches their OWN UID-key in the
+    //      map (used by sendFriendRequest). V-26 hardening: prevents
+    //      the unbounded-spam-keys DoS that would bloat the victim's
+    //      user-doc to the 1MB limit.
+    //   D-friendIds/groupIds) cross-user array-membership writes
+    //      (used by acceptFriendRequest writing to requester, unfriend,
+    //      kickFromGroup, group-deletion ripple). Looser bound — the
+    //      auth UID is not always the affected element.
     // Delete:  only own doc or admin.
     match /users/{uid} {
       allow get:    if isAuth();
@@ -117,13 +181,71 @@ service cloud.firestore {
                           && xpDeltaOk()
                           && outlinesGrowthOk()
                           && themesGrowthOk()
-                          && achievementsGrowthOk())
-                        // Case B: owner from admin/tester whitelist may also write role-sensitive fields
-                        || (isOwner(uid) && request.auth.token.email in adminOrTesterEmail())
+                          && achievementsGrowthOk()
+                          && studyTimeDeltaOk())
+                        // Case B-admin: full Case-B power for the admin whitelist
+                        || (isOwner(uid) && request.auth.token.email in adminEmails())
+                        // Case B-tester: owner-safe-fields without soft-caps.
+                        // May ALSO write `role` if and only if the new value is
+                        // 'tester' (so syncUserRole in auth.js can self-set the
+                        // role on login, but a leaked tester credential cannot
+                        // self-promote to 'admin' or anything else). Must not
+                        // touch isBanned / isClaude / isHacker — those are
+                        // never in ownerSafeFields() and `role` is the only
+                        // role-sensitive field added to the diff allow-list.
+                        || (isOwner(uid)
+                            && request.auth.token.email in testerEmails()
+                            && request.resource.data.diff(resource.data).affectedKeys()
+                                 .hasOnly(ownerSafeFields().concat(['role']))
+                            && (
+                                 !('role' in request.resource.data.diff(resource.data).affectedKeys())
+                                 || request.resource.data.role == 'tester'
+                               ))
                         // Case C: real admin (any user with role:'admin' in their own doc)
                         || isAdmin()
-                        // Case D: cross-user friend/group writes
-                        || (isAuth() && onlyChanged(['friendRequests', 'friendIds', 'groupIds']))
+                        // Case D-friendRequests (V-26 Ramsey Cycle-2 audit,
+                        // P2 MED, 2026-05-08): when the cross-user write
+                        // ONLY touches `friendRequests`, the requesting user
+                        // may only add/change THEIR OWN UID-key in the map.
+                        // Previously Case D was a single broad branch that
+                        // let any auth user merge arbitrary keys into ANY
+                        // user's friendRequests map — `for (i=0; i<10000;
+                        // i++) set({friendRequests: {[`spam_${i}`]:...}})`
+                        // would bloat the victim's user-doc to the 1MB
+                        // limit (app fails to load).
+                        //
+                        // hasOnly([request.auth.uid]) means only the
+                        // sender's own UID-key can appear in the diff —
+                        // re-sending an already-pending request still
+                        // works (overwrite of own key), but no other
+                        // keys can be touched (no spam, no clearing
+                        // someone else's pending requests).
+                        //
+                        // Followup (Mission 3 scope): move friendRequests
+                        // into a subcollection `users/{uid}/friendRequests/
+                        // {fromUid}` so each request is its own doc and
+                        // the 1MB user-doc limit is no longer a vector.
+                        || (isAuth()
+                            && onlyChanged(['friendRequests'])
+                            && request.resource.data.friendRequests
+                                 .diff(resource.data.get('friendRequests', {}))
+                                 .affectedKeys()
+                                 .hasOnly([request.auth.uid]))
+                        // Case D-friendIds/groupIds: cross-user array
+                        // membership writes used by acceptFriendRequest
+                        // (writes friendIds on the requester's doc),
+                        // unfriend (writes friendIds on the friend's doc),
+                        // leaveGroup creator-path (clears groupIds on all
+                        // members), and kickFromGroup (clears groupIds on
+                        // the kicked user). These use arrayUnion/Remove
+                        // transforms; the auth UID is not always the
+                        // affected element (kicker != kicked target), so
+                        // we keep the broader rule here. Bounding these
+                        // tighter is a Mission 3 followup.
+                        // hasOnly() is a subset check, so this single
+                        // branch covers writes touching only friendIds,
+                        // only groupIds, or both together.
+                        || (isAuth() && onlyChanged(['friendIds', 'groupIds']))
                       );
       allow delete: if isOwner(uid) || isAdmin();
     }
@@ -142,24 +264,50 @@ service cloud.firestore {
     }
 
     // ── leaderboard ───────────────────────────────────────────────────────
-    // Soft-cap: each write may change at most ONE scores key (so an
-    // attacker cannot forge 50 inflated topic-keys in a single write).
-    // Per-key value validation is not expressible cleanly in rules
-    // (Firestore-rules cannot iterate map values), so the per-key cap
-    // lives in the test-engine clamp + Cloud Function (Mission 3 ADR).
-    // isClaude / isHacker stay owner-writable for now (mirrored by
-    // markAsClaude / markAsHacker via the user-doc whitelist branch).
+    // V-24 closed (Ramsey Cycle-2 audit, 2026-05-08): the previous
+    // one-key-per-write soft-cap had no validation on the *value* — a user
+    // could `set({scores: {topicKey: 999999}}, {merge:true})` on their own
+    // leaderboard doc and claim Top-1 on every klassen-leaderboard without
+    // earning the XP. The submitTestResult Cloud Worker (service-account
+    // credentials, bypasses these rules) is now the ONLY writer for the
+    // `scores` map.
+    //
+    // Owner-update is restricted to a small allow-list of NON-score display
+    // fields so the existing client mirrors keep working:
+    //   - setActiveTheme()   -> activeTheme
+    //   - setActiveOutline() -> activeOutline
+    //   - resetLeaderboard() -> scores (set to empty map only — explicit
+    //                           guard below: scores must be {} after the
+    //                           write, never grown)
+    //
+    // updateLeaderboard() in auth.js was the inflation vector and has been
+    // deleted alongside this rule change (Cycle-2 commit). All test-save
+    // leaderboard writes now go through the Worker exclusively.
+    //
+    // Admin write stays open for manual anomaly correction via admin
+    // tooling. Reads stay auth-only so the Rangliste UI keeps working.
+    function lbOwnerSafeFields() {
+      return ['activeTheme', 'activeOutline', 'scores', 'updatedAt'];
+    }
     match /leaderboard/{uid} {
       allow read, list: if isAuth();
       allow create:     if isOwner(uid);
-      allow update:     if (isOwner(uid)
+      allow update:     if (
+                            isOwner(uid)
+                            && request.resource.data.diff(resource.data).affectedKeys()
+                                 .hasOnly(lbOwnerSafeFields())
+                            // If `scores` is in the write, it MUST become {}
+                            // (resetLeaderboard path). Inflation is blocked
+                            // because no other key/value combination satisfies
+                            // both this `is map`+`size==0` predicate and the
+                            // hasOnly() above.
                             && (
-                              // No scores change -> ok (display fields update)
-                              !('scores' in request.resource.data.diff(resource.data).affectedKeys())
-                              // OR scores changed: at most ONE key added/changed per write
-                              || request.resource.data.scores.diff(resource.data.get('scores', {})).affectedKeys().size() <= 1
-                            ))
-                         || isAdmin();
+                                 !('scores' in request.resource.data.diff(resource.data).affectedKeys())
+                                 || (request.resource.data.scores is map
+                                     && request.resource.data.scores.keys().size() == 0)
+                               )
+                          )
+                          || isAdmin();
       allow delete:     if isOwner(uid) || isAdmin();
     }
 

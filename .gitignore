@@ -18,3 +18,6 @@ firebase-debug.log
 # in workers/) but local node_modules + package-lock.json may still linger
 # from old `firebase deploy` invocations. Don't accidentally re-commit them.
 functions/
+
+# Wrangler local build artifacts — no need to track
+workers/.wrangler-dryrun/

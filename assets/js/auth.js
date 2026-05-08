@@ -104,6 +104,17 @@ export async function syncUserRole(uid, email) {
 // Markiert das eigene User-Doc als Claude-Test-Account: bekommt Admin-Rolle,
 // wird in Suche/Rangliste/Feed ausgeblendet. Login-Daten leben nur in localStorage
 // auf Simons PC (key 'lf_claude_creds') — nichts davon liegt im Repo.
+//
+// Effective auth: BY DESIGN admin-only. The set() below writes
+// `role:'admin' + isClaude:true` to users/{uid}. firestore.rules permits
+// that only via the Case-B-admin branch (request.auth.token.email in
+// adminEmails()), i.e. simonkoper27@gmail.com. The tester whitelist
+// CANNOT call this — Case-B-tester only allows role:'tester' on the
+// role field, and isClaude is not in ownerSafeFields(). A tester who
+// invokes this from the console would get permission-denied on the
+// users/ write (the leaderboard mirror has a silent .catch and would
+// also be denied). This is intentional: marking yourself as a test
+// account is an admin power, not a tester power. (V-03 cycle-2 followup.)
 export async function markAsClaude(uid) {
   if (!uid) return;
   await _db.collection('users').doc(uid).set({
@@ -155,6 +166,11 @@ export async function loginAsClaude() {
 // Credentials: localStorage-Key 'lf_hacker_creds' = { email, password } —
 // existiert nur lokal auf Simons PC, wird NIEMALS ins Repo committet und
 // NIEMALS geloggt.
+//
+// Same admin-only design as markAsClaude (see comment above): role:'admin'
+// + isHacker:true requires Case-B-admin. The tester whitelist cannot
+// promote itself this way — V-03 split keeps role-sensitive writes on
+// the admin email tier. (V-03 cycle-2 followup.)
 export async function markAsHacker(uid) {
   if (!uid) return;
   await _db.collection('users').doc(uid).set({
@@ -322,28 +338,15 @@ export function onAuthStateChanged(callback) {
 }
 
 // ── Rangliste ────────────────────────────
-// extras: { klasse, activeOutline, activeTheme, xp, role, streak, studyMins, isClaude }
-// Felder, die undefined sind, werden bewusst NICHT geschrieben — Idempotenz, kein
-// versehentliches Ueberschreiben mit null bei einem Feld, das gar nicht uebergeben wurde.
-export async function updateLeaderboard(uid, displayName, photoURL, subjectId, yearId, topicId, gradeNum, totalPoints, extras = {}) {
-  const pts = typeof totalPoints === 'number' ? totalPoints : 0;
-  const meta = {};
-  if (extras.klasse        !== undefined) meta.klasse        = String(extras.klasse);
-  if (extras.activeOutline !== undefined) meta.activeOutline = extras.activeOutline;
-  if (extras.activeTheme   !== undefined) meta.activeTheme   = extras.activeTheme;
-  if (typeof extras.xp        === 'number') meta.xp        = extras.xp;
-  if (extras.role          !== undefined) meta.role          = extras.role;
-  if (typeof extras.streak    === 'number') meta.streak    = extras.streak;
-  if (typeof extras.studyMins === 'number') meta.studyMins = extras.studyMins;
-  if (extras.isClaude      !== undefined) meta.isClaude      = !!extras.isClaude;
-  await _db.collection('leaderboard').doc(uid).set({
-    displayName,
-    photoURL: photoURL || null,
-    scores: { [`${subjectId}__${yearId}__${topicId}`]: pts },
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    ...meta
-  }, { merge: true });
-}
+// updateLeaderboard() REMOVED (Cycle-2 / V-24 fix, Marcus 2026-05-08).
+// The previous client-side `set({scores:{[k]: pts}}, {merge:true})` was
+// dead code (no caller in app.js — submitTestResult Cloud Worker has
+// owned the leaderboard write since Mission 6) AND the matching rule
+// allowed any value for the scores entry, which Ramsey weaponised in
+// Cycle-2 to claim Top-1 with forged 999999 scores. The rule has been
+// tightened to allow owner-update only on display fields (activeTheme/
+// activeOutline/scores-reset) — the worker is now the sole writer for
+// real `scores` values via service-account credentials.
 
 export async function resetLeaderboard(uid) {
   // merge:true beibehalten, damit displayName/photoURL/klasse/activeOutline/xp/role
@@ -516,12 +519,19 @@ export async function addStudyTime(uid, minutes) {
 }
 
 // ── Schwache Fragen tracken (F-03) ─────────
+// Hard rule 4: never `update()` on a doc that may not exist. A brand-new
+// user who fails their very first test would hit `update()` against a
+// users/{uid} doc that exists but lacks `weakQuestions` — `update()` works
+// for that, but if the doc itself is missing (race against the create
+// path) it throws. set+merge is correct in both cases: the dot-path
+// increment transform is supported identically by set+merge and
+// auto-creates the doc if needed.
 export async function saveWeakQuestions(uid, questionIds) {
   if (!questionIds.length) return;
   const inc = firebase.firestore.FieldValue.increment(1);
   const updates = {};
   questionIds.forEach(id => { updates[`weakQuestions.${id}`] = inc; });
-  await _db.collection('users').doc(uid).update(updates).catch(console.error);
+  await _db.collection('users').doc(uid).set(updates, { merge: true }).catch(console.error);
 }
 
 // ── XP speichern (F-25) ───────────────────
