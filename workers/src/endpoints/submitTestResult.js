@@ -52,10 +52,13 @@ import {
 // per Note-1/2 test as a "trostpreis" (consolation prize).
 const TROSTPREIS_XP = 30;
 
+// B6 fix (2026-05-08): cap raised from 50 → 200, mirrors achievements.js
+// _levelNum. _xpForLevel(200) ≈ 10M XP - effectively unlimited. Bounded
+// at 200 instead of Infinity to keep the loop safe against corrupted xp.
 function _levelFromXp(xp) {
   let l = 1;
   const xpForLvl = n => n <= 1 ? 0 : (n - 1) * 100 + 25 * (n - 1) * (n - 2);
-  while (l < 50 && xpForLvl(l + 1) <= (xp || 0)) l++;
+  while (l < 200 && xpForLvl(l + 1) <= (xp || 0)) l++;
   return l;
 }
 

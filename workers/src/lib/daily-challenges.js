@@ -18,7 +18,13 @@
 //  drops the `correct` field). Long-term Mission-10+ goal: serve
 //  this from KV or a dailyChallenges/{date} doc with admin-only
 //  write rules.
+//
+//  B4 fix (2026-05-08): the curated map is no longer mandatory.
+//  submitDailyChallenge falls back to a frontend-supplied
+//  questions[] for non-curated dates (see endpoint comment).
 // =============================================================
+
+import { balanceDistractorLengthBatch } from './distractor-balance.js';
 
 export const DAILY_CHALLENGES = {
 
@@ -94,6 +100,21 @@ export const DAILY_CHALLENGES = {
 
 };
 
+// B5 fix: every read of a curated challenge runs through the
+// distractor-length balancer. The `correct` index is preserved (only
+// the trailing tail of the correct option may be trimmed), so the
+// existing eval path in submitDailyChallenge keeps working unchanged.
+// We don't rewrite the static map at module-load time so a future
+// admin tool can compare raw vs balanced for spot-checking.
 export function getDailyChallenge(dateKey) {
+  const raw = DAILY_CHALLENGES[dateKey];
+  if (!raw) return null;
+  return balanceDistractorLengthBatch(raw);
+}
+
+// Raw access (un-balanced) — used by the submit endpoint for eval where
+// the user already saw the un-balanced options on their device. Server
+// re-balancing at submit time would be cosmetically pointless.
+export function getDailyChallengeRaw(dateKey) {
   return DAILY_CHALLENGES[dateKey] || null;
 }

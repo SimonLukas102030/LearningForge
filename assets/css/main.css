@@ -549,6 +549,8 @@ input, textarea, select { font-family: var(--font); }
   background: transparent; color: var(--text-muted);
 }
 .btn-ghost:hover { background: var(--bg-input); color: var(--text); }
+.btn-ghost.btn-danger { background: transparent; color: #ef4444; border-color: rgba(239,68,68,.4); }
+.btn-ghost.btn-danger:hover:not(:disabled) { background: rgba(239,68,68,.12); color: #ef4444; }
 .btn-full { width: 100%; }
 .btn-lg { padding: 13px 28px; font-size: 16px; border-radius: var(--radius); }
 .btn-sm { padding: 7px 14px; font-size: 13px; }
@@ -1331,8 +1333,18 @@ input, textarea, select { font-family: var(--font); }
   .profile-grid { grid-template-columns: 1fr; }
 }
 
-/* Dynamic nav collapse — JS adds this class when content overflows */
-.navbar--collapsed .nav-center { display: none; }
+/* Dynamic nav collapse (B2 / 2026-05-08) — JS adds these classes in two stages.
+   Stage 1: `navbar--breadcrumb-collapsed` — versteckt nur die Breadcrumb-Zeile
+            und den Pipe-Separator. Primärlinks (Start / Lernen / Rangliste / Hilfe)
+            bleiben sichtbar.
+   Stage 2: `navbar--full-collapsed` — versteckt zusätzlich die Primärlinks.
+            Mobile (Bottom-Tab-Bar) übernimmt dann die Hauptnavigation. */
+.navbar--breadcrumb-collapsed .nav-breadcrumb { display: none; }
+.navbar--breadcrumb-collapsed .nav-sep-bar    { display: none; }
+.navbar--breadcrumb-collapsed .nav-links      { margin-left: 0; }
+.navbar--full-collapsed       .nav-links      { display: none; }
+/* Wenn beide Stufen greifen ist .nav-center effektiv leer — ausblenden. */
+.navbar--full-collapsed.navbar--breadcrumb-collapsed .nav-center { display: none; }
 
 /* ── 24. Nav separator ──────────────────── */
 .nav-sep-bar {

@@ -8,7 +8,10 @@ function _totalTests(u) { return Object.keys(u.grades || {}).length; }
 function _gradeCount(u, g) { return Object.values(u.grades || {}).filter(gr => (gr.grade || 9) <= g).length; }
 function _studyMins(u)  { return Object.values(u.studyTime || {}).reduce((a, b) => a + b, 0); }
 function _xpForLevel(n) { if (n <= 1) return 0; return (n - 1) * 100 + 25 * (n - 1) * (n - 2); }
-function _levelNum(xp)  { let l = 1; while (l < 50 && _xpForLevel(l + 1) <= xp) l++; return l; }
+// B6 fix (2026-05-08): cap raised from 50 → 200, mirrors achievements.js
+// frontend. Server-side check on level achievements must agree with client
+// or level_75/level_100 (added below) would never grant from the worker.
+function _levelNum(xp)  { let l = 1; while (l < 200 && _xpForLevel(l + 1) <= xp) l++; return l; }
 
 export function calcLevel(totalXP) {
   const level = _levelNum(totalXP || 0);
@@ -51,6 +54,8 @@ export const ACHIEVEMENTS = [
   { id: 'level_10',      xp: 100, check: (u)      => _levelNum(u.xp ?? 0) >= 10 },
   { id: 'level_25',      xp: 250, check: (u)      => _levelNum(u.xp ?? 0) >= 25 },
   { id: 'level_50',      xp: 500, check: (u)      => _levelNum(u.xp ?? 0) >= 50 },
+  { id: 'level_75',      xp: 750, check: (u)      => _levelNum(u.xp ?? 0) >= 75 },
+  { id: 'level_100',     xp: 1000, check: (u)     => _levelNum(u.xp ?? 0) >= 100 },
   { id: 'joined_group',  xp: 50,  check: (u)      => (u.groupIds?.length ?? 0) >= 1 }
 ];
 

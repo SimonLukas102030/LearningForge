@@ -46,8 +46,8 @@ Our profit metric is exactly one number: **how much our users learn**. Nothing e
                     Simon Lukas Köper
                           CEO
                            │
-                    Adrian Pierce
-                       Manager
+                    Bob Andrew
+                      Manager
                            │
    ┌──────┬─────────┬──────┴────┬──────────┬────────┬─────────┐
   Maya   Ethan   Marcus       Sophie     Jake    Ramsey     Casey
@@ -59,11 +59,11 @@ Our profit metric is exactly one number: **how much our users learn**. Nothing e
 
 ## The Team
 
-### Adrian Pierce — *Manager*
+### Bob Andrew — *Manager*
 
 Coordinates everything. Reads the user request, decides which department gets dispatched, merges the work, surfaces decisions to the CEO. Does no implementation directly — every line of code is owned by a specialist.
 
-**When to consult:** always — Adrian is the entry point.
+**When to consult:** always — Bob is the entry point.
 
 ---
 
@@ -216,7 +216,7 @@ Every commit lists the agents who actually contributed as `Co-Authored-By:` trai
 
 ## A note on how this team is built
 
-Anvil Labs is a fictional company staffed by specialized [Claude](https://claude.com) instances coordinated by a manager-thread (Adrian Pierce). Each agent has its own system prompt, role-specific tooling, and hard rules. The org structure exists because the work has scaled past what a single thread can hold coherently — splitting concerns by department gives each "employee" the focus to go deep in their domain instead of being a generalist who's mediocre at everything.
+Anvil Labs is a fictional company staffed by specialized [Claude](https://claude.com) instances coordinated by a manager-thread (Bob Andrew). Each agent has its own system prompt, role-specific tooling, and hard rules. The org structure exists because the work has scaled past what a single thread can hold coherently — splitting concerns by department gives each "employee" the focus to go deep in their domain instead of being a generalist who's mediocre at everything.
 
 The agents are AI. The work, the bugs, the design decisions, and the products are real.
 

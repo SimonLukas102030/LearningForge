@@ -7,7 +7,10 @@
 function _totalTests(u) { return Object.keys(u.grades || {}).length; }
 function _gradeCount(u, g) { return Object.values(u.grades || {}).filter(gr => (gr.grade || 9) <= g).length; }
 function _studyMins(u)  { return Object.values(u.studyTime || {}).reduce((a, b) => a + b, 0); }
-function _levelNum(xp)  { let l = 1; while (l < 50 && _xpForLevel(l + 1) <= xp) l++; return l; }
+// B6 fix (2026-05-08): cap raised from 50 → 200. _xpForLevel(200) ≈ 10M XP,
+// so effectively unlimited for any realistic player. Hardcoded 200 instead
+// of `Infinity` to keep the loop bounded if `xp` ever ends up corrupted/NaN.
+function _levelNum(xp)  { let l = 1; while (l < 200 && _xpForLevel(l + 1) <= xp) l++; return l; }
 function _xpForLevel(n) { if (n <= 1) return 0; return (n - 1) * 100 + 25 * (n - 1) * (n - 2); }
 
 // ── Achievement-Definitionen ─────────────────
@@ -115,6 +118,12 @@ export const ACHIEVEMENTS = [
   { id: 'level_50',      code: 'L50', iconName: 'rocket', color: '#4d7c0f', title: 'Level 50',          desc: 'Level 50 erreicht',                     xp: 500, check: (u) => _levelNum(u.xp ?? 0) >= 50,
     longDesc: 'Erreiche Stufe 50. Endlevel-Bereich — hier sind viele Outlines verfügbar.',
     progress: (u) => ({ current: Math.min(_levelNum(u.xp ?? 0), 50), total: 50 }) },
+  { id: 'level_75',      code: 'L75', iconName: 'rocket', color: '#3f6212', title: 'Level 75',          desc: 'Level 75 erreicht',                     xp: 750, check: (u) => _levelNum(u.xp ?? 0) >= 75,
+    longDesc: 'Erreiche Stufe 75. Lebende Legende — die meisten Spieler kommen nie hierhin.',
+    progress: (u) => ({ current: Math.min(_levelNum(u.xp ?? 0), 75), total: 75 }) },
+  { id: 'level_100',     code: 'L100', iconName: 'rocket', color: '#365314', title: 'Level 100',         desc: 'Level 100 erreicht',                    xp: 1000, check: (u) => _levelNum(u.xp ?? 0) >= 100,
+    longDesc: 'Erreiche Stufe 100. Du gehörst in die Hall of Fame. Ab hier ist Lernen reine Gewohnheit.',
+    progress: (u) => ({ current: Math.min(_levelNum(u.xp ?? 0), 100), total: 100 }) },
   // ── Gruppen
   { id: 'joined_group',  code: 'GR',  iconName: 'users-round', color: '#a855f7', title: 'Teamplayer',        desc: 'Einer Gruppe beigetreten',              xp: 50,  check: (u) => (u.groupIds?.length ?? 0) >= 1,
     longDesc: 'Tritt einer Lerngruppe bei (über einen Code, den dir jemand schickt) oder erstelle selbst eine. Findest du im Avatar-Menü unter „Gruppen".' },

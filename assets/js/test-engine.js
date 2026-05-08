@@ -414,6 +414,11 @@ export async function generateQuestionsWithGemini(htmlContent, timeMinutes) {
   ].filter(Boolean).join(',\n');
 
   // Groq erwartet ein JSON-Objekt (kein Array), deshalb {"questions":[...]}
+  // B5 (2026-05-08, Ramsey): MC-Längen-Balance-Regel — LLMs schreiben die
+  // korrekte Antwort ausführlicher als die Distraktoren, was eine
+  // „längste Antwort = richtig"-Heuristik mit ~85% Trefferquote ergibt.
+  // Prompt-Hardening reduziert das (defense in depth zusammen mit dem
+  // post-process Length-Balancer in _processGeneratedQuestions).
   const groqPrompt =
 `Du bist ein Lehrer. Erstelle abwechslungsreiche Testfragen zum folgenden Lerninhalt.
 Generiere jedes Mal andere Fragen — variiere Formulierungen, Zahlenwerte und Beispiele.
@@ -427,6 +432,7 @@ ${typeLines}
 - Freitext-Erwartung: ${cfg.textExpectation}
 - Sprache: Deutsch
 - Bei Mathe/Physik: Zahlenwerte bei jeder Generierung leicht variieren
+- WICHTIG: Bei Multiple-Choice-Fragen müssen ALLE 4 Optionen ungefähr gleich lang sein (max. 20% Längendifferenz in Wortanzahl). Die korrekte Antwort darf nicht durch Länge oder Detailgrad herausstechen — Distraktoren müssen genauso ausführlich und plausibel formuliert sein wie die richtige Antwort, nicht nur Stichworte.
 
 Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt:
 {"questions": [
@@ -474,14 +480,62 @@ ${exampleLines}
   return [];
 }
 
+// B5 (2026-05-08): Length-Balancer für MC-Optionen — wenn die korrekte
+// Antwort deutlich länger ist als die Distraktoren-Median-Länge, sanft
+// kürzen. Das schließt das „längste = richtig"-Loophole für Gemini-/Groq-
+// generierte Fragen. Manuell-handgeschriebene questions.json bleiben
+// unangetastet (separater Linter-Job, Marcus).
+//
+// Heuristik: wenn correct.length > 1.4 * median(others), gracefully truncate
+// auf 1.2 * median. „Graceful" = Schnitt am letzten Komma/Punkt/Klammer-Ende
+// vor dem Limit. Wenn keine saubere Grenze vor 1.2× → Frage in Ruhe lassen
+// (besser unbalanced als unverständlich).
+function _truncateGracefully(text, maxLen) {
+  if (typeof text !== 'string' || text.length <= maxLen) return text;
+  // Suche letzten Satz-/Klausel-Endpunkt vor maxLen.
+  // Reihenfolge der Vorzieher: Punkt > Fragezeichen > Ausrufezeichen > Komma > Klammer-Ende.
+  const slice = text.slice(0, Math.floor(maxLen));
+  const candidates = [
+    slice.lastIndexOf('. '),
+    slice.lastIndexOf('? '),
+    slice.lastIndexOf('! '),
+    slice.lastIndexOf(') '),
+    slice.lastIndexOf(', ')
+  ].filter(i => i > maxLen * 0.5); // muss mindestens halbe Länge sein
+  if (!candidates.length) return text; // keine saubere Schnittstelle → Original lassen
+  const cut = Math.max(...candidates);
+  // +1 wegen des Punkts/Kommas selbst, ohne Trailing-Space.
+  return text.slice(0, cut + 1).trim();
+}
+
+function _balanceMCOptionLengths(options, correctIdx) {
+  if (!Array.isArray(options) || options.length < 2 || correctIdx < 0 || correctIdx >= options.length) {
+    return options;
+  }
+  const others = options.filter((_, i) => i !== correctIdx).map(o => String(o).length).sort((a,b) => a-b);
+  if (!others.length) return options;
+  const median = others[Math.floor(others.length / 2)];
+  const correctLen = String(options[correctIdx]).length;
+  if (correctLen <= median * 1.4) return options;
+  const target = Math.max(median * 1.2, median + 12); // mindestens median+12 chars Toleranz
+  const truncated = _truncateGracefully(String(options[correctIdx]), target);
+  if (truncated === options[correctIdx]) return options; // truncate fehlgeschlagen → in Ruhe lassen
+  const out = [...options];
+  out[correctIdx] = truncated;
+  return out;
+}
+
 function _processGeneratedQuestions(arr, cfg) {
   return arr.map((q, i) => {
     q.id = `gen_${Date.now()}_${i}`;
     if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
-      const pairs    = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.correct }));
+      // B5: Length-Balancing VOR dem Shuffle — operiert auf q.correct (Original-Index).
+      const balancedOpts = _balanceMCOptionLengths(q.options, q.correct);
+      const pairs    = balancedOpts.map((opt, idx) => ({ opt, isCorrect: idx === q.correct }));
       const shuffled = shuffleArr(pairs);
       return {
         ...q,
+        options:              balancedOpts,
         shuffledOptions:      shuffled.map(x => x.opt),
         shuffledCorrectIndex: shuffled.findIndex(x => x.isCorrect),
         timeConfig: cfg

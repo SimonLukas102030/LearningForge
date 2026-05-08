@@ -213,16 +213,47 @@ function initNavCollapse() {
   const navbar = document.querySelector('.navbar');
   if (!navbar) return;
 
+  // B2 (Maya/Casey): Zwei-Stufen-Collapse statt All-or-Nothing.
+  //   Stage 1 — `navbar--breadcrumb-collapsed`: Breadcrumb verstecken,
+  //             Primärlinks + Trenner bleiben sichtbar. Greift sobald
+  //             der Inhalt nicht mehr in die Navbar passt (kleiner Buffer).
+  //   Stage 2 — `navbar--full-collapsed`: zusätzlich Primärlinks verstecken.
+  //             Greift erst wenn auch ohne Breadcrumb noch Overflow ist.
+  // Die alte `.navbar--collapsed`-Klasse versteckte sofort `.nav-center`
+  // komplett, das hat den Lernen-Tab und alle anderen Routes auf Desktop-
+  // Breiten zu früh kaput gemacht (User: „oben fehlt die Navigation bar").
   const check = () => {
-    // Remove class first so we can measure natural content width
-    navbar.classList.remove('navbar--collapsed');
-    const brand  = navbar.querySelector('.nav-brand');
-    const center = navbar.querySelector('.nav-center');
-    const right  = navbar.querySelector('.nav-right');
+    navbar.classList.remove('navbar--breadcrumb-collapsed', 'navbar--full-collapsed');
+    const brand     = navbar.querySelector('.nav-brand');
+    const center    = navbar.querySelector('.nav-center');
+    const right     = navbar.querySelector('.nav-right');
+    const crumb     = center?.querySelector('.nav-breadcrumb');
+    const sepBar    = center?.querySelector('.nav-sep-bar');
+    const navLinks  = center?.querySelector('.nav-links');
     if (!brand || !center || !right) return;
-    // 48 = left+right padding, 32 = safety buffer
-    const needed = brand.offsetWidth + center.scrollWidth + right.offsetWidth + 80;
-    if (needed > navbar.offsetWidth) navbar.classList.add('navbar--collapsed');
+
+    const navbarW = navbar.offsetWidth;
+    const buffer  = 40; // small safety buffer (vorher 80, war zu aggressiv)
+
+    // Naturmass aller Center-Children (Breadcrumb + Separator + nav-links).
+    const neededFull = brand.offsetWidth + center.scrollWidth + right.offsetWidth + buffer;
+
+    if (neededFull <= navbarW) return; // alles passt
+
+    // Stage 1: Breadcrumb wegnehmen — Primärlinks bleiben.
+    navbar.classList.add('navbar--breadcrumb-collapsed');
+
+    // Re-measure: was bleibt nach dem Hide vom Breadcrumb übrig?
+    // Wir berechnen die zu erwartende Breite ohne das Breadcrumb-Element.
+    const crumbW = crumb ? crumb.offsetWidth : 0;
+    // Achtung: sepBar wird auch via CSS in stage-1 versteckt (pipe ohne Breadcrumb sieht doof aus).
+    const sepW   = sepBar ? sepBar.offsetWidth : 0;
+    const neededStage1 = neededFull - crumbW - sepW;
+
+    if (neededStage1 > navbarW) {
+      // Stage 2: auch Primärlinks weg — User hat dann nur Brand + Right + Bottom-Tab-Bar.
+      navbar.classList.add('navbar--full-collapsed');
+    }
   };
 
   _navRO = new ResizeObserver(check);
@@ -349,6 +380,13 @@ export function startApp() {
           // Mission 4 Edge-Case: Tour-Engine lauscht auf 'lf:banned' und
           // raeumt Overlay auf, sonst bleibt es ueber dem Login sichtbar.
           try { window.dispatchEvent(new CustomEvent('lf:banned')); } catch(e){}
+          // B3 Sophie-Audit-Fix (2026-05-08): Force-Logout bei Ban darf
+          // KEINE beforeunload/popstate-Listener leaken (sonst nervt der
+          // Reload-Confirm den User auch nach Logout). KEIN Confirm-Modal
+          // (Maya-Spec: ban = direkt raus).
+          try { testState = null; } catch(e){}
+          try { if (typeof dailyChallengeState !== 'undefined') dailyChallengeState = null; } catch(e){}
+          try { _teardownMidTestGuards(); } catch(e){}
           try { _bannedUnsub?.(); } catch(e){}
           _bannedUnsub = null;
           await logout();
@@ -459,6 +497,23 @@ function _hashParam(name) {
 
 // ── Router ───────────────────────────────
 function route() {
+  // B3 (2026-05-08): Mid-Test-Lockdown — wenn ein Test aktiv ist und der
+  // User auf einen anderen Hash navigiert (Klick auf Lernen-Link, Browser-
+  // Back, etc.), Modal zeigen und Hash zurücksetzen, BEVOR irgendein
+  // anderer Renderer das Test-DOM überschreibt.
+  if (isTestActive()) {
+    if (!isTestRouteOk(location.hash)) {
+      const wantedHash = location.hash;
+      if (_testLockHash) history.replaceState(null, '', _testLockHash);
+      showMidTestConfirmModal(wantedHash);
+      return;
+    }
+    // B3 Sophie-Audit-Fix (2026-05-08): wenn Hash bereits == _testLockHash,
+    // sind wir schon auf der Testseite — re-rendern wuerde testArea wipen.
+    // Das passiert insb. nach popstate→replaceState→hashchange-Race (TWA-
+    // Back-Button). Test bleibt am Bildschirm; nichts tun.
+    return;
+  }
   unmountCalculator();
   unmountTafelwerk();
   unmountPomodoro();
@@ -2342,19 +2397,42 @@ function _renderTourStep(index) {
 
   // Skip-Logic: Mobile + mobileTarget=null → skippen.
   if (step.target && _tourIsMobile() && step.mobileTarget === null) {
-    return _renderTourStep(index + (index >= _tourState.index ? 1 : -1));
+    _tourState._visSkipChain = (_tourState._visSkipChain || 0) + 1;
+    if (_tourState._visSkipChain >= 3) {
+      // B1 (a): Anti-Recursion — bei 3+ Skips in Folge bricht ab und zeigt
+      // den aktuellen Schritt ohne Spotlight (wie Welcome-Step).
+      console.warn('[tour] visibility-skip chain at step', index, '— rendering tooltip without spotlight');
+      _tourState._visSkipChain = 0;
+      // Fall through, render OHNE Target — siehe unten.
+    } else {
+      return _renderTourStep(index + (index >= _tourState.index ? 1 : -1));
+    }
   }
 
   // Target nicht im DOM (z.B. streak-chip wenn streak <= 1) ODER unsichtbar
-  // (z.B. bug-fab auf Desktop, bug-chip auf Mobile) → skip.
+  // (z.B. bug-fab auf Desktop, bug-chip auf Mobile) → skip — aber maximal
+  // 2 mal in Folge, dann brechen wir die Recursion ab und zeigen den
+  // Schritt-Inhalt ohne Spotlight (B1 (a) Defense).
+  let forceNoTarget = false;
   if (step.target) {
     const el = _tourFindTarget(step);
     const visible = el && el.getClientRects().length > 0
                        && el.offsetWidth > 0 && el.offsetHeight > 0;
     if (!el || !visible) {
-      const dir = (index >= _tourState.index) ? 1 : -1;
-      return _renderTourStep(index + dir);
+      _tourState._visSkipChain = (_tourState._visSkipChain || 0) + 1;
+      if (_tourState._visSkipChain >= 3) {
+        console.warn('[tour] visibility-skip chain at step', index, '— rendering tooltip without spotlight (target', step.target, 'not visible)');
+        _tourState._visSkipChain = 0;
+        forceNoTarget = true;
+      } else {
+        const dir = (index >= _tourState.index) ? 1 : -1;
+        return _renderTourStep(index + dir);
+      }
+    } else {
+      _tourState._visSkipChain = 0;
     }
+  } else {
+    _tourState._visSkipChain = 0;
   }
 
   _tourState.index = index;
@@ -2403,7 +2481,9 @@ function _renderTourStep(index) {
   `;
 
   // Auto-Scroll-to-Target falls noetig, dann positionieren.
-  const target = _tourFindTarget(step);
+  // B1 (a): forceNoTarget unterdrueckt das Spotlight wenn die Visibility-
+  // Skip-Chain 3+ erreicht hat — sonst wuerden wir einen toten Pfad rendern.
+  const target = forceNoTarget ? null : _tourFindTarget(step);
   if (target) {
     try {
       const r = target.getBoundingClientRect();
@@ -2530,6 +2610,15 @@ function _repositionTour() {
 
 async function _endTour(reason) {
   if (!_tourState) return;
+  // B1 (b): Wenn 'completed' OHNE dass der User wirklich progressed ist
+  // (z.B. Tour bricht in step <3 ab durch Visibility-Recursion oder
+  // hashchange), das ist KEIN Erfolgs-Ende — Toast zeigen statt Erfolgs-
+  // Markierung schreiben.
+  const _earlyAbort = (reason === 'completed' && (_tourState.index || 0) < 3);
+  if (_earlyAbort) {
+    showToast('Tour konnte nicht starten — bitte erneut versuchen über Hilfe-Tab.', 'error');
+    reason = 'aborted';
+  }
   // Cleanup
   window.removeEventListener('scroll', _repositionTour, { passive: true });
   window.removeEventListener('resize', _repositionTour);
@@ -2643,14 +2732,19 @@ window.LF.startTour = async () => {
 };
 
 window.LF.tourNext = () => {
-  if (!_tourState) return;
+  if (!_tourState) { console.debug('[tour] tourNext called but _tourState is null'); return; }
+  console.debug('[tour] tourNext from index', _tourState.index, 'visSkipChain=', _tourState._visSkipChain || 0);
   _renderTourStep(_tourState.index + 1);
 };
 window.LF.tourBack = () => {
-  if (!_tourState) return;
+  if (!_tourState) { console.debug('[tour] tourBack called but _tourState is null'); return; }
+  console.debug('[tour] tourBack from index', _tourState.index, 'visSkipChain=', _tourState._visSkipChain || 0);
   _renderTourStep(_tourState.index - 1);
 };
-window.LF.tourSkip = () => _endTour('skipped');
+window.LF.tourSkip = () => {
+  console.debug('[tour] tourSkip called, _tourState=', _tourState ? `index=${_tourState.index}` : 'null');
+  _endTour('skipped');
+};
 
 // ── Admin-User-Editor (Mission 1, neu) ────
 let adminEditState = null;
@@ -5128,6 +5222,8 @@ async function renderDailyChallenge() {
   });
 
   dailyChallengeState = { questions, answers: new Array(questions.length).fill(null), current: 0, startTime: Date.now(), timer: null, timeLeft: 300, dateKey: today };
+  // B3: Daily-Challenge zählt auch als „aktiver Test" — gleiche Mid-Test-Guards.
+  _setupMidTestGuards('#/daily-challenge');
 
   _renderDCQuestion();
 }
@@ -5178,6 +5274,10 @@ function _renderDCQuestion() {
 // ── F-29: Wöchentliche Zusammenfassung ─────
 function checkAndShowWeeklySummary() {
   if (!userData) return;
+  // B1 (c): Während Tour aktiv NIE den Wochenrückblick popup-en —
+  // weekly-overlay hat z-index 10000 und würde die Tour begraben.
+  // Casey hat den Stack-Bug aufgespürt; defensiv hier blocken.
+  if (_tourState) return;
   const now  = new Date();
   const d    = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -5239,7 +5339,15 @@ window.LF = {
   closeMobileMenu: () => {
     document.getElementById('mobileNav')?.classList.remove('open');
   },
-  doLogout: async () => { await logout(); location.hash = '#/'; },
+  doLogout: async () => {
+    // B3: Wenn der User sich mitten im Test ausloggt, müssen wir die
+    // Mid-Test-Guards trotzdem abräumen — sonst zeigt beforeunload dem
+    // nächsten Login auf der Seite einen Confirm-Dialog beim Reload.
+    if (isTestActive()) _abortActiveTest();
+    _teardownMidTestGuards();
+    await logout();
+    location.hash = '#/';
+  },
   toggleAuthMode: () => {
     const nameGroup = document.getElementById('nameGroup');
     const isReg = nameGroup.style.display === 'none';
@@ -5582,9 +5690,34 @@ window.LF = {
       return { questionIndex: i, freeText: String(ans ?? '') };
     });
 
+    // B4 fix (2026-05-08): for NON-curated dates the worker has no
+    // server-side answer-key (the curated map only covers Apr 22-28).
+    // Frontend's getDailyChallengeQuestions() in that case pulls from
+    // getTopicQuestions(), which keeps the `correct` field. We pass
+    // questions[] alongside so the worker can validate + evaluate.
+    // Curated dates: questions[].correct is undefined (Mission 9
+    // stripped it from daily-challenges-config.js). Detect curated by
+    // checking whether ALL MC questions have a numeric `correct`. If
+    // any is missing, we're on the curated path and don't send
+    // `questions` at all (worker will use its server map).
+    const allMcHaveCorrect = questions.every(q =>
+      q.type !== 'multiple_choice' || Number.isInteger(q.correct)
+    );
+    const dynamicQuestions = allMcHaveCorrect
+      ? questions.map(q => ({
+          id:      q.id || null,
+          type:    q.type,
+          options: Array.isArray(q.options) ? q.options : [],
+          correct: q.correct,
+          points:  q.points || 2
+        }))
+      : null;
+
     let result;
     try {
-      result = await cf.submitDailyChallenge({ date: dateKey, answers: payloadAnswers });
+      const payload = { date: dateKey, answers: payloadAnswers };
+      if (dynamicQuestions) payload.questions = dynamicQuestions;
+      result = await cf.submitDailyChallenge(payload);
     } catch (e) {
       console.error('[dcSubmit] Worker call failed:', e);
       showToast('Daily-Challenge konnte nicht abgegeben werden: ' + (e?.message || 'Netzwerkfehler'), 'error');
@@ -5608,6 +5741,9 @@ window.LF = {
       userData.achievements = Array.from(new Set([...(userData.achievements || []), ...result.achievementsGranted]));
     }
 
+    // B3: Daily-Challenge fertig — Mid-Test-Guards abräumen, dann State leeren.
+    if (dailyChallengeState) dailyChallengeState.submitted = true;
+    _teardownMidTestGuards();
     dailyChallengeState = null;
     renderDailyChallenge();
   },
@@ -6662,8 +6798,133 @@ window.LF.adminEditUserResetDoc = async () => {
   }
 };
 
+// ── B3 — Mid-Test-Lockdown (2026-05-08) ───────────────────────────────
+// Casey/Maya/Ramsey: Während eines aktiven Tests darf der User nicht
+// einfach auf eine andere Hash-Route klicken — Test wird sonst stillschweigend
+// verworfen + Anti-Cheat-Loophole (Antwort nachschlagen + zurück).
+// Lösung: Confirm-Modal mit „Hier bleiben" / „Test abbrechen" + popstate-Guard
+// + beforeunload-Native-Dialog für Reload/Close. Tab-Switch bleibt unverändert
+// (Note 6 via _tabSwitch). In-App-Nav-Abbruch = NICHT als Note 6, weil aktiv
+// gewählter Abbruch ≠ Cheat-Versuch (Maya's Spec).
+function isTestActive() {
+  if (testState && !testState.results && !testState._submitting) return true;
+  if (typeof dailyChallengeState !== 'undefined' && dailyChallengeState
+      && !dailyChallengeState.submitted) return true;
+  return false;
+}
+
+// Hash, von dem aus der Test gestartet wurde — Set in renderActiveTest und
+// renderDailyChallenge. Nur dieser Hash zählt als „im Test", alles andere
+// triggert das Confirm-Modal.
+let _testLockHash = null;
+
+function isTestRouteOk(targetHash) {
+  if (!_testLockHash) return true;
+  // Erlaubt: exakter Test-Hash. Auch Hash mit Query-Suffix.
+  const stripped = (targetHash || '').split('?')[0];
+  const lock     = (_testLockHash || '').split('?')[0];
+  return stripped === lock;
+}
+
+function _midTestPopstateGuard() {
+  if (!isTestActive()) return;
+  if (isTestRouteOk(location.hash)) return;
+  const wantedHash = location.hash;
+  if (_testLockHash) history.replaceState(null, '', _testLockHash);
+  showMidTestConfirmModal(wantedHash);
+}
+
+function _midTestBeforeUnload(e) {
+  if (!isTestActive()) return;
+  // Native Browser-Dialog. Moderne Browser zeigen den String nicht mehr,
+  // aber returnValue muss gesetzt sein damit der Dialog erscheint.
+  const msg = 'Du bist mitten in einem Test. Beim Verlassen gehen deine Antworten verloren.';
+  e.preventDefault();
+  e.returnValue = msg;
+  return msg;
+}
+
+function _setupMidTestGuards(testHash) {
+  _testLockHash = testHash;
+  window.addEventListener('popstate',     _midTestPopstateGuard);
+  window.addEventListener('beforeunload', _midTestBeforeUnload);
+}
+
+function _teardownMidTestGuards() {
+  _testLockHash = null;
+  window.removeEventListener('popstate',     _midTestPopstateGuard);
+  window.removeEventListener('beforeunload', _midTestBeforeUnload);
+}
+
+function showMidTestConfirmModal(targetHash) {
+  if (document.getElementById('midTestConfirmOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'midTestConfirmOverlay';
+  overlay.className = 'lf-modal-overlay';
+  overlay.addEventListener('click', e => {
+    // Klick auf Backdrop = „Hier bleiben" (Default = sicher).
+    if (e.target === overlay) overlay.remove();
+  });
+  // Maya's Copy ist verbindlich (uxspec 2026-05-08).
+  overlay.innerHTML = `
+    <div class="lf-modal-card" style="max-width:420px">
+      <div class="lf-modal-header">
+        <h3>${lfIcon('triangle-alert')} Test l&auml;uft noch</h3>
+      </div>
+      <div class="lf-modal-body">
+        <p style="margin:0;line-height:1.5;color:var(--text)">
+          Du bist mitten in einem Test. Wenn du jetzt weggehst, gehen deine bisherigen Antworten verloren &mdash; ohne Note, ohne XP.
+        </p>
+      </div>
+      <div class="lf-modal-actions">
+        <button class="btn btn-ghost btn-danger" id="midTestAbortBtn">Test abbrechen</button>
+        <button class="btn btn-primary" id="midTestStayBtn">Hier bleiben</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  document.getElementById('midTestStayBtn')?.addEventListener('click', () => {
+    overlay.remove();
+  });
+  document.getElementById('midTestAbortBtn')?.addEventListener('click', () => {
+    overlay.remove();
+    _abortActiveTest();
+    if (targetHash && targetHash !== location.hash) {
+      location.hash = targetHash;
+    } else {
+      location.hash = '#/';
+    }
+  });
+  setTimeout(() => document.getElementById('midTestStayBtn')?.focus(), 50);
+}
+
+function _abortActiveTest() {
+  // Test-State wegräumen ohne submitTest aufzurufen — KEIN Note-6, KEIN XP.
+  if (typeof timerInterval !== 'undefined' && timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  try { _tabSwitch.teardown(); } catch(e) {}
+  testState = null;
+  if (typeof dailyChallengeState !== 'undefined' && dailyChallengeState) {
+    if (dailyChallengeState.timer) clearInterval(dailyChallengeState.timer);
+    dailyChallengeState = null;
+  }
+  _teardownMidTestGuards();
+  showToast('Test verworfen.', 'info');
+}
+
+window.LF.midTestStay  = () => document.getElementById('midTestConfirmOverlay')?.remove();
+window.LF.midTestAbort = () => {
+  document.getElementById('midTestConfirmOverlay')?.remove();
+  _abortActiveTest();
+};
+
 function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, subject, topic) {
   setupTabSwitchDetection();
+  // B3: Mid-test guards aktivieren. Test-Hash = der aktuelle Topic-Hash, von
+  // dem aus startTest aufgerufen wurde.
+  _setupMidTestGuards(`#/fach/${subjectId}/${yearId}/${topicId}`);
   testState = {
     questions, timeMinutes, subjectId, yearId, topicId,
     subjectName: subject.name, topicName: topic.name,
@@ -6957,9 +7218,18 @@ window.LF.submitTest = async () => {
     }
   }
 
+  // B3: Test fertig — Mid-Test-Guards abräumen, results-Flag setzen, damit
+  // isTestActive() false zurückgibt und der User die Result-View frei
+  // verlassen kann.
+  if (testState) testState.results = true;
+  _teardownMidTestGuards();
   renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty });
   } finally {
     if (testState) testState._submitting = false;
+    // B3 Sophie-Audit-Fix (2026-05-08): wenn evaluateAnswers/CF wirft, hat
+    // die happy-path-teardown weiter oben nicht gefeuert — beforeunload
+    // würde den User auch nach Logout/Reload nerven. Defensiv im finally.
+    if (!testState || !testState.results) _teardownMidTestGuards();
   }
 };
 
@@ -8344,6 +8614,102 @@ window.LF.selectTheme = async (themeId) => {
 // ════════════════════════════════════════════════════════════════
 //  Testing-Tab (Admin + Tester) + Admin-Tab (nur Admin)
 // ════════════════════════════════════════════════════════════════
+// B7 (2026-05-08, Maya): Self-Grade-Setter im Testing-Bereich.
+// Cascading-Dropdown Fach → Klasse → Thema → Note-Pill-Group.
+// Sicht: tester + admin (siehe route()-Guard line 507). Schreibt nur in
+// `currentUser`s userData.grades — keine Fremd-User-Modifikation.
+let _testGradeDraft = { subjectId: '', yearId: '', topicId: '', grade: null };
+
+function _testGradeKey(s, y, t) { return `${s}__${y}__${t}`; }
+
+function _renderTesterGradeSection() {
+  if (!structure || structure._configError) {
+    return `<div class="testing-section">
+      <div class="testing-section-title">&#128221; Eigene Noten setzen</div>
+      <div class="text-muted" style="padding:8px 0">F&auml;cher werden geladen&hellip;</div>
+    </div>`;
+  }
+  const d = _testGradeDraft;
+  const subjects = Object.values(structure).filter(s => s && s.id);
+  const subjectOpts = subjects.map(s =>
+    `<option value="${escapeHtml(s.id)}" ${d.subjectId===s.id?'selected':''}>${escapeHtml(s.name)}</option>`
+  ).join('');
+  const subj  = d.subjectId ? structure[d.subjectId] : null;
+  const years = subj ? Object.values(subj.years || {}) : [];
+  const yearOpts = years.map(y =>
+    `<option value="${escapeHtml(y.id)}" ${d.yearId===y.id?'selected':''}>${escapeHtml(y.name)}</option>`
+  ).join('');
+  const yr     = subj && d.yearId ? subj.years[d.yearId] : null;
+  const topics = yr ? Object.values(yr.topics || {}) : [];
+  const topicOpts = topics.map(t =>
+    `<option value="${escapeHtml(t.id)}" ${d.topicId===t.id?'selected':''}>${escapeHtml(t.name)}</option>`
+  ).join('');
+
+  const canSave = d.subjectId && d.yearId && d.topicId && d.grade;
+  const pillBtns = [1,2,3,4,5,6].map(n => {
+    const active = d.grade === n;
+    const style = active
+      ? 'background:var(--accent);color:#fff;border-color:var(--accent)'
+      : '';
+    return `<button class="btn btn-secondary btn-sm" style="min-width:48px;${style}" onclick="window.LF.testGradeSetGrade(${n})">${n}</button>`;
+  }).join('');
+
+  // Bestehende Noten — aus userData.grades.
+  const grades = userData?.grades || {};
+  const gradeRows = Object.entries(grades).map(([key, g]) => {
+    const [sid, yid, tid] = key.split('__');
+    const subject = structure?.[sid];
+    const year    = subject?.years?.[yid];
+    const topic   = year?.topics?.[tid];
+    const sName = escapeHtml(subject?.name || sid);
+    const yName = escapeHtml(year?.name    || yid);
+    const tName = escapeHtml(topic?.name   || tid);
+    // Maya's Pro-Eintrag-Format: „{Fachname} · Klasse {n} · {Themenname} · Note {n}"
+    const label = `${sName} &middot; Klasse ${yName} &middot; ${tName} &middot; Note ${parseInt(g.grade)||'?'}`;
+    return `<div class="adm-grade-row">
+      <span>${label}</span>
+      <button class="btn btn-ghost btn-sm" title="Diese Note l&ouml;schen" onclick="window.LF.testGradeDelete('${escapeHtml(key)}')">${lfIcon('x')}</button>
+    </div>`;
+  }).join('') || '<div class="empty-state" style="padding:8px">Noch keine Noten gesetzt.</div>';
+
+  return `
+    <div class="testing-section">
+      <div class="testing-section-title">&#128221; Eigene Noten setzen</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        Setze Noten direkt f&uuml;r deine eigenen Tests &mdash; zum Reproduzieren von Bugs.
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fach</label>
+        <select class="form-input" id="tgSubject" onchange="window.LF.testGradeSetSubject(this.value)">
+          <option value="">Fach w&auml;hlen&hellip;</option>
+          ${subjectOpts}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Klasse</label>
+        <select class="form-input" id="tgYear" ${d.subjectId?'':'disabled'} onchange="window.LF.testGradeSetYear(this.value)">
+          <option value="">Klasse w&auml;hlen&hellip;</option>
+          ${yearOpts}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Thema</label>
+        <select class="form-input" id="tgTopic" ${d.yearId?'':'disabled'} onchange="window.LF.testGradeSetTopic(this.value)">
+          <option value="">Thema w&auml;hlen&hellip;</option>
+          ${topicOpts}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${pillBtns}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" ${canSave?'':'disabled'} onclick="window.LF.testGradeSave()">Note speichern</button>
+      <div class="adm-section-title" style="margin-top:20px">Bestehende Noten</div>
+      <div class="adm-grade-list">${gradeRows}</div>
+      ${Object.keys(grades).length ? `<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="window.LF.testGradeDeleteAll()">Alle Noten l&ouml;schen</button>` : ''}
+    </div>`;
+}
+
 function renderTesting() {
   const isA = isAdmin();
   document.getElementById('app').innerHTML = `
@@ -8364,6 +8730,8 @@ function renderTesting() {
           <button class="btn btn-secondary btn-sm" onclick="window.LF.testSetXP(150000)">+150k XP (Lv 100+)</button>
         </div>
       </div>
+
+      ${_renderTesterGradeSection()}
 
       <div class="testing-section">
         <div class="testing-section-title">&#127912; Cosmetics</div>
@@ -8446,6 +8814,84 @@ window.LF.testWipeGrades = async () => {
   await adminPatchUser(currentUser.uid, { grades: {} }).catch(console.error);
   userData.grades = {};
   showToast('Alle Noten gel&ouml;scht', 'info');
+};
+
+// ── B7 — Tester Self-Grade Handlers (2026-05-08) ──────────────────────
+window.LF.testGradeSetSubject = (sid) => {
+  _testGradeDraft = { subjectId: sid || '', yearId: '', topicId: '', grade: null };
+  if (location.hash.startsWith('#/testing')) renderTesting();
+};
+window.LF.testGradeSetYear = (yid) => {
+  _testGradeDraft.yearId = yid || '';
+  _testGradeDraft.topicId = '';
+  _testGradeDraft.grade = null;
+  if (location.hash.startsWith('#/testing')) renderTesting();
+};
+window.LF.testGradeSetTopic = (tid) => {
+  _testGradeDraft.topicId = tid || '';
+  // grade nicht zurücksetzen — User kann erst Topic wählen, dann Note klicken.
+  if (location.hash.startsWith('#/testing')) renderTesting();
+};
+window.LF.testGradeSetGrade = (n) => {
+  if (!_testGradeDraft.topicId) return; // pill nur klickbar wenn Topic gesetzt
+  _testGradeDraft.grade = n;
+  if (location.hash.startsWith('#/testing')) renderTesting();
+};
+window.LF.testGradeSave = async () => {
+  const d = _testGradeDraft;
+  if (!d.subjectId || !d.yearId || !d.topicId || !d.grade) return;
+  const key = _testGradeKey(d.subjectId, d.yearId, d.topicId);
+  // Maya: minimaler gradeObj-Shape für _gp()-Reader. bestPoints/bestMaxPoints
+  // = 0/0 ist akzeptabel — Subject-Card-Avg-Display nutzt nur grade.
+  const gradeObj = {
+    grade:         d.grade,
+    bestPoints:    0,
+    bestMaxPoints: 0,
+    lastTested:    Date.now()
+  };
+  try {
+    const newGrades = { ...(userData?.grades || {}), [key]: gradeObj };
+    await adminPatchUser(currentUser.uid, { grades: newGrades });
+    userData.grades = newGrades;
+    const subj = structure?.[d.subjectId];
+    const topic = subj?.years?.[d.yearId]?.topics?.[d.topicId];
+    const sName = subj?.name || d.subjectId;
+    const tName = topic?.name || d.topicId;
+    showToast(`Note gespeichert: ${sName} · ${tName} → Note ${d.grade}`, 'success');
+    _testGradeDraft = { subjectId: '', yearId: '', topicId: '', grade: null };
+    if (location.hash.startsWith('#/testing')) renderTesting();
+  } catch(e) {
+    console.error('[testGradeSave]', e);
+    showToast('Fehler: ' + (e.message || 'Konnte nicht speichern'), 'error');
+  }
+};
+window.LF.testGradeDelete = async (key) => {
+  if (!key) return;
+  try {
+    // Hard Rule 4/5: kein update(), kein delete() — set+merge mit FieldValue.delete()
+    // entfernt den Map-Key sauber ohne Race.
+    await db().collection('users').doc(currentUser.uid).set({
+      grades: { [key]: firebase.firestore.FieldValue.delete() }
+    }, { merge: true });
+    if (userData?.grades) delete userData.grades[key];
+    showToast('Note gelöscht.', 'info');
+    if (location.hash.startsWith('#/testing')) renderTesting();
+  } catch(e) {
+    console.error('[testGradeDelete]', e);
+    showToast('Fehler: ' + (e.message || 'Konnte nicht löschen'), 'error');
+  }
+};
+window.LF.testGradeDeleteAll = async () => {
+  if (!confirm('Wirklich alle deine Noten löschen?')) return;
+  try {
+    await adminPatchUser(currentUser.uid, { grades: {} });
+    userData.grades = {};
+    showToast('Alle Noten gelöscht.', 'info');
+    if (location.hash.startsWith('#/testing')) renderTesting();
+  } catch(e) {
+    console.error('[testGradeDeleteAll]', e);
+    showToast('Fehler: ' + (e.message || 'Konnte nicht löschen'), 'error');
+  }
 };
 
 window.LF.testWipeAll = async () => {

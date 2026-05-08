@@ -131,25 +131,32 @@ export async function getParentShareReport(token) {
 }
 
 // -----------------------------------------------------------
-//  submitDailyChallenge - Mission 9 (Cheat #4 fix).
-//  Worker re-evaluates answers server-side using the secret
-//  answer-key (no longer shipped in daily-challenges-config.js).
-//  Worker also writes the dailyScores doc + grants XP/streak.
+//  submitDailyChallenge - Mission 9 (Cheat #4 fix) + B4 fix
+//  (2026-05-08, Marcus): for non-curated dates the frontend
+//  passes its dynamically-generated questions[] alongside the
+//  answers — the worker validates + evaluates against the
+//  supplied `correct` index. Curated dates ignore `questions`
+//  and use the server-held answer-key as before.
+//
+//  Worker writes the dailyScores doc + grants XP/streak.
 //
 //  payload shape:
 //    {
 //      date: '2026-04-22',                // ISO YYYY-MM-DD
 //      answers: [
-//        // multiple-choice (most common):
 //        { questionIndex: 0, selectedOriginalIndex: 2 },
-//        // free-text (if a daily ever ships those):
-//        { questionIndex: 1, freeText: '...student answer...' }
+//        { questionIndex: 1, freeText: '...' }   // future
+//      ],
+//      // OPTIONAL: required for non-curated dates only
+//      questions: [
+//        { id, type: 'multiple_choice', options: [...], correct: <int>, points: <int> },
+//        ...
 //      ]
 //    }
 //
 //  returns: {
-//    grade, points, max, correctIndices: [...],   // for the result-render
-//    xpAwarded, achievementsGranted, perfect
+//    grade, points, max, xpAwarded, achievementsGranted,
+//    dailyPerfect, source: 'curated' | 'dynamic'
 //  }
 // -----------------------------------------------------------
 export async function submitDailyChallenge(payload) {
