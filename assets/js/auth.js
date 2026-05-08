@@ -218,13 +218,14 @@ export async function loginAsHacker() {
 
 export async function setUserRole(uid, role) {
   // role: 'admin' | 'tester' | null (=remove)
-  if (role === null) {
-    await _db.collection('users').doc(uid).update({
-      role: firebase.firestore.FieldValue.delete()
-    });
-  } else {
-    await _db.collection('users').doc(uid).set({ role }, { merge: true });
-  }
+  // Wave-1 hardening 2026-05-08 (Marcus, Hard rule 4 + 5): the previous
+  // `update({role: FieldValue.delete()})` violated both:
+  //   - Hard rule 4 (no `update()` for partial writes — throws on missing doc)
+  //   - Hard rule 5 (no `delete()` for resets — race-prone)
+  // Switched to `set+merge` with `null` as the reset marker. Reader code
+  // already handles `role: null` gracefully (see roleBadge() and userRole()
+  // in app.js — both treat null/undefined as "no role").
+  await _db.collection('users').doc(uid).set({ role: role }, { merge: true });
 }
 
 // ── Cosmetics: Outlines + Themes ────────────────────────
@@ -253,9 +254,25 @@ export async function setActiveOutline(uid, outlineId) {
 }
 
 // ── Admin-Tools (für Testing-Tab) ───────────────────────
+// Wave-1 hardening 2026-05-08 (Marcus, B-M05): the leaderboard mirror
+// block is now SKIPPED when the caller is not an admin. Tester accounts
+// (Robin) hit this path via testSetXP / testWipeAll / etc. — the
+// leaderboard.update rule denies their cross-user mirror writes
+// (`isOwner(uid)` fails because target uid != caller; `isAdmin()` fails
+// because tester has role:'tester'). The previous silent .catch hid the
+// failure; the rangliste then showed stale values until the target user
+// next ran a test. Skipping the mirror avoids the silent fail entirely;
+// the next test-submit by the target user re-syncs via the worker.
 export async function adminPatchUser(uid, patch) {
   // Setzt beliebige Felder auf einem User-Doc — nur via Admin-Rolle in Rules erlaubt
   await _db.collection('users').doc(uid).set(patch, { merge: true });
+
+  // Caller-admin gate: only admins may mirror to leaderboard. Testers
+  // skip — the leaderboard re-syncs on the target user's next test.
+  const callerEmail = _auth?.currentUser?.email || null;
+  const isCallerAdmin = !!callerEmail && ADMIN_EMAILS.includes(callerEmail);
+  if (!isCallerAdmin) return;
+
   // Mirror leaderboard-relevanter Felder, sonst zeigt Rangliste alte Werte
   // bis der Target-User selbst einen Test macht. Cross-User-Write erlaubt
   // weil isAdmin() die leaderboard-Rule deckt. Silent catch: Patch ist trotzdem
@@ -322,14 +339,20 @@ export async function adminUnlockAllForUser(uid, allOutlines, allThemes) {
 }
 
 // ── Note speichern ──────────────────────
+// Hard rule 4 (Wave-1 fix, Marcus, 2026-05-08, CHEAT-28): switched from
+// `update()` to `set+merge`. Without this, a brand-new user's first
+// grade-save against a not-yet-fully-existent users/{uid} doc would throw
+// (`update()` requires the doc to exist; the doc only gets created on the
+// register/login auth-handler path). set+merge auto-creates if needed
+// AND covers the dot-path nested-write semantics identically.
 export async function saveGrade(uid, subjectId, yearId, topicId, gradeData) {
   const key = `grades.${subjectId}__${yearId}__${topicId}`;
-  await _db.collection('users').doc(uid).update({
+  await _db.collection('users').doc(uid).set({
     [key]: {
       ...gradeData,
       date: firebase.firestore.FieldValue.serverTimestamp()
     }
-  });
+  }, { merge: true });
 }
 
 // ── Auth-State beobachten ───────────────
@@ -402,46 +425,70 @@ export async function createGroup(uid, displayName, photoURL, groupName) {
   return groupRef.id;
 }
 
+// Hard rule 4 (Wave-1, Marcus, 2026-05-08, B-M02): switched from
+// `doc.ref.update()` to `set+merge`. The matching firestore.rule was
+// also fixed in the same wave to allow the self-join carve-out
+// (groups.update Case B). Without both fixes, group-join was silently
+// broken — the rule denied the write because the joiner is not the
+// creator, and the client used `update()` which would fail with the
+// same generic permission-denied error a legacy missing-doc would.
 export async function joinGroupByCode(uid, displayName, photoURL, code) {
   const snap = await _db.collection('groups').where('code', '==', code.trim().toUpperCase()).limit(1).get();
   if (snap.empty) throw new Error('Kein Gruppe mit diesem Code gefunden.');
   const doc  = snap.docs[0];
   if (doc.data().members?.[uid]) throw new Error('Du bist bereits in dieser Gruppe.');
-  await doc.ref.update({
-    [`members.${uid}`]: { displayName, photoURL: photoURL || null, role: 'member' }
-  });
+  await doc.ref.set({
+    members: { [uid]: { displayName, photoURL: photoURL || null, role: 'member' } }
+  }, { merge: true });
   await _db.collection('users').doc(uid).set(
     { groupIds: firebase.firestore.FieldValue.arrayUnion(doc.id) }, { merge: true }
   );
   return doc.id;
 }
 
+// Hard rule 4 + 5 (Wave-1, Marcus, 2026-05-08): switched from
+// `update()` + `FieldValue.delete()` to `set+merge` + `null` marker.
+// The map-key-`null`-marker is what the firestore.rule's self-leave
+// carve-out (groups.update Case C) accepts; downstream readers
+// (`Object.entries(group.members).filter(([_, v]) => v != null)`) skip
+// null-markers, which is the same as semantically "left the group".
+// Hard rule 4: set+merge auto-creates if doc is missing.
+// Hard rule 5: null-marker pattern instead of FieldValue.delete().
 export async function leaveGroup(uid, groupId) {
   const ref  = _db.collection('groups').doc(groupId);
   const snap = await ref.get();
   if (!snap.exists) return;
   const data = snap.data();
   if (data.creatorUid === uid) {
+    // Creator deletes the group entirely — semantic delete (Hard rule 5
+    // exception: the group ITSELF goes away, not a per-member reset).
     const batch    = _db.batch();
     const members  = Object.keys(data.members || {});
-    members.forEach(m => batch.update(_db.collection('users').doc(m),
-      { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) }));
+    members.forEach(m => batch.set(_db.collection('users').doc(m),
+      { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) },
+      { merge: true }));
     batch.delete(ref);
     await batch.commit();
   } else {
-    await ref.update({ [`members.${uid}`]: firebase.firestore.FieldValue.delete() });
-    await _db.collection('users').doc(uid).update(
-      { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) }
+    await ref.set({
+      members: { [uid]: null }
+    }, { merge: true });
+    await _db.collection('users').doc(uid).set(
+      { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) },
+      { merge: true }
     );
   }
 }
 
+// Hard rule 4 + 5 (Wave-1, Marcus, 2026-05-08): same null-marker pattern
+// as leaveGroup. firestore.rule allows this via creator-Case-A on groups.
 export async function kickFromGroup(groupId, targetUid) {
-  await _db.collection('groups').doc(groupId).update({
-    [`members.${targetUid}`]: firebase.firestore.FieldValue.delete()
-  });
-  await _db.collection('users').doc(targetUid).update(
-    { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) }
+  await _db.collection('groups').doc(groupId).set({
+    members: { [targetUid]: null }
+  }, { merge: true });
+  await _db.collection('users').doc(targetUid).set(
+    { groupIds: firebase.firestore.FieldValue.arrayRemove(groupId) },
+    { merge: true }
   );
 }
 
@@ -490,11 +537,14 @@ export async function getCustomTopicById(topicId) {
 }
 
 // ── Lesezeichen (F-19) ─────────────────────
+// Hard rule 4 (Wave-1, Marcus, 2026-05-08): set+merge instead of update().
+// arrayUnion/arrayRemove are field-transforms that work identically under
+// set+merge, and set+merge auto-creates the doc if it's missing.
 export async function toggleBookmark(uid, key, isBookmarked) {
   const op = isBookmarked
     ? firebase.firestore.FieldValue.arrayRemove(key)
     : firebase.firestore.FieldValue.arrayUnion(key);
-  await _db.collection('users').doc(uid).update({ bookmarks: op });
+  await _db.collection('users').doc(uid).set({ bookmarks: op }, { merge: true });
 }
 
 // ── Notizen (F-18) ─────────────────────────
@@ -589,9 +639,19 @@ export async function saveErrorExplanation(uid, qId, explanationText) {
   if (len < 1 || len > 2000) {
     throw new Error('saveErrorExplanation: explanationText length muss 1..2000 sein.');
   }
+  // Wave-1 hardening 2026-05-08 (Marcus, B-M10): generatedAt as numeric
+  // ms (Date.now()), not serverTimestamp. The optimistic local update in
+  // app.js writes Date.now() too — using serverTimestamp here would have
+  // produced a Firestore Timestamp object on round-trip while the local
+  // optimistic value stays a number. Any future TTL-comparison code
+  // (e.g. "regenerate explanations older than 30 days") would have hit
+  // a TypeError on the Timestamp branch. Numeric ms is also what the
+  // Worker uses for topicDropCooldowns / themeDropCooldowns (same
+  // nested-map-no-sentinel constraint applies for cf-write paths even
+  // though this client write doesn't have that constraint).
   const entry = {
     explanation: explanationText,
-    generatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    generatedAt: Date.now()
   };
   await _db.collection('users').doc(uid).set(
     { errorExplanations: { [qId]: entry } },
@@ -600,14 +660,18 @@ export async function saveErrorExplanation(uid, qId, explanationText) {
 }
 
 // ── Lernzeit speichern (F-17) ──────────────
+// Hard rule 4 (Wave-1, Marcus, 2026-05-08, CHEAT-36): collapsed the
+// previous try-update-fallback-set pattern to a single set+merge call.
+// FieldValue.increment is a transform that works identically under
+// set+merge; the dot-path nested-write semantics are also identical.
+// Set+merge auto-creates the doc + the studyTime map if missing — no
+// need for the fallback branch anymore.
 export async function addStudyTime(uid, minutes) {
   if (!uid || minutes <= 0) return;
   const key = new Date().toISOString().slice(0, 10);
-  await _db.collection('users').doc(uid).update({
+  await _db.collection('users').doc(uid).set({
     [`studyTime.${key}`]: firebase.firestore.FieldValue.increment(minutes)
-  }).catch(() =>
-    _db.collection('users').doc(uid).set({ studyTime: { [key]: minutes } }, { merge: true })
-  );
+  }, { merge: true });
 }
 
 // ── Schwache Fragen tracken (F-03) ─────────
@@ -627,16 +691,15 @@ export async function saveWeakQuestions(uid, questionIds) {
 }
 
 // ── XP speichern (F-25) ───────────────────
+// Hard rule 4 (Wave-1, Marcus, 2026-05-08, CHEAT-36): single set+merge
+// instead of try-update-fallback-set. See addStudyTime for the same
+// transform-under-merge rationale.
 export async function saveXP(uid, xpToAdd) {
   const key = new Date().toISOString().slice(0, 10);
-  await _db.collection('users').doc(uid).update({
+  await _db.collection('users').doc(uid).set({
     xp: firebase.firestore.FieldValue.increment(xpToAdd),
     [`xpLog.${key}`]: firebase.firestore.FieldValue.increment(xpToAdd)
-  }).catch(() =>
-    _db.collection('users').doc(uid).set(
-      { xp: xpToAdd, xpLog: { [key]: xpToAdd } }, { merge: true }
-    )
-  );
+  }, { merge: true });
 }
 
 // ── Achievements speichern (F-24) ─────────
@@ -648,12 +711,11 @@ export async function saveAchievements(uid, ids) {
 }
 
 // ── Allgemeiner Zähler (Fragen, SRS-Reviews) ─
+// Hard rule 4 (Wave-1, Marcus, 2026-05-08, CHEAT-36): single set+merge.
 export async function incrementCounter(uid, field, by = 1) {
-  await _db.collection('users').doc(uid).update({
+  await _db.collection('users').doc(uid).set({
     [field]: firebase.firestore.FieldValue.increment(by)
-  }).catch(() =>
-    _db.collection('users').doc(uid).set({ [field]: by }, { merge: true })
-  );
+  }, { merge: true });
 }
 
 // ── Daily Challenge Score (F-26) ──────────
@@ -697,14 +759,23 @@ export async function deleteComment(topicKey, commentId) {
   await _db.collection('comments').doc(_safeKey(topicKey)).collection('entries').doc(commentId).delete();
 }
 
+// Hard rule 4 + 5 (Wave-1, Marcus, 2026-05-08): set+merge with `false`
+// marker instead of update + FieldValue.delete. Reader path checks
+// `!!c.likes?.[uid]` so falsy (null/undefined/false) is uniformly
+// "not liked" — the marker pattern is transparent to UI.
+//
+// Note the firestore.rule for comments still requires
+// `likes.diff().affectedKeys().hasOnly([uid])` — set+merge with a single
+// dot-path key produces exactly that diff, so the rule still permits
+// the like-toggle.
 export async function toggleCommentLike(topicKey, commentId, uid) {
   const ref = _db.collection('comments').doc(_safeKey(topicKey)).collection('entries').doc(commentId);
   const doc = await ref.get();
   const liked = !!(doc.data()?.likes?.[uid]);
   if (liked) {
-    await ref.update({ [`likes.${uid}`]: firebase.firestore.FieldValue.delete() });
+    await ref.set({ likes: { [uid]: false } }, { merge: true });
   } else {
-    await ref.update({ [`likes.${uid}`]: true });
+    await ref.set({ likes: { [uid]: true } }, { merge: true });
   }
   return !liked;
 }
@@ -732,29 +803,42 @@ export async function sendFriendRequest(fromUid, fromName, fromPhoto, toUid, fro
   }, { merge: true });
 }
 
+// Hard rule 5 (Wave-1, Marcus, 2026-05-08): null marker instead of
+// FieldValue.delete() for the friendRequests cleanup. Same rationale as
+// rejectFriendRequest above — reader path filters null entries.
 export async function acceptFriendRequest(uid, fromUid) {
   const batch = _db.batch();
   batch.set(_db.collection('users').doc(uid),
-    { friendIds: firebase.firestore.FieldValue.arrayUnion(fromUid),
-      [`friendRequests.${fromUid}`]: firebase.firestore.FieldValue.delete() },
+    { friendIds:      firebase.firestore.FieldValue.arrayUnion(fromUid),
+      friendRequests: { [fromUid]: null } },
     { merge: true });
   batch.set(_db.collection('users').doc(fromUid),
     { friendIds: firebase.firestore.FieldValue.arrayUnion(uid) }, { merge: true });
   await batch.commit();
 }
 
+// Hard rule 4 + 5 (Wave-1, Marcus, 2026-05-08): set+merge with null
+// marker. Reader code in app.js iterates friendRequests and skips null
+// values (treats them as "no pending request"). The firestore.rule's
+// Case-A (owner writing own friendRequests via ownerSafeFields) accepts
+// this — friendRequests is in ownerSafeFields and the diff.affectedKeys
+// check on Case-D doesn't apply because this is the owner's own write.
 export async function rejectFriendRequest(uid, fromUid) {
-  await _db.collection('users').doc(uid).update({
-    [`friendRequests.${fromUid}`]: firebase.firestore.FieldValue.delete()
-  });
+  await _db.collection('users').doc(uid).set({
+    friendRequests: { [fromUid]: null }
+  }, { merge: true });
 }
 
+// Hard rule 4 (Wave-1, Marcus, 2026-05-08): batch.update -> batch.set
+// with merge. arrayRemove is a transform that works under set+merge.
 export async function unfriend(uid, friendUid) {
   const batch = _db.batch();
-  batch.update(_db.collection('users').doc(uid),
-    { friendIds: firebase.firestore.FieldValue.arrayRemove(friendUid) });
-  batch.update(_db.collection('users').doc(friendUid),
-    { friendIds: firebase.firestore.FieldValue.arrayRemove(uid) });
+  batch.set(_db.collection('users').doc(uid),
+    { friendIds: firebase.firestore.FieldValue.arrayRemove(friendUid) },
+    { merge: true });
+  batch.set(_db.collection('users').doc(friendUid),
+    { friendIds: firebase.firestore.FieldValue.arrayRemove(uid) },
+    { merge: true });
   await batch.commit();
 }
 
@@ -796,11 +880,19 @@ export async function getFeedForFriends(friendIds) {
 // block was deleted from firestore.rules in the same commit.
 
 // ── Eltern-Share-Link (F-46) ──────────────
+// Wave-1 hardening 2026-05-08 (Marcus, CHEAT-38): expiresAt added (90d).
+// The matching rule now requires `expiresAt is number` at create time;
+// the parent-share-report worker rejects expired tokens. createdAt is
+// kept as a server timestamp for audit / display, but expiresAt is a
+// numeric Date.now()-ms so the worker's `expiresAt > Date.now()` check
+// is a single numeric compare (no Timestamp.toMillis dance).
+const SHARE_LINK_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 export async function createShareToken(uid) {
   const token = Math.random().toString(36).slice(2, 14) + Math.random().toString(36).slice(2, 6);
   await _db.collection('shareLinks').doc(token).set({
     uid,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    expiresAt: Date.now() + SHARE_LINK_TTL_MS
   });
   return token;
 }

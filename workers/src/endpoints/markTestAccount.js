@@ -15,16 +15,34 @@ import { requireAuth }              from '../lib/auth.js';
 import { readJsonBody, httpError }  from '../lib/http.js';
 import { firestoreUpdate }          from '../lib/firestore.js';
 
-const TEST_ACCOUNT_EMAILS = [
-  'simonkoper27@gmail.com'
-  // Add more emails here if Simon needs additional test accounts.
-];
+// Wave-1 hardening 2026-05-08 (Marcus, B-M03): the previous hardcoded
+// list contained ONLY simonkoper27@gmail.com, but the Claude- and Hacker-
+// Test-Accounts have their OWN emails (stored in localStorage, never
+// committed to the repo). markAsClaude/markAsHacker called from those
+// accounts hit a 403 here — silent-catch upstream, so the test-account
+// markers (isClaude/isHacker) were never written to users/{uid}, and
+// the Test-Accounts then leaked into the leaderboard / friend-search /
+// feed because the !isClaude/!isHacker filters had nothing to filter on.
+//
+// Fix: the Worker env carries a `TEST_ACCOUNT_EMAILS` secret = comma-
+// separated list of allowed emails (set via `wrangler secret put`).
+// Falls back to Simon's email only if the secret isn't set, so deploys
+// in development without the secret still work.
+function _getTestAccountEmails(env) {
+  const raw = env.TEST_ACCOUNT_EMAILS;
+  if (!raw || typeof raw !== 'string') {
+    return ['simonkoper27@gmail.com'];
+  }
+  return raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+}
 
 export async function handleMarkTestAccount(request, env) {
   if (request.method !== 'POST') throw httpError(405, 'POST erforderlich.');
 
   const { uid, email } = await requireAuth(request, env);
-  if (!email || !TEST_ACCOUNT_EMAILS.includes(email)) {
+  const allowed = _getTestAccountEmails(env);
+  const emailLc = (email || '').toLowerCase();
+  if (!emailLc || !allowed.includes(emailLc)) {
     throw httpError(403, 'Diese Email ist nicht fuer Test-Accounts freigegeben.');
   }
 

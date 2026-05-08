@@ -115,14 +115,61 @@ export async function handleSubmitTestResult(request, env) {
   const isTestAccount = !!userData.isClaude || !!userData.isHacker;
 
   // Server-fetch the canonical questions and re-evaluate.
+  // CHEAT-22 fix (Wave-1, Marcus, 2026-05-08, P0):
+  //   The previous custom-topic path TRUSTED `a.correctOriginal` and
+  //   `a.maxPointsForQ` from the client request body. A hacker could
+  //   POST hand-crafted answers with `correctOriginal === selectedOriginalIndex`
+  //   on every question and `maxPointsForQ: 12` for unlimited points,
+  //   then collect +108 XP per call (Note 1). The frontend's normal
+  //   custom-topic flow does NOT route through this worker (it goes
+  //   the local-eval branch at app.js:7802), so this code path was
+  //   reachable only via a direct console attack — but reachable it
+  //   was, and the rules layer can't help here because the worker
+  //   bypasses rules with service-account creds.
+  //
+  //   New rule: a custom-topic submit MUST carry a `customTopicId`
+  //   (Firestore docId in `customTopics/`). The worker reads that doc,
+  //   verifies the caller has access (ownerUid match OR groupId in the
+  //   user's groupIds), and uses the SERVER-stored `q.correct` /
+  //   `q.points`. Client-supplied correctOriginal/maxPointsForQ are
+  //   ignored. Defense-in-depth: NO XP awarded for custom-topic submits
+  //   (the +50 XP for `customCreated` was the legitimate reward; doing
+  //   the test yourself is not.) Leaderboard mirror was already skipped
+  //   for custom (good).
   let questions, evalResult;
   if (isCustomTopic) {
-    questions = (answers || []).map(a => ({
-      type:      a.type || 'multiple_choice',
-      points:    a.maxPointsForQ || 2,
-      maxPoints: a.maxPointsForQ || 4,
-      correct:   a.correctOriginal,
-      keywords:  []
+    const { customTopicId } = body || {};
+    if (typeof customTopicId !== 'string' || !customTopicId) {
+      throw httpError(400, 'customTopicId fehlt fuer Custom-Topic-Submit.');
+    }
+    const topicDoc = await firestoreGet(env, `customTopics/${customTopicId}`);
+    if (!topicDoc) {
+      throw httpError(404, 'Custom-Topic existiert nicht.');
+    }
+    const topicData = topicDoc.fields || {};
+    // Access check: caller must be owner OR member of the topic's group.
+    const isOwner = topicData.ownerUid === uid;
+    const userGroupIds = Array.isArray(userData.groupIds) ? userData.groupIds : [];
+    const isGroupMember = topicData.groupId
+                       && userGroupIds.includes(topicData.groupId);
+    if (!isOwner && !isGroupMember) {
+      throw httpError(403, 'Kein Zugriff auf dieses Custom-Topic.');
+    }
+    const serverQuestions = Array.isArray(topicData.questions) ? topicData.questions : [];
+    if (serverQuestions.length === 0) {
+      throw httpError(404, 'Custom-Topic enthaelt keine Fragen.');
+    }
+    // Map server-stored questions into the evaluator's expected shape.
+    // We only support multiple_choice for custom topics today (matches
+    // the builder UI in app.js — free_text/vocab custom-questions are
+    // not authored). Any non-MC entry gets defaulted to MC; if a user
+    // ever authors something else here we'd need to extend.
+    questions = serverQuestions.map(q => ({
+      type:      q.type || 'multiple_choice',
+      points:    Number.isFinite(q.points)    ? q.points    : 2,
+      maxPoints: Number.isFinite(q.maxPoints) ? q.maxPoints : (Number.isFinite(q.points) ? q.points : 2),
+      correct:   q.correct,    // <- SERVER's truth, NOT client's
+      keywords:  Array.isArray(q.keywords) ? q.keywords : []
     }));
     evalResult = evaluateServerSide(questions, answers, timeMinutes, !!isPenalty);
   } else {
@@ -136,7 +183,15 @@ export async function handleSubmitTestResult(request, env) {
   const total = evalResult.points;
   const max   = evalResult.maxPoints;
   const grade = evalResult.grade;
-  const xpAwarded = isPenalty ? 5 : calcXPForTest(grade);
+  // CHEAT-22 defense-in-depth: custom topics earn ZERO XP via this path
+  // (the +50 XP for creating a custom topic is the only legitimate XP
+  // reward in the custom-topic flow; doing your own test does not earn
+  // additional XP). isPenalty still gets 5 XP for the deterrent effect
+  // (tab-switch penalty exists to discourage cheating during regular
+  // tests, identical semantics for custom).
+  const xpAwarded = isCustomTopic
+    ? (isPenalty ? 5 : 0)
+    : (isPenalty ? 5 : calcXPForTest(grade));
 
   // Build the new grade entry (mirrors app.js submitTest logic).
   const gradeKey = `${subjectId}__${yearId}__${topicId}`;

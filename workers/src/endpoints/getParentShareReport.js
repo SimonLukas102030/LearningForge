@@ -37,6 +37,16 @@ export async function handleGetParentShareReport(request, env) {
   const uid = linkDoc.fields?.uid;
   if (!uid) throw httpError(404, 'Share-Link unvollstaendig.');
 
+  // CHEAT-38 (Wave-1, Marcus, 2026-05-08): expiry check. Tokens created
+  // pre-Wave-1 do not carry expiresAt — for those we treat the link as
+  // expired (parents who need a fresh report ask the kid to regenerate
+  // the link). Forward-compat: tokens created via the new auth.js path
+  // have a 90-day TTL.
+  const expiresAt = linkDoc.fields?.expiresAt;
+  if (typeof expiresAt !== 'number' || expiresAt < Date.now()) {
+    throw httpError(410, 'Share-Link ist abgelaufen. Bitte einen neuen Link anfordern.');
+  }
+
   const userDoc = await firestoreGet(env, `users/${uid}`);
   if (!userDoc) throw httpError(404, 'Nutzer existiert nicht mehr.');
   const u = userDoc.fields || {};

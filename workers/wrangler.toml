@@ -11,5 +11,11 @@ PROJECT_ID = "learningforge-e995e"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/SimonLukas102030/LearningForge/master"
 
 # Secrets set via `wrangler secret put NAME`:
-#   SA_CLIENT_EMAIL  -> service account client_email
-#   SA_PRIVATE_KEY   -> service account private_key (PEM, with newlines preserved)
+#   SA_CLIENT_EMAIL      -> service account client_email
+#   SA_PRIVATE_KEY       -> service account private_key (PEM, with newlines preserved)
+#   TEST_ACCOUNT_EMAILS  -> comma-separated list of emails allowed to
+#                            call /markTestAccount (Simon's personal +
+#                            the Claude/Hacker-Test-Account emails).
+#                            Wave-1 fix 2026-05-08 (B-M03 / CHEAT-B-M03):
+#                            without this secret, only simonkoper27@gmail.com
+#                            is allowed and Test-Accounts can't self-mark.

@@ -52,6 +52,22 @@
   --warning:        #f59e0b;        /* amber-500 */
   --warning-subtle: #fef3c7;        /* amber-100 */
   --warning-text:   #78350f;        /* amber-900 */
+  --danger:         #ef4444;        /* red-500 */
+  --danger-subtle:  #fee2e2;        /* red-100 */
+  --danger-text:    #7f1d1d;        /* red-900 */
+
+  /* Wave-4 (Maya/Bereich-5): Avatar-Default-Palette. 8 Buckets, hash-basiert
+     pro User stabil. Alle Farben sind so gewaehlt, dass weisser Text >= 4.5:1
+     Kontrast hat (Sophie's F-4 §7-Pattern). Themes erben diese Defaults via
+     :root-Inheritance — kein Per-Theme-Override noetig (Maya-Spec). */
+  --avatar-color-1: #6366f1;   /* indigo-500 */
+  --avatar-color-2: #ec4899;   /* pink-500 */
+  --avatar-color-3: #14b8a6;   /* teal-500 */
+  --avatar-color-4: #d97706;   /* amber-600 — dunkler als amber-500 fuer Weiss-Kontrast */
+  --avatar-color-5: #8b5cf6;   /* violet-500 */
+  --avatar-color-6: #059669;   /* emerald-600 — dunkler als emerald-500 fuer Weiss-Kontrast */
+  --avatar-color-7: #dc2626;   /* red-600 */
+  --avatar-color-8: #2563eb;   /* blue-600 */
 
   /* Rarity colors (Mission 7 — Locked-Cards-V2 stripes/tints).
      Absolute Anker: Common=grau, Rare=blau, Epic=lila, Legendary=Gold.
@@ -123,6 +139,16 @@
   --warning:        #fbbf24;        /* amber-400 */
   --warning-subtle: #422006;        /* amber-950 */
   --warning-text:   #fde68a;        /* amber-200 */
+  --danger:         #f87171;        /* red-400 — leicht aufgehellt fuer dunkles BG */
+  --danger-subtle:  #450a0a;        /* red-950 */
+  --danger-text:    #fca5a5;        /* red-300 */
+
+  /* Wave-5b HIGH-4 (WCAG-Fix): Dark-Mode-Override entfernt. Die 400-shades
+     (z.B. indigo-400 #818cf8) hatten <2.5:1 Kontrast zu weissem Text in
+     `.avatar-default { color:#fff }` — fail WCAG AA (>=4.5:1 erforderlich).
+     Wir erben jetzt die :root-Werte (500/600-shades), die mit weissem Text
+     ~5:1 erreichen. Light + Dark + Aurora + alle Cosmetic-Themes nutzen
+     dieselbe Palette — konsistent + barrierearm. */
 
   /* Icon-Color (Mission 8) — same fallback pattern as :root, but resolves to dark-theme --text. */
   --icon-color: var(--text);
@@ -882,11 +908,46 @@ input, textarea, select { font-family: var(--font); }
 }
 
 /* ── 17. Empty state ────────────────────── */
+/* Wave-3 (Maya/Bereich-2): einheitliches Empty-State-Pattern.
+   Helper renderEmptyState() liefert die neuen Sub-Klassen empty-state-icon /
+   -title / -sub / -cta. Legacy-Inline-Empty-States nutzen weiter .empty-icon
+   (Emoji/Lucide-Icon ohne BG-Tile). */
 .empty-state {
-  text-align: center; padding: 48px 24px;
-  color: var(--text-muted); font-size: 15px;
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 15px;
 }
 .empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  margin: 0 auto 16px;
+}
+.empty-state-icon svg { width: 32px; height: 32px; }
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.empty-state-sub {
+  font-size: 14px;
+  margin: 0 0 16px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--text-muted);
+}
+.empty-state-cta {
+  margin-top: 12px;
+}
 
 /* ── 18. Toast ──────────────────────────── */
 .toast-container {
@@ -903,6 +964,70 @@ input, textarea, select { font-family: var(--font); }
 .toast.success { background: #10b981; }
 .toast.error   { background: #ef4444; }
 .toast.info    { background: var(--accent); }
+
+/* F5 (Casey/Wave-2): XP-Pop-In auf der Result-Page — zentriert ueber dem
+   Note-Kreis. Theme-konform via --accent. */
+.xp-pop-in {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: var(--radius-pill);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--accent) 35%, transparent),
+              0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+  z-index: 1000;
+  pointer-events: none;
+  animation: xpPopIn 1.7s ease-out forwards;
+}
+@keyframes xpPopIn {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  18%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  30%  { transform: translate(-50%, -50%) scale(1); }
+  78%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -85%) scale(0.92); opacity: 0; }
+}
+
+/* F1 (Casey/Wave-2): Pulse-Highlight fuer neu erstellte Karten (Klausur etc).
+   Nutzt --accent als Glow-Farbe — bleibt damit theme-konform in allen Themes. */
+.card-just-created {
+  animation: pulseHighlight 2s ease-out;
+}
+@keyframes pulseHighlight {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  50%  { box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+
+/* V11 (Casey/Wave-2): Toast mit Undo-Button — 5s persistent. */
+.toast.toast-undo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 8px;
+  max-width: 360px;
+}
+.toast-undo .toast-undo-msg { flex: 1; }
+.toast-undo .toast-undo-btn {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.toast-undo .toast-undo-btn:hover {
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.55);
+}
 
 /* ── 19. Progress bar ───────────────────── */
 .progress-bar {
@@ -3266,10 +3391,11 @@ input, textarea, select { font-family: var(--font); }
   line-height: 1.3; word-break: break-word;
 }
 .ach-xp {
-  font-size: 10px; font-weight: 700; color: #f59e0b;
-  background: #fffbeb; border-radius: var(--radius-pill); padding: 1px 7px;
+  font-size: 10px; font-weight: 700;
+  color: var(--warning);
+  background: var(--warning-subtle);
+  border-radius: var(--radius-pill); padding: 1px 7px;
 }
-[data-theme="dark"] .ach-xp { background: #1c1500; }
 .ach-xp-locked { color: var(--text-light); background: var(--bg-input); }
 
 /* ── Leaderboard Tabs (F-25/F-28) ────────── */
@@ -3791,27 +3917,8 @@ input, textarea, select { font-family: var(--font); }
 }
 .stc-label { font-size: 11px; color: var(--text-muted); }
 
-/* F-40: Lernplan */
-.lernplan-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  margin-top: 16px;
-}
-.lernplan-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: var(--transition);
-}
-.lernplan-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.lernplan-day { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; letter-spacing: .05em; }
-.lernplan-topic { display: flex; align-items: flex-start; gap: 8px; }
-.lernplan-icon { font-size: 20px; flex-shrink: 0; }
-.lernplan-topic-name { font-weight: 600; font-size: 14px; }
-.lernplan-reason { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+/* F-40 Lernplan: retired 2026-05-08 (Wave-2) — page hidden per
+   lernplan-decision-2026-05-08.md. CSS-Block entfernt. */
 
 /* F-46: Share-Link & Bericht */
 .share-link-card {
@@ -3901,6 +4008,44 @@ input, textarea, select { font-family: var(--font); }
 .profile-header-info .profile-meta { font-size: 13px; color: var(--text-muted); margin: 2px 0; }
 .profile-header-info .profile-email { font-size: 12px; color: var(--text-light); }
 .profile-header-info .profile-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+/* Wave-3 (Maya/Bereich-4): "Klasse nicht gesetzt"-Warn-Pill als eigenes Element
+   statt hardcoded color:#f59e0b inline. Theme-stable via --warning Variable. */
+.profile-warn-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--warning-subtle);
+  color: var(--warning-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.profile-warn-pill:hover {
+  background: var(--warning);
+  color: var(--bg-card);
+}
+/* Wave-3 (Maya/Bereich-4): Danger-Zone-Card am Profil-Ende. Kapselt den
+   "Alle Noten loeschen"-Button mit Erklaerung statt frei am Page-Ende zu haengen.
+   --danger-subtle wird in Themes ohne Variable per color-mix gefallback'd. */
+.danger-zone-card {
+  margin-top: 32px;
+  padding: 16px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--danger-subtle, color-mix(in srgb, var(--danger) 8%, transparent));
+}
+.danger-zone-card h3 {
+  color: var(--danger);
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.danger-zone-card p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
 .profile-tabs {
   display: flex;
   gap: 4px;
@@ -4202,9 +4347,73 @@ input, textarea, select { font-family: var(--font); }
   width: 10px; height: 10px;
   border-radius: 50%;
   background: var(--border);
-  transition: background var(--transition);
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
 }
+/* Legacy-Klasse (vor Wave-4) — bleibt drin fuer evtl. andere Aufrufer. */
 .wp-dot.wp-active { background: var(--accent); }
+/* Wave-4 (Maya/Bereich-5): drei differenzierte States. */
+.wp-dot.wp-completed { background: var(--accent); }
+.wp-dot.wp-current   {
+  background: var(--accent);
+  transform: scale(1.4);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+.wp-dot.wp-future    { background: var(--border); }
+
+/* Wave-4 (Maya/Bereich-5): Onboarding-Step-1 Logo-Block. */
+.wizard-logo {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 16px;
+}
+.wizard-logo-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--accent) 30%, transparent));
+}
+
+/* Wave-4 (Maya/Bereich-5): Step-3 Avatar-Action-Reihe (Upload + Standard). */
+.onb-avatar-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.onb-avatar-actions .btn { cursor: pointer; }
+
+/* Wave-4 (Maya/Bereich-5): Default-Avatar-Tile. Hash-basierte BG-Color
+   kommt per inline-style; Klasse setzt nur die Geometrie + Weiss-Text. */
+.avatar-default {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 36px;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+.avatar-default-large { font-size: 42px; }
+
+/* Wave-4 (Maya/Bereich-5): Final-Step-Actions — Tour-Primary gross, Skip klein. */
+.wizard-actions-final {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.wizard-actions-final .wizard-tour-cta {
+  align-self: stretch;
+}
+.wizard-actions-final .wizard-skip-link {
+  align-self: flex-end;
+  font-size: 12px;
+  opacity: 0.7;
+}
 .wizard-actions {
   display: flex; gap: 8px; justify-content: center;
   flex-wrap: wrap; margin-top: 16px;
@@ -4516,6 +4725,114 @@ input, textarea, select { font-family: var(--font); }
   background: var(--accent-subtle);
   color: var(--accent);
   border-color: var(--accent);
+}
+/* Wave-4 (Maya/Bereich-3): "Neue Bestnote!"-Variante. Auf success-Tokens
+   aufbauend, leicht intensiver — emotional staerkste Ergebnis-Message. */
+.result-improvement-banner.improvement-best {
+  background: var(--success-subtle);
+  color: var(--success-text);
+  border-color: var(--success);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 25%, transparent);
+}
+
+/* Wave-4 (Maya/Bereich-3): Celebration-Block oben in der Result-Page.
+   Note 1 = Confetti-Burst + Sehr-gut-Headline.
+   Note 2 = Akzent-Ton ohne Confetti.
+   Alles ueber CSS-Variablen — keine hardcoded Farben. */
+.celebration-block {
+  position: relative;
+  background: var(--success-subtle);
+  border: 1px solid var(--success);
+  color: var(--success-text);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 0 0 16px;
+  text-align: center;
+  overflow: hidden;
+}
+.celebration-block-grade2 {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  /* Sophie-QA-fix 2026-05-08: war `var(--accent-hover, var(--accent))` — auf
+     8 von 12 Cosmetic-Dark-Themes (ocean/forest/aurora/sunset/lavender/crimson/
+     mint/cherry/carbon) ist --accent-hover identisch oder dunkler als
+     --accent-subtle, weil die Dark-Variants nur --accent neu definieren und
+     --accent-hover aus Light erben. Resultat: Dark-Block-Text war nicht lesbar.
+     `var(--text)` ist die theme-aware Text-Farbe und kontrastiert per
+     Definition gegen Card-/Subtle-BGs in jedem Theme. */
+  color: var(--text);
+}
+.cb-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+.cb-headline { font-size: 18px; font-weight: 700; }
+.cb-xp-pill {
+  background: var(--accent);
+  color: var(--bg-card);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.cb-best-pill {
+  background: var(--warning-subtle);
+  color: var(--warning-text);
+  border: 1px solid var(--warning);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+}
+.cb-sub {
+  font-size: 14px;
+  margin-top: 4px;
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
+}
+/* Confetti via 4 Radial-Gradient-Punkte. Jede Farbe ist eine semantische
+   Variable, sodass jedes Theme automatisch eigene Konfetti-Farben kriegt
+   (kein hardcoded green/yellow). */
+.cb-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 20%, var(--accent) 0, transparent 2px),
+    radial-gradient(circle at 80% 30%, var(--success) 0, transparent 2px),
+    radial-gradient(circle at 30% 80%, var(--warning) 0, transparent 2px),
+    radial-gradient(circle at 70% 70%, var(--danger) 0, transparent 2px),
+    radial-gradient(circle at 50% 15%, var(--accent) 0, transparent 2px),
+    radial-gradient(circle at 15% 60%, var(--success) 0, transparent 2px),
+    radial-gradient(circle at 85% 80%, var(--warning) 0, transparent 2px);
+  animation: cbConfettiFall 1.5s ease-out 1 both;
+  opacity: 0;
+}
+@keyframes cbConfettiFall {
+  0%   { opacity: 0.9; transform: translateY(-12px); }
+  60%  { opacity: 0.7; }
+  100% { opacity: 0;   transform: translateY(8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cb-confetti { animation: none; opacity: 0; }
+}
+/* Empathie-Banner fuer Note 4-6 — bewusst leise (text-muted), kein Drama. */
+.empathy-banner {
+  background: var(--bg-input, var(--bg-card));
+  border-left: 4px solid var(--text-muted);
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
 }
 
 .streak-warning-banner {

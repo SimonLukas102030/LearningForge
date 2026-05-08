@@ -5,7 +5,7 @@
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { initPhysikSimulations } from './physik-sim.js';
-import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, markAsClaude, loginAsHacker, markAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
+import { auth, db, logout, getUserData, saveGrade, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, loginAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
 import { DAILY_CHALLENGES } from './daily-challenges-config.js';
@@ -25,12 +25,17 @@ const ADMIN_EMAIL = 'simonkoper27@gmail.com';
 function isAdmin() { return userData?.role === 'admin' || currentUser?.email === ADMIN_EMAIL; }
 function isClaudeAccount() { return !!userData?.isClaude; }
 function isHackerAccount() { return !!userData?.isHacker; }
-// Claude-Test-Account darf lesen + privat testen, aber NICHT in fuer andere
-// User sichtbare State schreiben (Comments, Friend-Requests, Group-Joins,
-// Group-Topic-Uploads). Returnt true wenn der Aufruf abgebrochen werden soll.
+// Claude-/Hacker-Test-Account duerfen lesen + privat testen, aber NICHT in
+// fuer andere User sichtbare State schreiben (Comments, Friend-Requests,
+// Group-Joins, Group-Topic-Uploads). Returnt true wenn der Aufruf abgebrochen
+// werden soll.
+// Wave-1-Ramsey B-M09: Hacker-Account analog Claude blocken (war nur fuer
+// Claude — Ramsey konnte als Hacker via Comment/Friend-Req in shared-State
+// schreiben).
 function _blockClaudeWrite(what = 'Diese Aktion') {
-  if (!isClaudeAccount()) return false;
-  showToast(`${what} ist f\xfcr den Claude-Test-Account deaktiviert (kein Spam in geteiltem State).`, 'info');
+  if (!isClaudeAccount() && !isHackerAccount()) return false;
+  const which = isClaudeAccount() ? 'Claude-Test-Account' : 'Hacker-Test-Account';
+  showToast(`${what} ist f\xfcr den ${which} deaktiviert (kein Spam in geteiltem State).`, 'info');
   return true;
 }
 function userRole(u) {
@@ -93,9 +98,17 @@ function outlineFor(userInfo) {
   // 1. User-Wahl gewinnt IMMER (Bug-Fix Mission 1: Role-Glow != Outline-Pick).
   //    Role wird separat als Crown-/Beaker-Badge neben dem Namen angezeigt
   //    via roleBadge() — NICHT mehr automatisch auf den Avatar.
-  if (userInfo.activeOutline) {
-    const tier = OUTLINE_TIERS.find(t => t.id === userInfo.activeOutline);
-    if (tier?.css) return tier.css;
+  // Wave-1-Ramsey CHEAT-26: Aktive Outline MUSS in owned-Liste sein
+  // (defense-in-depth — Frontend-Bypass via activeOutline-Patch ohne owned).
+  // Fuer Fremd-User-Daten (kein owned-Array dabei) trauen wir der Auswahl —
+  // Marcus sichert das in firestore.rules + Server-Unlock-Pfad ab.
+  if (userInfo.activeOutline && userInfo.activeOutline !== 'none') {
+    const owned = userInfo.outlines;
+    const isOwn = !Array.isArray(owned) || owned.includes(userInfo.activeOutline);
+    if (isOwn) {
+      const tier = OUTLINE_TIERS.find(t => t.id === userInfo.activeOutline);
+      if (tier?.css) return tier.css;
+    }
   }
   // 2. Default basierend auf Level
   if (typeof userInfo.xp === 'number') {
@@ -311,6 +324,16 @@ export function startApp() {
     if (_bannedUnsub) { try { _bannedUnsub(); } catch(e){} _bannedUnsub = null; }
     if (user) {
       userData = await getUserData(user.uid);
+      // Wave-5b HIGH-3: Bestand-User-Migration numeric -> string klasse.
+      // Marcus's klasseOk() Rule akzeptiert temporaer beide Typen — Migration
+      // schreibt legacy-numeric auf String, danach kann die numerische Branch
+      // der Rule in 30 Tagen weg. Idempotent + fire-and-forget.
+      if (typeof userData?.klasse === 'number') {
+        userData.klasse = String(userData.klasse);
+        db().collection('users').doc(user.uid)
+          .set({ klasse: userData.klasse }, { merge: true })
+          .catch(e => console.warn('[klasse-migration]', e));
+      }
       if (userData?.isBanned) {
         await logout();
         currentUser = null;
@@ -320,8 +343,11 @@ export function startApp() {
         return;
       }
       // Claude-Test-Account: localStorage-Email matched → idempotent markieren.
-      // Mission 3: primaerer Pfad ueber CF (Email-Whitelist serverseitig); bei
-      // CF-Fehler (offline / Region-Issue) Fallback auf direkten markAsClaude-Write.
+      // Mission 3: primaerer Pfad ueber CF (Email-Whitelist serverseitig).
+      // Wave-1-Ramsey CHEAT-35: Direkter markAsClaude/markAsHacker-Fallback
+      // wurde gestrichen — Firestore-Rules verbieten Self-Promote, der Aufruf
+      // scheiterte silent ohne CF. Bei CF-Fehler: Toast + UI bleibt
+      // unmarkiert (idempotent — naechster Login retried).
       try {
         const raw = localStorage.getItem('lf_claude_creds');
         if (raw) {
@@ -329,15 +355,14 @@ export function startApp() {
           if (cc?.email === user.email && !userData?.isClaude) {
             try {
               await cf.markTestAccount('claude');
+              userData = { ...(userData || {}), isClaude: true, role: 'admin', name: userData?.name || 'Claude (Test)' };
             } catch (e) {
-              console.warn('[claude-mark-cf-fallback]', e);
-              await markAsClaude(user.uid);
+              console.warn('[claude-mark-cf]', e);
+              showToast('Test-Account-Markierung fehlgeschlagen (CF nicht erreichbar).', 'error');
             }
-            userData = { ...(userData || {}), isClaude: true, role: 'admin', name: userData?.name || 'Claude (Test)' };
           }
         }
       } catch(e) { console.warn('[claude-mark]', e); }
-      // Hacker-Test-Account: gleiches Pattern wie Claude.
       try {
         const raw = localStorage.getItem('lf_hacker_creds');
         if (raw) {
@@ -345,11 +370,11 @@ export function startApp() {
           if (cc?.email === user.email && !userData?.isHacker) {
             try {
               await cf.markTestAccount('hacker');
+              userData = { ...(userData || {}), isHacker: true, role: 'admin', name: userData?.name || 'Hacker (Test)' };
             } catch (e) {
-              console.warn('[hacker-mark-cf-fallback]', e);
-              await markAsHacker(user.uid);
+              console.warn('[hacker-mark-cf]', e);
+              showToast('Test-Account-Markierung fehlgeschlagen (CF nicht erreichbar).', 'error');
             }
-            userData = { ...(userData || {}), isHacker: true, role: 'admin', name: userData?.name || 'Hacker (Test)' };
           }
         }
       } catch(e) { console.warn('[hacker-mark]', e); }
@@ -361,8 +386,16 @@ export function startApp() {
             : user.email === 'bohmrobin797@gmail.com' ? 'tester'
             : undefined);
       } catch(e) { console.warn('[role-sync]', e); }
-      // Theme anwenden (User-Doc → localStorage-Fallback)
-      try { applyTheme(userData?.activeTheme || getStoredTheme()); } catch(e) {}
+      // Theme anwenden (User-Doc → localStorage-Fallback).
+      // Wave-1-Ramsey CHEAT-26: Active-Theme muss in owned sein (oder default),
+      // sonst Fallback auf 'default' (defense-in-depth).
+      try {
+        const wantTheme = userData?.activeTheme || getStoredTheme() || 'default';
+        const ownedT    = userData?.themes || ['default'];
+        const tDef      = THEMES.find(t => t.id === wantTheme);
+        const isOwnedT  = ownedT.includes(wantTheme) || tDef?.default === true;
+        applyTheme(isOwnedT ? wantTheme : 'default');
+      } catch(e) {}
       structure = await getStructure();
       getChangelog().then(entries => {
         changelog = entries;
@@ -586,8 +619,6 @@ function route() {
     renderFriends();
   } else if (parts[0] === 'feed') {
     renderFeed();
-  } else if (parts[0] === 'lernplan') {
-    renderLernplan();
   } else {
     renderDashboard();
   }
@@ -617,8 +648,8 @@ function renderNav(breadcrumbs = []) {
           ${breadcrumbs.map((b, i) => `
             <span class="sep">›</span>
             <span class="crumb ${i === breadcrumbs.length-1 ? 'active' : ''}"
-                  onclick="${b.href ? `location.hash='${b.href}'` : ''}"
-                  style="${b.href ? 'cursor:pointer' : 'cursor:default'}">${b.label}</span>
+                  onclick="${b.href ? `location.hash='${escapeAttr(b.href)}'` : ''}"
+                  style="${b.href ? 'cursor:pointer' : 'cursor:default'}">${escapeHtml(b.label || '')}</span>
           `).join('')}
         </div>
         <span class="nav-sep-bar">|</span>
@@ -645,10 +676,10 @@ function renderNav(breadcrumbs = []) {
         </button>
         <div class="user-chip" id="userChip" data-tour="user-chip" onclick="window.LF.toggleUserMenu(event)">
           <div class="avatar">${(userData?.photoURL || currentUser.photoURL)
-            ? `<img src="${userData?.photoURL || currentUser.photoURL}" alt="">`
-            : (userData?.name || currentUser.displayName || 'U')[0].toUpperCase()
+            ? `<img src="${escapeAttr(userData?.photoURL || currentUser.photoURL)}" alt="">`
+            : escapeHtml((userData?.name || currentUser.displayName || 'U')[0].toUpperCase())
           }</div>
-          <span class="uname">${(userData?.name || currentUser.displayName)?.split(' ')[0] || 'Nutzer'}${friendReqCount ? `<span class="nav-badge">${friendReqCount}</span>` : ''}</span>
+          <span class="uname">${escapeHtml((userData?.name || currentUser.displayName)?.split(' ')[0] || 'Nutzer')}${friendReqCount ? `<span class="nav-badge">${friendReqCount}</span>` : ''}</span>
           <div class="user-dropdown user-dropdown-rich">
             <div class="dd-header">
               <div class="dd-name">${escapeHtml(userData?.name || currentUser.displayName || 'Nutzer')} ${roleBadge(role)}</div>
@@ -806,7 +837,7 @@ function renderClaudeSetupModal() {
         <input class="form-input" id="claudeSetupPass" type="text"
                value="${creds.password || ''}" placeholder="Passwort">
       </div>
-      <div id="claudeSetupErr" style="color:#ef4444;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <div id="claudeSetupErr" style="color:var(--danger);font-size:12px;min-height:16px;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
         ${creds.email ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.clearClaudeCreds()">Logindaten loeschen</button>` : ''}
         <button class="btn btn-secondary btn-sm" onclick="this.closest('.kb-overlay').remove()">Schliessen</button>
@@ -845,7 +876,7 @@ function renderHackerSetupModal() {
         <input class="form-input" id="hackerSetupPass" type="text"
                value="${escapeHtml(creds.password || '')}" placeholder="Passwort">
       </div>
-      <div id="hackerSetupErr" style="color:#ef4444;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <div id="hackerSetupErr" style="color:var(--danger);font-size:12px;min-height:16px;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
         ${creds.email ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.clearHackerCreds()">Logindaten loeschen</button>` : ''}
         <button class="btn btn-secondary btn-sm" onclick="this.closest('.kb-overlay').remove()">Schliessen</button>
@@ -1153,6 +1184,57 @@ function escapeHtml(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+// Wave-1-Ramsey CHEAT-24: Attribute-safe escape fuer Werte, die in
+// onclick="…('${x}')"-Strings landen. Schlaegt &-und-Quote-Vektoren ab.
+// Identische Outputs wie escapeHtml — separates Symbol fuer Code-Klarheit.
+function escapeAttr(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+// Wave-3 (Maya/Bereich-2): Zentrale Empty-State-Helper. Vorher 7+ verschiedene
+// Empty-State-Block-Inlines mit unterschiedlicher Padding/Sub-Styling und
+// keinerlei CTA — User sah nur "leer" ohne klaren naechsten Schritt. Helper
+// gibt einheitlichen HTML-String zurueck (Icon-Tile + Title + Sub + optional
+// Primary-CTA-Button). Alle Felder werden defensive escaped.
+function renderEmptyState({ icon, title, sub, ctaLabel, ctaAction }) {
+  const iconHtml = icon ? `<div class="empty-state-icon">${lfIcon(icon)}</div>` : '';
+  const ctaHtml = (ctaLabel && ctaAction)
+    ? `<button class="btn btn-primary empty-state-cta" onclick="${escapeAttr(ctaAction)}">${escapeHtml(ctaLabel)}</button>`
+    : '';
+  return `
+    <div class="empty-state">
+      ${iconHtml}
+      <h3 class="empty-state-title">${escapeHtml(title || '')}</h3>
+      <p class="empty-state-sub">${escapeHtml(sub || '')}</p>
+      ${ctaHtml}
+    </div>`;
+}
+// Wave-1-Ramsey CHEAT-21: Mini-Sanitizer fuer Custom-Topic-HTML-Content.
+// Whitelisted Tags only; alle Attribute werden gestrippt (kein onclick,
+// onerror, javascript:-style, src etc.). Nicht-whitelisted Tags werden
+// unwrapped (Text bleibt, Tag faellt weg). Reicht fuer gewachsene Lerntexte
+// — neue Inhalte gehen ueber serializeVisualBlocks-Pipeline (sicher by
+// design). DOMPurify wurde bewusst NICHT eingefuehrt — keine neue Dep.
+function sanitizeTopicContent(html) {
+  const ALLOWED = ['p','br','strong','em','b','i','u','ul','ol','li',
+                   'h2','h3','h4','h5','h6','code','pre','blockquote','span'];
+  const div = document.createElement('div');
+  div.innerHTML = String(html ?? '');
+  const walk = (node) => {
+    [...node.children].forEach(child => {
+      if (!ALLOWED.includes(child.tagName.toLowerCase())) {
+        const text = document.createTextNode(child.textContent);
+        node.replaceChild(text, child);
+      } else {
+        [...child.attributes].forEach(a => child.removeAttribute(a.name));
+        walk(child);
+      }
+    });
+  };
+  walk(div);
+  return div.innerHTML;
+}
 async function loadBugReportSection() {
   const host = document.getElementById('bugReportSection');
   if (!host || !currentUser) return;
@@ -1161,7 +1243,7 @@ async function loadBugReportSection() {
   const open  = mine.filter(b => !b.resolved);
   const closed = mine.filter(b =>  b.resolved).slice(0, 3);
   const row = (b) => `
-    <div class="recent-item" style="--subject-color:${b.resolved ? '#16a34a' : '#f59e0b'}">
+    <div class="recent-item" style="--subject-color:${b.resolved ? 'var(--success)' : 'var(--warning)'}">
       <span class="recent-icon">${b.resolved ? '&#9989;' : '&#128027;'}</span>
       <div class="recent-info">
         <div class="recent-name" style="white-space:normal">${escapeHtml(b.text)}</div>
@@ -1187,7 +1269,7 @@ async function loadClaudeBugList() {
   try { open = await getOpenBugReports(); } catch(e) { console.warn('[bugReports/open]', e); }
   if (!open.length) {
     host.innerHTML = `
-      <div class="install-card" style="margin-bottom:16px;border-left:3px solid #16a34a">
+      <div class="install-card" style="margin-bottom:16px;border-left:3px solid var(--success)">
         <div class="install-card-icon">&#9989;</div>
         <div class="install-card-info">
           <div class="install-card-title">Keine offenen Bug-Reports</div>
@@ -1197,7 +1279,7 @@ async function loadClaudeBugList() {
     return;
   }
   const fmt = (b) => `
-    <div class="attention-item" style="--subject-color:#f59e0b;align-items:flex-start">
+    <div class="attention-item" style="--subject-color:var(--warning);align-items:flex-start">
       <span class="att-icon">&#128027;</span>
       <div class="att-info">
         <div class="att-name" style="white-space:normal">${escapeHtml(b.text)}</div>
@@ -1209,7 +1291,7 @@ async function loadClaudeBugList() {
       </div>
     </div>`;
   host.innerHTML = `
-    <div class="section-title" style="margin-top:0;color:#f59e0b">
+    <div class="section-title" style="margin-top:0;color:var(--warning)">
       &#128736;&#65039; ${open.length} offene${open.length === 1 ? 'r' : ''} Bug-Report${open.length === 1 ? '' : 's'} zum Pruefen
     </div>
     <div class="attention-list">${open.map(fmt).join('')}</div>`;
@@ -1728,11 +1810,21 @@ function getRecentTests() {
 // ── F-36: KI-Empfehlungen (lokal) ────────
 function getRecommendations() {
   const grades = userData?.grades || {};
+  // V2 (Casey/Wave-2): Topics aus getNeedsAttention() ausschliessen — die
+  // erscheinen schon als eigene "Brauchen Aufmerksamkeit"-Karte. Sonst kommen
+  // dieselben Note-4+-Topics doppelt auf dem Dashboard vor.
+  let attentionKeys;
+  try {
+    attentionKeys = new Set(
+      getNeedsAttention().map(t => `${t.subjectId}__${t.yearId}__${t.topicId}`)
+    );
+  } catch { attentionKeys = new Set(); }
   const all = [];
   Object.values(structure || {}).forEach(subject => {
     Object.values(subject.years || {}).forEach(year => {
       Object.values(year.topics || {}).forEach(topic => {
         const key = `${subject.id}__${year.id}__${topic.id}`;
+        if (attentionKeys.has(key)) return;
         const g   = grades[key];
         if (!g) {
           all.push({ subjectId: subject.id, yearId: year.id, topicId: topic.id,
@@ -2466,6 +2558,16 @@ async function submitKlausur() {
   closeKlausurModal();
   showToast('Klausur gespeichert.', 'success');
   if (location.hash === '#/lernen') renderLernen();
+  // F1 (Casey/Wave-2): zur frisch eingetragenen Klausur scrollen + 2s Pulse,
+  // damit der User sieht WO seine Eingabe gelandet ist (vorher: Modal zu, Toast,
+  // Karte irgendwo unten in der Liste).
+  setTimeout(() => {
+    const card = document.querySelector(`.klausur-card[data-exam-id="${newExam.id}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('card-just-created');
+    setTimeout(() => card.classList.remove('card-just-created'), 2200);
+  }, 60);
 }
 
 async function deleteKlausur(examId) {
@@ -2521,7 +2623,7 @@ function renderKlausurCard(exam) {
     ? `<span class="klausur-boost-pill">${lfIcon('zap', { cls: 'lf-icon-sm' })} Daily-Boost aktiv</span>`
     : '';
   return `
-    <div class="klausur-card${isPast ? ' klausur-card-past' : ''}">
+    <div class="klausur-card${isPast ? ' klausur-card-past' : ''}" data-exam-id="${escapeAttr(exam.id || '')}">
       <div class="klausur-card-header">
         <div class="klausur-card-title-row">
           <span class="klausur-card-icon" style="--subject-color:${getSubjectColor(exam.subject)}">${getSubjectIcon(exam.subject)}</span>
@@ -2681,13 +2783,16 @@ function _decideStep5NewTopic() {
         const key = `${subject.id}__${year.id}__${tid}`;
         if (!grades[key]) {
           const topic = year.topics[tid];
+          const subjName  = subject.name || subject.id;
+          const topicName = topic?.name || tid;
           return {
             kind: 'newTopic',
             icon: 'map',
-            sub: 'Du hast deine Pflicht f\xfcr heute. Lust auf ein neues Thema?',
+            // H3 (Casey/Wave-2): konkretes Topic statt generischer "Lust auf was Neues?"-Frage.
+            sub: `Du hast deine Pflicht f\xfcr heute. Probier mal ${subjName} \xb7 ${topicName}.`,
             cta: 'Neues Thema entdecken',
             hash: `#/fach/${subject.id}/${year.id}/${tid}`,
-            payload: { subjectName: subject.name, topicName: topic?.name || tid }
+            payload: { subjectName: subjName, topicName }
           };
         }
       }
@@ -2871,36 +2976,79 @@ function _renderOnboardingStep() {
   overlay.id = 'onboardingOverlay';
   overlay.className = 'wizard-overlay';
 
+  // Wave-4 (Maya/Bereich-5): Progress-Dots-Differenzierung. Drei States:
+  //   wp-completed = vergangener Schritt (filled, kleiner)
+  //   wp-current   = jetziger Schritt (filled, leicht groesser, mit Ring)
+  //   wp-future    = kommender Schritt (border-only)
+  // Bestand-User-Modus (skipSteps.length > 0): nur die wirklich gemachten
+  // Schritte zaehlen — User sieht z.B. 2 Dots fuer 2 Schritte, nicht 4.
+  // active-Param ist der absolute Step (1-4); wir mappen ihn auf den 0-basierten
+  // Index der NICHT-geskippten Steps.
   const dots = (active) => {
-    const total = 4;
+    const skipSet = new Set(_onboardingState?.skipSteps || []);
+    const visibleSteps = [1,2,3,4].filter(n => !skipSet.has(n));
+    const total = visibleSteps.length || 4;
+    const currentIdx = visibleSteps.indexOf(active);
     return `<div class="wizard-progress-dots">${
-      Array.from({length: total}, (_, i) => `<span class="wp-dot ${i+1 <= active ? 'wp-active' : ''}"></span>`).join('')
+      Array.from({length: total}, (_, i) => {
+        const cls = i < currentIdx ? 'wp-completed'
+                  : i === currentIdx ? 'wp-current'
+                  : 'wp-future';
+        return `<span class="wp-dot ${cls}"></span>`;
+      }).join('')
     }</div>`;
   };
 
   let body = '';
   if (s.step === 1) {
+    // Wave-4 (Maya/Bereich-5): klares Wert-Versprechen + Brand-Logo statt
+    // generischem zap-Icon. Logo lebt in assets/icons/icon.svg (PWA-Icon).
     body = `
       <div class="wizard-step">
-        <div class="wizard-icon-large">${lfIcon('zap', {cls:'lf-icon-2xl'})}</div>
-        <h2>Willkommen!</h2>
-        <p>Wir richten dein Konto in 4 Schritten ein — dauert keine Minute.</p>
+        <div class="wizard-logo">
+          <img src="assets/icons/icon.svg" alt="LearningForge" class="wizard-logo-img">
+        </div>
+        <h2>Willkommen bei LearningForge!</h2>
+        <p>Tests schreiben, Schw\xe4chen erkennen, Streak halten. Schauen wir mal in 4 Schritten.</p>
         ${dots(1)}
         <div class="wizard-actions">
-          <button class="btn btn-ghost" onclick="window.LF.onboardingSkipAll()">Überspringen</button>
+          <button class="btn btn-ghost" onclick="window.LF.onboardingSkipAll()">\xdcberspringen</button>
           <button class="btn btn-primary btn-lg" onclick="window.LF.onboardingNext()">Los geht's</button>
         </div>
       </div>`;
   } else if (s.step === 2) {
+    // Wave-4 (Maya/Bereich-5): Bestand-User-Modus erkennen — User hat bereits
+    // einen Namen, nur die Klassenstufe fehlt. Heading + Sub-Text sind klarer
+    // ueber den Anlass des Wizards; Name-Input wird per Conditional-Render
+    // ausgeblendet (defensiv noch ein hidden-Field falls _collectOnboardingState
+    // ihn erwartet — Lesen mit "?.value" failt graceful).
+    const isReturning = s.skipSteps.includes(1);
+    // Wave-5b LOW-2: escapeHtml erledigt bereits " -> &quot;. Doppel-Replace
+    // war redundant + haette &amp;quot; produziert wenn der Name selbst ein "
+    // enthielte (escapeHtml: " -> &quot;, dann replace: " gibts nicht mehr —
+    // aber bei tatsaechlichem & im Namen wuerde &quot; erneut greifen?
+    // Tatsaechlich harmlos in dem Fall, aber unnoetig — escapeHtml allein.
+    const safeName = escapeHtml(s.name || '');
+    const heading = isReturning && s.name
+      ? `Hi ${escapeHtml(s.name)}, wir brauchen noch deine Klassenstufe.`
+      : 'Wer bist du?';
+    const sub = isReturning
+      ? '<div class="form-hint" style="margin-bottom:12px">Wir zeigen dir dann nur passende Aufgaben.</div>'
+      : '';
+    const nameField = isReturning
+      ? `<input type="hidden" id="onbName" value="${safeName}">`
+      : `
+        <div class="form-group">
+          <label class="form-label">Wie hei\xdft du?</label>
+          <input class="form-input" id="onbName" value="${safeName}" maxlength="40" placeholder="Dein Name">
+          <div class="form-hint">So sehen dich Mitsch\xfcler in der Rangliste.</div>
+        </div>`;
     body = `
       <div class="wizard-step">
-        <div class="wizard-step-num">Schritt 2 von 4</div>
-        <h2>Wer bist du?</h2>
-        <div class="form-group">
-          <label class="form-label">Wie heißt du?</label>
-          <input class="form-input" id="onbName" value="${escapeHtml(s.name).replace(/"/g,'&quot;')}" maxlength="40" placeholder="Dein Name">
-          <div class="form-hint">So sehen dich Mitschüler in der Rangliste.</div>
-        </div>
+        <div class="wizard-step-num">Schritt ${isReturning ? '1 von 2' : '2 von 4'}</div>
+        <h2>${heading}</h2>
+        ${sub}
+        ${nameField}
         <div class="form-group">
           <label class="form-label">In welcher Klasse bist du?</label>
           <div class="onb-klasse-grid">
@@ -2913,37 +3061,50 @@ function _renderOnboardingStep() {
         <div id="onbStep2Err" class="error-msg" style="display:none;margin:8px 0"></div>
         ${dots(2)}
         <div class="wizard-actions">
-          ${s.skipSteps.includes(1) ? '' : '<button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zurück</button>'}
-          <button class="btn btn-ghost" onclick="window.LF.onboardingSkipAll()">Überspringen</button>
+          ${isReturning ? '' : '<button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zur\xfcck</button>'}
+          <button class="btn btn-ghost" onclick="window.LF.onboardingSkipAll()">\xdcberspringen</button>
           <button class="btn btn-primary" onclick="window.LF.onboardingNext()">Weiter</button>
         </div>
       </div>`;
   } else if (s.step === 3) {
     // Mission 8 Q1=C: Avatar-Picker = nur File-Upload, kein Emoji-Grid mehr.
-    // Default-Fallback fuer User ohne Bild bleibt der Initial-Letter (universal).
+    // Wave-4 (Maya/Bereich-5): Default-Avatar = Hash-basierte Color-Tile mit
+    // Initial. User der ueberspringt sieht einen unique-aber-stabilen Default
+    // statt eines neutralen Standard-Kreises.
+    const initial = escapeHtml((s.name || 'U')[0].toUpperCase());
+    const uidForHash = currentUser?.uid || s.name || 'lf';
+    const defaultBg  = _generateDefaultAvatarHsl(uidForHash);
+    const previewHtml = s.photoURL
+      ? `<img src="${escapeAttr(s.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+      : `<div class="avatar-default avatar-default-large" style="background:${defaultBg}">${initial}</div>`;
     body = `
       <div class="wizard-step">
         <div class="wizard-step-num">Schritt 3 von 4</div>
-        <h2>Lade dein Profilbild hoch.</h2>
+        <h2>Profilbild w\xe4hlen</h2>
         <div style="margin:16px 0">
-          <div class="profile-avatar-large" style="margin:12px auto 0">${
-            s.photoURL ? `<img src="${s.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">` : escapeHtml((s.name||'U')[0].toUpperCase())
-          }</div>
+          <div class="profile-avatar-large" style="margin:12px auto 0">${previewHtml}</div>
         </div>
-        <div class="form-hint">Optional — wenn du ueberspringst, wird der Anfangsbuchstabe deines Namens als Avatar genutzt.</div>
-        <label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-block;margin-top:12px">
-          ${lfIcon('folder')} Bild hochladen
-          <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="window.LF.onboardingHandleFile(this)">
-        </label>
+        <div class="form-hint">Lade ein Bild hoch oder bleib beim Standard-Avatar — beides geht.</div>
+        <div class="onb-avatar-actions">
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+            ${lfIcon('folder')} Bild hochladen
+            <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="window.LF.onboardingHandleFile(this)">
+          </label>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.onboardingUseDefaultAvatar()">Standard-Avatar nutzen</button>
+        </div>
         ${dots(3)}
         <div class="wizard-actions">
-          <button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zurück</button>
-          <button class="btn btn-ghost" onclick="window.LF.onboardingSkip()">Überspringen</button>
+          <button class="btn btn-ghost" onclick="window.LF.onboardingBack()">Zur\xfcck</button>
+          <button class="btn btn-ghost" onclick="window.LF.onboardingSkip()">\xdcberspringen</button>
           <button class="btn btn-primary" onclick="window.LF.onboardingNext()">Weiter</button>
         </div>
       </div>`;
   } else {
     // Mission 4: Step 4 wird zum Tour-Einstieg (Maya Architecture A).
+    // Wave-4 (Maya/Bereich-5): Hierarchie umkehren — Tour starten ist Primary
+    // (gross, btn-lg), "Spaeter" ist Secondary (btn-ghost btn-sm, rechts unten).
+    // Default-Fokus auf Tour-CTA, damit Enter den User direkt in die Tour
+    // schickt. Eine 8-Step-Tour, einmal uebersprungen = 95% verloren.
     body = `
       <div class="wizard-step">
         <div class="wizard-step-num">Schritt 4 von 4</div>
@@ -2951,11 +3112,13 @@ function _renderOnboardingStep() {
         <h2>Alles klar, ${escapeHtml(s.name || 'Lernender')}!</h2>
         <p>Soll ich dir die wichtigsten Funktionen in 8 kurzen Schritten zeigen?</p>
         ${dots(4)}
-        <div class="wizard-actions">
-          <button class="btn btn-ghost" onclick="window.LF.onboardingFinish('app')">Später, zur App</button>
-          <button class="btn btn-primary" onclick="window.LF.onboardingFinish('tour')">Tour starten</button>
+        <div class="wizard-actions wizard-actions-final">
+          <button class="btn btn-primary btn-lg wizard-tour-cta" onclick="window.LF.onboardingFinish('tour')">Tour starten</button>
+          <button class="btn btn-ghost btn-sm wizard-skip-link" onclick="window.LF.onboardingFinish('app')">Sp\xe4ter, zur App</button>
         </div>
       </div>`;
+    // Default-Fokus erst nach Mount setzen.
+    setTimeout(() => document.querySelector('.wizard-tour-cta')?.focus(), 50);
   }
 
   // Wizard-Bug B: X-Close-Button am Overlay-Rand (auf jedem Step sichtbar).
@@ -3578,8 +3741,8 @@ function renderSRS() {
     ${renderNav([{ label: 'SRS — Wiederholung' }])}
     <div class="page">
       <div class="page-header">
-        <h1>${lfIcon('brain')} Spaced Repetition</h1>
-        <div class="sub">${due.length} Karte${due.length !== 1 ? 'n' : ''} heute fällig</div>
+        <h1>${lfIcon('brain')} Wiederholen</h1>
+        <div class="sub">Spaced Repetition — die Karten kommen wieder, wenn dein Gehirn sie vergessen würde. ${due.length} Karte${due.length !== 1 ? 'n' : ''} heute fällig.</div>
       </div>
       <div id="srsArea">
         ${due.length === 0
@@ -3777,15 +3940,19 @@ function renderProfile() {
     <div class="profile-header-card">
       <div class="profile-avatar-large ${outlineFor({activeOutline:userData?.activeOutline,xp:userData?.xp})}">${
         (userData?.photoURL || currentUser.photoURL)
-          ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
-          : initial
+          ? `<img src="${escapeAttr(userData?.photoURL || currentUser.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+          : escapeHtml(initial)
       }</div>
       <div class="profile-header-info">
         <div class="profile-name">${escapeHtml(userData?.name || currentUser.displayName || 'Nutzer')} ${roleBadge(role)}</div>
         <div class="profile-meta">
-          ${userData?.klasse ? `Klasse ${userData.klasse}` : '<span style="color:#f59e0b">Klasse nicht gesetzt</span>'}
+          ${userData?.klasse
+            ? `Klasse ${userData.klasse}`
+            : `<span class="profile-warn-pill" onclick="window.LF.openProfileEditOnKlasse?.()">Klasse nicht gesetzt</span>`}
           · Lv.${xpInfo.level} ${xpInfo.title}
-          ${streak > 1 ? ` · ${lfIcon('flame', {cls:'sx-streak'})} ${streak} Tage` : ''}
+          ${streak >= 1 ? ` · ${lfIcon('flame', {cls:'sx-streak'})} ${
+            streak === 1 ? 'Tag 1 — heute angefangen' : `${streak} Tage Streak`
+          }` : ''}
         </div>
         <div class="profile-email">${escapeHtml(currentUser.email || '')}</div>
         <div class="profile-actions">
@@ -3809,7 +3976,6 @@ function renderProfile() {
   document.getElementById('app').innerHTML = `
     ${renderNav([{ label: 'Profil' }])}
     <div class="page">
-      <div class="page-header"><h1>Mein Profil</h1></div>
       ${header}
       ${tabBar}
       <div class="profile-tab-content">${content}</div>
@@ -3818,14 +3984,20 @@ function renderProfile() {
       <div id="profileEditForm" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-top:16px">
         <div class="profile-avatar-large" id="profileAvatarPreview" style="margin:0 auto 12px">${
           (userData?.photoURL || currentUser.photoURL)
-            ? `<img src="${userData?.photoURL || currentUser.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
-            : initial
+            ? `<img src="${escapeAttr(userData?.photoURL || currentUser.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+            : escapeHtml(initial)
         }</div>
-        <label class="btn btn-secondary btn-sm" style="margin:6px auto;cursor:pointer;display:block;width:fit-content">
-          ${lfIcon('folder')} Bild hochladen
-          <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
-                 onchange="window.LF.handleProfileFile(this)">
-        </label>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:6px 0">
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+            ${lfIcon('folder')} Bild hochladen
+            <input type="file" accept="image/png,image/jpeg,image/webp" style="display:none"
+                   onchange="window.LF.handleProfileFile(this)">
+          </label>
+          ${(userData?.photoURL || currentUser.photoURL) ? `
+            <button class="btn btn-ghost btn-sm" onclick="window.LF.removeProfilePhoto()">${lfIcon('x')} Bild entfernen</button>
+          ` : ''}
+        </div>
+        <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:8px">Quadratisch, max 1 MB.</div>
         <div class="profile-edit-row">
           <input class="form-input" id="profileNameInput"
                  value="${(userData?.name || currentUser.displayName || '').replace(/"/g,'&quot;')}"
@@ -3865,7 +4037,13 @@ function _renderProfileUebersichtTab() {
         <span>${getSubjectIcon(s.id)} ${escapeHtml(s.name)}</span>
         <div class="grade-badge" style="background:${gi.color}">${avg.toFixed(1)}</div>
       </div>`;
-  }).filter(Boolean).join('') || '<div class="empty-state" style="padding:16px">Noch keine Noten vorhanden.</div>';
+  }).filter(Boolean).join('') || renderEmptyState({
+    icon: 'pencil',
+    title: 'Noch keine Noten',
+    sub: 'Mach deinen ersten Test — die Übersicht füllt sich automatisch.',
+    ctaLabel: 'Erstes Fach öffnen',
+    ctaAction: "location.hash='#/lernen'",
+  });
 
   return `
     <div class="profile-grid">
@@ -3878,7 +4056,7 @@ function _renderProfileUebersichtTab() {
           <div class="xp-level-badge">Lv.${xpInfo.level}</div>
           <div class="xp-card-info">
             <div class="xp-title">${xpInfo.title}</div>
-            <div class="xp-sub">${xpInfo.xpCurrent} / ${xpInfo.xpNeeded} XP bis Stufe ${xpInfo.level + 1}</div>
+            <div class="xp-sub">Noch ${xpInfo.xpNeeded - xpInfo.xpCurrent} XP bis Stufe ${xpInfo.level + 1}</div>
           </div>
         </div>
         <div class="xp-card-right">
@@ -3898,7 +4076,7 @@ function _renderProfileUebersichtTab() {
     <div class="share-link-card">
       <div class="share-link-info">
         <div class="share-link-title">Lernbericht für Eltern</div>
-        <div class="share-link-sub">Teile deinen Lernfortschritt ohne Login</div>
+        <div class="share-link-sub">Eltern sehen: deinen Namen, Klasse, Anzahl Tests, durchschnittliche Note, Streak. Keine E-Mail, keine Freunde, keine privaten Daten.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input class="share-link-input" id="shareLinkInput" readonly placeholder="Link wird gleich erstellt…">
@@ -3907,7 +4085,9 @@ function _renderProfileUebersichtTab() {
       </div>
     </div>
 
-    <div style="margin-top:32px;text-align:center">
+    <div class="danger-zone-card">
+      <h3>${lfIcon('triangle-alert')} Gefahrenzone</h3>
+      <p>Setzt alle Noten zurück. XP, Streak, Achievements und Tests bleiben erhalten.</p>
       <button class="btn btn-danger btn-sm" onclick="window.LF.resetAllGrades()">Alle meine Noten löschen</button>
     </div>`;
 }
@@ -3919,7 +4099,13 @@ function _renderProfileStatsTab() {
   const allGrades = Object.values(grades).filter(g => g.grade);
   const totalTests = allGrades.length;
   if (totalTests === 0) {
-    return `<div class="empty-state"><div class="empty-icon">${lfIcon('chart-bar')}</div>Noch keine Tests gemacht — fang einfach an!</div>`;
+    return renderEmptyState({
+      icon: 'chart-bar',
+      title: 'Noch keine Daten',
+      sub: 'Sobald du Tests schreibst, siehst du hier deine Trends.',
+      ctaLabel: 'Daily Challenge starten',
+      ctaAction: "location.hash='#/daily-challenge'",
+    });
   }
   const avgGrade   = (allGrades.reduce((s,g)=>s+g.grade,0)/totalTests).toFixed(2);
   const bestGrade  = Math.min(...allGrades.map(g=>g.grade));
@@ -4049,8 +4235,8 @@ function _renderProfileErfolgeTab() {
     return `
       <div class="ach-tile ${unlocked ? 'ach-unlocked' : 'ach-locked'}"
            onclick="window.LF.openAchievement('${a.id}')"
-           title="${escapeHtml(a.title)}">
-        <div class="ach-code" style="${unlocked ? `background:${a.color};color:#fff` : ''}">${a.iconName ? lfIcon(a.iconName) : escapeHtml(a.code)}<span class="ach-code-suffix">${escapeHtml(a.code)}</span></div>
+           title="${escapeHtml(a.title)} (${escapeHtml(a.code)})">
+        <div class="ach-code" style="${unlocked ? `background:${a.color};color:#fff` : ''}">${a.iconName ? lfIcon(a.iconName) : escapeHtml(a.code)}</div>
         <div class="ach-title">${escapeHtml(a.title)}</div>
         ${unlocked ? `<div class="ach-xp">+${a.xp} XP</div>` : `<div class="ach-xp ach-xp-locked">${a.xp} XP</div>`}
       </div>`;
@@ -4198,8 +4384,8 @@ function _renderProfileInventarTab() {
     <div class="inv-active-banner">
       <div class="inv-active-avatar ${activeOlTier.css || ''}">${
         (userData?.photoURL || currentUser.photoURL)
-          ? `<img src="${userData.photoURL || currentUser.photoURL}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`
-          : initial
+          ? `<img src="${escapeAttr(userData.photoURL || currentUser.photoURL)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`
+          : escapeHtml(initial)
       }</div>
       <div class="inv-active-info">
         <div class="inv-active-title">Aktiv</div>
@@ -4294,8 +4480,9 @@ async function renderLeaderboard() {
     const medal = rank <= 3
       ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[rank-1] })
       : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${rank}</span>`;
+    // Wave-1-Ramsey CHEAT-24: photoURL als Attribut escapen.
     const av = u.photoURL
-      ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      ? `<img src="${escapeAttr(u.photoURL)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
       : escapeHtml((u.displayName || '?')[0].toUpperCase());
     return `
       <div class="lb-row${isMe?' lb-me':''}">
@@ -4337,8 +4524,13 @@ async function renderLeaderboard() {
       return;
     }
   } else if (!data.length) {
-    document.getElementById('lbContent').innerHTML =
-      `<div class="empty-state"><div class="empty-icon">${lfIcon('trophy')}</div>Noch keine Einträge — mach einen Test, um in die Rangliste zu kommen!</div>`;
+    document.getElementById('lbContent').innerHTML = renderEmptyState({
+      icon: 'trophy',
+      title: 'Rangliste ist leer',
+      sub: 'Sei der Erste — schreib einen Test, dein Score erscheint sofort.',
+      ctaLabel: 'Zur Fächer-Übersicht',
+      ctaAction: "location.hash='#/lernen'",
+    });
     return;
   }
 
@@ -4384,8 +4576,9 @@ async function renderLeaderboard() {
     const medal = i < 3
       ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[i] })
       : `<span style="font-size:13px;font-weight:700;color:var(--text-muted)">${i+1}</span>`;
+    // Wave-1-Ramsey CHEAT-24: photoURL als Attribut escapen.
     const av = u.photoURL
-      ? `<img src="${u.photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+      ? `<img src="${escapeAttr(u.photoURL)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
       : escapeHtml((u.displayName||'?')[0].toUpperCase());
     const isMe = u.uid === currentUser?.uid;
     return `
@@ -4394,9 +4587,15 @@ async function renderLeaderboard() {
         <div class="lb-avatar ${outlineFor(u)}">${av}</div>
         <div class="lb-name">${escapeHtml(u.displayName||'Unbekannt')} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
         <div class="lb-meta">Lv.${xi.level} ${escapeHtml(xi.title)}</div>
-        <div class="lb-score" style="color:#f59e0b">${u.xp} XP</div>
+        <div class="lb-score" style="color:var(--warning)">${u.xp} XP</div>
       </div>`;
-  }).join('') : '<div class="empty-state" style="padding:24px">Noch keine XP-Daten vorhanden.</div>';
+  }).join('') : renderEmptyState({
+    icon: 'zap',
+    title: 'Noch keine XP-Daten',
+    sub: 'Dein erstes Lernen bringt XP — dann erscheinst du hier.',
+    ctaLabel: 'Zur Fächer-Übersicht',
+    ctaAction: "location.hash='#/lernen'",
+  });
 
   const scopeLabel = lbTab === 'klasse' ? `Klasse ${escapeHtml(myKlasse)}` : 'Global';
   document.getElementById('lbContent').innerHTML = `
@@ -4439,7 +4638,13 @@ async function renderMyContent() {
     if (personal.length) {
       html += `<div class="custom-topic-grid">${personal.map(t => renderCustomTopicCard(t, true)).join('')}</div>`;
     } else {
-      html += `<div class="empty-state" style="margin-bottom:32px">Noch keine persönlichen Themen. Erstelle eines im <a onclick="location.hash='#/builder'" style="color:var(--accent);cursor:pointer">Builder</a>.</div>`;
+      html += renderEmptyState({
+        icon: 'pen-line',
+        title: 'Du hast noch keine eigenen Themen',
+        sub: 'Im Builder erstellst du eigene Lerninhalte für dich oder deine Gruppe.',
+        ctaLabel: 'Builder öffnen',
+        ctaAction: "location.hash='#/builder'",
+      });
     }
 
     const groupIds = userData?.groupIds || [];
@@ -4447,7 +4652,7 @@ async function renderMyContent() {
       const groups = await getUserGroups(groupIds);
       for (const group of groups) {
         const topics = await getGroupCustomTopics(group.id);
-        html += `<h2 style="font-size:18px;font-weight:700;margin:28px 0 12px">Gruppe: ${group.name}</h2>`;
+        html += `<h2 style="font-size:18px;font-weight:700;margin:28px 0 12px">Gruppe: ${escapeHtml(group.name || '')}</h2>`;
         if (topics.length) {
           html += `<div class="custom-topic-grid">${topics.map(t => renderCustomTopicCard(t, t.ownerUid === uid)).join('')}</div>`;
         } else {
@@ -4465,16 +4670,17 @@ async function renderMyContent() {
 function renderCustomTopicCard(topic, canDelete) {
   const qCount = (topic.questions || []).length;
   const safeId = topic.id;
+  // Wave-1-Ramsey CHEAT-21: ALLE User-controlled Felder escapen.
   return `
     <div class="custom-topic-card">
-      <div class="custom-topic-meta">${topic.fach || '?'} · ${topic.klasse || '?'}</div>
-      <div class="custom-topic-name">${topic.thema || 'Unbenannt'}</div>
-      ${topic.description ? `<div class="custom-topic-desc">${topic.description}</div>` : ''}
+      <div class="custom-topic-meta">${escapeHtml(topic.fach || '?')} · ${escapeHtml(topic.klasse || '?')}</div>
+      <div class="custom-topic-name">${escapeHtml(topic.thema || 'Unbenannt')}</div>
+      ${topic.description ? `<div class="custom-topic-desc">${escapeHtml(topic.description)}</div>` : ''}
       <div class="custom-topic-footer">
         <span class="custom-topic-qcount">${qCount} Frage${qCount !== 1 ? 'n' : ''}</span>
         <div class="custom-topic-actions">
-          <button class="btn btn-primary btn-sm" onclick="location.hash='#/meine-inhalte/${safeId}'">Ansehen</button>
-          ${canDelete ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.deleteCustomTopicUI('${safeId}')">Löschen</button>` : ''}
+          <button class="btn btn-primary btn-sm" onclick="location.hash='#/meine-inhalte/${escapeAttr(safeId)}'">Ansehen</button>
+          ${canDelete ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.deleteCustomTopicUI('${escapeAttr(safeId)}')">Löschen</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -4493,18 +4699,25 @@ async function renderCustomTopicPage(topicId) {
     const t = customTopicData;
     const qCount = (t.questions || []).length;
 
+    // Wave-1-Ramsey CHEAT-21: Felder + Content harden.
+    // t.content darf legitimes HTML enthalten — sanitizeTopicContent whitelistet
+    // nur Text-Tags; script/img/iframe/onclick/onerror sind weg. Neue Inhalte
+    // sollten ueber serializedBlocks (visual-builder) reinkommen.
+    const safeContent = t.content
+      ? sanitizeTopicContent(t.content)
+      : '<p style="color:var(--text-muted)">Kein Inhalt vorhanden.</p>';
     document.getElementById('customTopicBody').innerHTML = `
       <div class="page-header">
-        <div class="breadcrumb-sub">${t.fach} · ${t.klasse}</div>
-        <h1>${t.thema}</h1>
-        ${t.description ? `<div class="sub">${t.description}</div>` : ''}
+        <div class="breadcrumb-sub">${escapeHtml(t.fach || '')} · ${escapeHtml(t.klasse || '')}</div>
+        <h1>${escapeHtml(t.thema || '')}</h1>
+        ${t.description ? `<div class="sub">${escapeHtml(t.description)}</div>` : ''}
       </div>
       <div class="topic-tab-bar">
         <button class="tab-btn active" id="ctTabBtnLernen" onclick="window.LF.ctSwitchTab('Lernen')">Lernen</button>
         ${qCount > 0 ? `<button class="tab-btn" id="ctTabBtnTest" onclick="window.LF.ctSwitchTab('Test')">Test</button>` : ''}
       </div>
       <div id="ctTabLernen">
-        <div class="content-body">${t.content || '<p style="color:var(--text-muted)">Kein Inhalt vorhanden.</p>'}</div>
+        <div class="content-body">${safeContent}</div>
       </div>
       ${qCount > 0 ? `
       <div id="ctTabTest" style="display:none">
@@ -4539,13 +4752,14 @@ async function renderGroups() {
   const myCount  = groups.length;
   const canJoin  = myCount < 2;
 
+  // Wave-1-Ramsey CHEAT-24: Group-Name escapen (User-controlled beim Erstellen).
   const groupCards = groups.map(g => {
     const memberCount = Object.keys(g.members || {}).length;
     const isCreator   = g.creatorUid === currentUser.uid;
     return `
-      <div class="group-card" onclick="location.hash='#/gruppen/${g.id}'">
+      <div class="group-card" onclick="location.hash='#/gruppen/${escapeAttr(g.id)}'">
         <div class="group-card-info">
-          <div class="group-card-name">${g.name}</div>
+          <div class="group-card-name">${escapeHtml(g.name || '')}</div>
           <div class="group-card-meta">${memberCount} Mitglied${memberCount !== 1 ? 'er' : ''} · ${isCreator ? 'Admin' : 'Mitglied'}</div>
         </div>
         <div class="group-card-arrow">›</div>
@@ -4554,7 +4768,13 @@ async function renderGroups() {
 
   document.getElementById('groupsContent').innerHTML = `
     ${groups.length > 0 ? `<div class="group-list">${groupCards}</div>` : ''}
-    ${groups.length === 0 ? `<div class="empty-state" style="margin-bottom:24px"><div class="empty-icon">${lfIcon('users')}</div>Du bist noch in keiner Gruppe.</div>` : ''}
+    ${groups.length === 0 ? renderEmptyState({
+      icon: 'users',
+      title: 'Du bist in keiner Gruppe',
+      sub: 'Erstelle eine eigene oder tritt einer per Code bei.',
+      ctaLabel: 'Gruppe erstellen',
+      ctaAction: "document.getElementById('newGroupName')?.focus()",
+    }) : ''}
 
     <div class="group-actions-grid">
       <div class="card" style="padding:20px">
@@ -4602,12 +4822,14 @@ async function renderGroupDetail(groupId) {
   const members   = Object.entries(group.members || {});
   const memberUids = members.map(([uid]) => uid);
 
+  // Wave-1-Ramsey CHEAT-24: Group-Name + Member-Display-Name escapen,
+  // onclick-Args via escapeAttr.
   // Re-render nav with group name
   document.getElementById('app').innerHTML = `
     ${renderNav([{ label: 'Gruppen', href: '#/gruppen' }, { label: group.name }])}
     <div class="page">
       <div class="page-header">
-        <h1>${group.name}</h1>
+        <h1>${escapeHtml(group.name || '')}</h1>
         <div class="sub">${members.length} Mitglied${members.length !== 1 ? 'er' : ''}</div>
       </div>
       <div id="groupDetailContent"><div class="spinner" style="margin:40px auto"></div></div>
@@ -4616,12 +4838,12 @@ async function renderGroupDetail(groupId) {
   // Mitgliederliste
   const memberRows = members.map(([uid, m]) => `
     <div class="group-member-row">
-      <div class="group-member-avatar">${(m.displayName||'?')[0].toUpperCase()}</div>
+      <div class="group-member-avatar">${escapeHtml((m.displayName||'?')[0].toUpperCase())}</div>
       <div class="group-member-info">
-        <div class="group-member-name">${m.displayName || 'Unbekannt'} ${m.role === 'admin' ? '<span class="group-admin-badge">Gruppen-Admin</span>' : ''} ${roleBadge(m.userRole)}</div>
+        <div class="group-member-name">${escapeHtml(m.displayName || 'Unbekannt')} ${m.role === 'admin' ? '<span class="group-admin-badge">Gruppen-Admin</span>' : ''} ${roleBadge(m.userRole)}</div>
       </div>
       ${isCreator && uid !== currentUser.uid
-        ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.groupKick('${groupId}','${uid}','${(m.displayName||'').replace(/'/g,"\\'")}')">Entfernen</button>`
+        ? `<button class="btn btn-ghost btn-sm" onclick="window.LF.groupKick('${escapeAttr(groupId)}','${escapeAttr(uid)}','${escapeAttr(m.displayName || '')}')">Entfernen</button>`
         : ''}
     </div>`).join('');
 
@@ -4637,15 +4859,15 @@ async function renderGroupDetail(groupId) {
         ${isCreator
           ? `<div class="group-invite-box">
                <span class="group-invite-label">Einladungscode:</span>
-               <code class="group-invite-code">${group.code}</code>
-               <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${group.code}');window.LF.showToast('Code kopiert!','success')">Kopieren</button>
+               <code class="group-invite-code">${escapeHtml(group.code || '')}</code>
+               <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${escapeAttr(group.code || '')}');window.LF.showToast('Code kopiert!','success')">Kopieren</button>
              </div>`
           : ''}
 
         <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">
           ${isCreator
-            ? `<button class="btn btn-danger btn-sm" onclick="window.LF.groupDelete('${groupId}','${group.name.replace(/'/g,"\\'")}')">Gruppe löschen</button>`
-            : `<button class="btn btn-secondary btn-sm" onclick="window.LF.groupLeave('${groupId}','${group.name.replace(/'/g,"\\'")}')">Gruppe verlassen</button>`
+            ? `<button class="btn btn-danger btn-sm" onclick="window.LF.groupDelete('${escapeAttr(groupId)}','${escapeAttr(group.name || '')}')">Gruppe löschen</button>`
+            : `<button class="btn btn-secondary btn-sm" onclick="window.LF.groupLeave('${escapeAttr(groupId)}','${escapeAttr(group.name || '')}')">Gruppe verlassen</button>`
           }
         </div>
       </div>
@@ -4673,10 +4895,11 @@ async function renderGroupDetail(groupId) {
       .sort((a, b) => b.total - a.total);
 
     const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+    // Wave-1-Ramsey CHEAT-24: Photo-URL als Attribut + Display-Name als HTML escapen.
     const lbRows = groupLb.map((u, i) => {
       const av = u.photoURL
-        ? `<img src="${u.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
-        : (u.displayName||'?')[0].toUpperCase();
+        ? `<img src="${escapeAttr(u.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+        : escapeHtml((u.displayName||'?')[0].toUpperCase());
       const isMe = u.uid === currentUser.uid;
       const medalCell = i < 3
         ? lfIcon('medal', { cls: 'lb-medal', color: medalColors[i] })
@@ -4685,7 +4908,7 @@ async function renderGroupDetail(groupId) {
         <div class="lb-row${isMe ? ' lb-me' : ''}">
           <div class="lb-rank">${medalCell}</div>
           <div class="lb-avatar ${outlineFor(u)}">${av}</div>
-          <div class="lb-name">${u.displayName||'Unbekannt'} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
+          <div class="lb-name">${escapeHtml(u.displayName||'Unbekannt')} ${roleBadge(u.role)}${isMe?'<span class="lb-me-tag">Du</span>':''}</div>
           <div class="lb-meta">${u.testCount} Test${u.testCount!==1?'s':''}</div>
           <div class="lb-score" style="color:var(--accent)">${u.total}</div>
         </div>`;
@@ -4708,14 +4931,15 @@ async function renderGroupDetail(groupId) {
         const avg    = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '–';
         const streak = u.streak || 0;
         const totalTime = Object.values(u.studyTime || {}).reduce((a,b)=>a+b, 0);
+        // Wave-1-Ramsey CHEAT-24: Photo-URL als Attribut + Name als HTML escapen.
         const av   = u.photoURL
-          ? `<img src="${u.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
-          : (u.name||'?')[0].toUpperCase();
+          ? `<img src="${escapeAttr(u.photoURL)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="">`
+          : escapeHtml((u.name||'?')[0].toUpperCase());
         return `
           <tr>
             <td><div style="display:flex;align-items:center;gap:8px">
               <div class="lb-avatar" style="width:28px;height:28px;font-size:12px">${av}</div>
-              ${u.name||'–'}
+              ${escapeHtml(u.name || '–')}
             </div></td>
             <td>${vals.length}</td>
             <td><span class="grade-pill" style="background:${avg!=='–'?gradeColor(Math.round(parseFloat(avg))):'var(--border)'}">
@@ -4763,20 +4987,23 @@ async function renderAdmin() {
       const testCount = Object.keys(u.grades || {}).length;
       const joined = u.createdAt?.seconds
         ? new Date(u.createdAt.seconds * 1000).toLocaleDateString('de-DE') : '–';
+      // Wave-1-Ramsey CHEAT-24: Admin-Panel zeigt User-controlled Name +
+      // Email — auch im Admin-Kontext escapen (Stored-XSS gegen Admin sonst
+      // moeglich, Account-Takeover-Risiko).
       return `
         <div class="admin-user-row ${u.isBanned ? 'admin-user-banned' : ''}">
-          <div class="admin-user-avatar">${(u.name || '?')[0].toUpperCase()}</div>
+          <div class="admin-user-avatar">${escapeHtml((u.name || '?')[0].toUpperCase())}</div>
           <div class="admin-user-info">
-            <div class="admin-user-name">${u.name || 'Unbekannt'} ${u.isBanned ? '<span class="admin-ban-badge">GESPERRT</span>' : ''}</div>
-            <div class="admin-user-meta">${u.email || '–'} · ${testCount} Tests · beigetreten ${joined}</div>
+            <div class="admin-user-name">${escapeHtml(u.name || 'Unbekannt')} ${u.isBanned ? '<span class="admin-ban-badge">GESPERRT</span>' : ''}</div>
+            <div class="admin-user-meta">${escapeHtml(u.email || '–')} · ${testCount} Tests · beigetreten ${joined}</div>
           </div>
           <div class="admin-user-actions">
-            <button class="btn btn-primary btn-sm" onclick="window.LF.adminEditUser('${u.uid}')">Bearbeiten</button>
+            <button class="btn btn-primary btn-sm" onclick="window.LF.adminEditUser('${escapeAttr(u.uid)}')">Bearbeiten</button>
             ${u.isBanned
-              ? `<button class="btn btn-secondary btn-sm" onclick="window.LF.adminUnban('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Entsperren</button>`
-              : `<button class="btn btn-danger btn-sm" onclick="window.LF.adminBan('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Sperren</button>`
+              ? `<button class="btn btn-secondary btn-sm" onclick="window.LF.adminUnban('${escapeAttr(u.uid)}','${escapeAttr(u.name || '')}')">Entsperren</button>`
+              : `<button class="btn btn-danger btn-sm" onclick="window.LF.adminBan('${escapeAttr(u.uid)}','${escapeAttr(u.name || '')}')">Sperren</button>`
             }
-            <button class="btn btn-ghost btn-sm" onclick="window.LF.adminResetLb('${u.uid}','${(u.name||'').replace(/'/g,'\\&apos;')}')">Rangliste reset</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.LF.adminResetLb('${escapeAttr(u.uid)}','${escapeAttr(u.name || '')}')">Rangliste reset</button>
           </div>
         </div>`;
     }).join('');
@@ -4869,21 +5096,21 @@ function renderBuilderStep(step) {
       <h2>Thema-Informationen</h2>
       <div class="form-group">
         <label class="form-label">Fach</label>
-        <input class="form-input" id="bFach" placeholder="z.B. Geschichte" value="${s.fach}"
+        <input class="form-input" id="bFach" placeholder="z.B. Geschichte" value="${escapeAttr(s.fach || '')}"
                list="bFachList">
-        <datalist id="bFachList">${Object.values(structure||{}).map(s=>`<option value="${s.name}">`).join('')}</datalist>
+        <datalist id="bFachList">${Object.values(structure||{}).map(s=>`<option value="${escapeAttr(s.name || '')}">`).join('')}</datalist>
       </div>
       <div class="form-group">
         <label class="form-label">Klasse</label>
-        <input class="form-input" id="bKlasse" placeholder="z.B. Klasse-9" value="${s.klasse}">
+        <input class="form-input" id="bKlasse" placeholder="z.B. Klasse-9" value="${escapeAttr(s.klasse || '')}">
       </div>
       <div class="form-group">
         <label class="form-label">Thema-Name</label>
-        <input class="form-input" id="bThema" placeholder="z.B. Erster Weltkrieg" value="${s.thema}">
+        <input class="form-input" id="bThema" placeholder="z.B. Erster Weltkrieg" value="${escapeAttr(s.thema || '')}">
       </div>
       <div class="form-group">
         <label class="form-label">Kurzbeschreibung (optional)</label>
-        <input class="form-input" id="bDesc" placeholder="Was lernst du hier?" value="${s.description}">
+        <input class="form-input" id="bDesc" placeholder="Was lernst du hier?" value="${escapeAttr(s.description || '')}">
       </div>
       <div class="builder-nav">
         <span></span>
@@ -4904,7 +5131,7 @@ function renderBuilderStep(step) {
           <button class="btn btn-primary" style="margin-top:20px;width:100%">Visuellen Builder wählen</button>
         </div>
         <div class="builder-mode-card" onclick="window.LF.builderChooseMode('html')">
-          <div class="mode-icon">&lt;/&gt;</div>
+          <div class="mode-icon">${lfIcon('code', {cls:'lf-icon-2xl'})}</div>
           <h3>HTML-Builder</h3>
           <span class="mode-badge mode-badge-gray">Fortgeschritten</span>
           <p class="mode-desc">Schreibe direkt HTML-Code mit vorgefertigten Bausteinen. Volle Kontrolle über das Layout. Für erfahrene Nutzer.</p>
@@ -5584,22 +5811,25 @@ async function grantXPAndAchievements(ctx = {}) {
   userData.xp = (userData.xp || 0) + xpGained;
   userData.achievements = [...already, ...newOnes.map(a => a.id)];
 
-  const p = [];
+  // Wave-5b MED-1: lb-mirror MUSS nach saveXP committen, sonst liest die
+  // lb-rule (xp == users/uid.xp) den alten Wert -> silent denial.
+  // Also nicht mehr Promise.all, sondern saveXP zuerst await, dann mirror.
+  // Wave-5b MED-4: displayName/photoURL aus userData (Marcus's Cross-Check),
+  // mit Auth-Fallback fuer Bestand-User die kein userData.name haben.
   if (xpGained > 0) {
-    p.push(saveXP(uid, xpGained).catch(console.error));
+    await saveXP(uid, xpGained).catch(console.error);
     // Mirror XP + Rolle zum leaderboard-Doc, damit Banner in Ranglisten auftaucht.
     // Claude- und Hacker-Test-Accounts NICHT mirroren — sonst tauchen sie im XP-Tab auf.
     if (!isClaudeAccount() && !isHackerAccount()) {
-      p.push(db().collection('leaderboard').doc(uid).set({
+      await db().collection('leaderboard').doc(uid).set({
         xp: userData.xp,
-        displayName: currentUser.displayName || 'Nutzer',
-        photoURL: currentUser.photoURL || null,
+        displayName: userData?.name || currentUser.displayName || 'Nutzer',
+        photoURL: userData?.photoURL || currentUser.photoURL || null,
         role: userRole() || null
-      }, { merge: true }).catch(console.error));
+      }, { merge: true }).catch(console.error);
     }
   }
-  if (newOnes.length) p.push(saveAchievements(uid, newOnes.map(a => a.id)).catch(console.error));
-  await Promise.all(p);
+  if (newOnes.length) await saveAchievements(uid, newOnes.map(a => a.id)).catch(console.error);
 
   newOnes.forEach((a, i) => {
     setTimeout(() => showToast(`Achievement freigeschaltet: ${a.title} (+${a.xp} XP)`, 'success'), i * 1800);
@@ -5868,6 +6098,27 @@ async function renderDailyChallenge() {
     const gi      = calcGrade(done.points, done.maxPoints);
     let scores    = [];
     try { scores = await getDailyScores(today); } catch(e) {}
+    // H9 (Casey/Wave-2): direkt nach dcSubmit hat der Server den eigenen Score
+    // u.U. noch nicht in den Sammler geschrieben (race window). Eigenen Eintrag
+    // lokal injizieren wenn er fehlt — der Server-Mirror beim naechsten Laden
+    // ueberschreibt das ohnehin.
+    const myUid = currentUser?.uid;
+    if (myUid && !scores.some(s => s.uid === myUid)) {
+      scores = [
+        ...scores,
+        {
+          uid: myUid,
+          displayName: userData?.name || currentUser?.displayName || 'Du',
+          photoURL: userData?.photoURL || currentUser?.photoURL || null,
+          role: userRole() || null,
+          activeOutline: userData?.activeOutline || null,
+          xp: userData?.xp || 0,
+          grade: done.grade,
+          points: done.points,
+          maxPoints: done.maxPoints
+        }
+      ];
+    }
     const ranked  = [...scores].sort((a,b)=>(a.grade||9)-(b.grade||9));
     const lbHtml  = ranked.map((u,i) => {
       const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
@@ -6501,7 +6752,26 @@ window.LF = {
     userData = userData || {};
     if (isBm) {
       userData.bookmarks = bm.filter(k => k !== key);
-      showToast('Lesezeichen entfernt.', 'info');
+      // V11 (Casey/Wave-2): Trash war "sofort weg, Toast als Trostpflaster".
+      // Jetzt 5s Undo-Window mit Button — re-add re-uses dieselbe toggleBookmark-API.
+      showUndoToast('Lesezeichen entfernt', async () => {
+        try {
+          await toggleBookmark(currentUser.uid, key, false);
+          userData.bookmarks = [...(userData.bookmarks || []), key];
+          if (location.hash === '#/lesezeichen') renderLesezeichen();
+          // bm-icon-btn-State zuruecksetzen, falls die Topic-Card noch sichtbar ist
+          document.querySelectorAll(`.bm-icon-btn`).forEach(b => {
+            if (b.getAttribute('onclick')?.includes(key)) b.classList.add('active');
+          });
+          showToast('Wiederhergestellt.', 'success');
+        } catch (e) {
+          console.warn('[bookmark-undo]', e);
+          showToast('Wiederherstellen fehlgeschlagen.', 'error');
+        }
+      });
+      // Auf der Lesezeichen-Page die entfernte Karte direkt aus dem DOM nehmen,
+      // damit die UI synchron mit dem Datenmodell ist.
+      if (location.hash === '#/lesezeichen') renderLesezeichen();
     } else {
       userData.bookmarks = [...bm, key];
       showToast('Lesezeichen gespeichert!', 'success');
@@ -6946,9 +7216,10 @@ window.LF = {
     if (!groupIds.length) { section.innerHTML = ''; return; }
     const groups = await getUserGroups(groupIds);
     if (!groups.length) { section.innerHTML = ''; return; }
+    // Wave-1-Ramsey CHEAT-24: Group-Name escapen (User-controlled).
     section.innerHTML = groups.map(g => `
-      <button class="btn btn-secondary" onclick="window.LF.builderUploadGroup('${g.id}','${(g.name||'').replace(/'/g,"\\'")}')">
-        Für Gruppe „${g.name}" hochladen
+      <button class="btn btn-secondary" onclick="window.LF.builderUploadGroup('${escapeAttr(g.id)}','${escapeAttr(g.name || '')}')">
+        Für Gruppe „${escapeHtml(g.name || '')}" hochladen
       </button>`).join('');
   },
 
@@ -7240,12 +7511,12 @@ window.LF.openAchievement = (id) => {
         <button class="btn-icon" onclick="window.LF.closeAchievement()">${lfIcon('x')}</button>
       </div>
       <div class="lf-modal-body" style="text-align:center">
-        <div class="ach-modal-code" style="${unlocked ? `background:${a.color};color:#fff` : ''}">${a.iconName ? lfIcon(a.iconName) : escapeHtml(a.code)}<span class="ach-code-suffix">${escapeHtml(a.code)}</span></div>
+        <div class="ach-modal-code" style="${unlocked ? `background:${a.color};color:#fff` : ''}">${a.iconName ? lfIcon(a.iconName) : escapeHtml(a.code)}</div>
         <div class="ach-modal-xp" style="color:${unlocked ? a.color : 'var(--text-muted)'}">+${a.xp} XP</div>
         <div class="ach-modal-desc">${escapeHtml(a.longDesc || a.desc)}</div>
         ${progressHtml}
         <div class="ach-modal-status">
-          Status: ${unlocked ? `${lfIcon('lock-open')} Freigeschaltet` : `${lfIcon('lock')} Noch nicht freigeschaltet`}
+          Status: ${unlocked ? `${lfIcon('check', {cls:'sx-correct'})} Freigeschaltet` : `${lfIcon('lock')} Noch nicht freigeschaltet`}
         </div>
       </div>
       <div class="lf-modal-actions">
@@ -7385,6 +7656,16 @@ window.LF.onboardingSkip = () => {
     _onboardingState.step = 4;
   }
   _renderOnboardingStep();
+};
+// Wave-4 (Maya/Bereich-5): explizit "Standard-Avatar nutzen"-Variante.
+// Effektiv identisch zum Skip (kein photoURL persistiert), aber Wizard
+// laeuft als Folgeschritt-Step weiter — User sieht den naechsten Step,
+// nicht "fertig".
+window.LF.onboardingUseDefaultAvatar = () => {
+  if (_onboardingState) {
+    _onboardingState.photoURL = null;
+  }
+  window.LF.onboardingNext();
 };
 // Bug D: SkipAll — kompletter Wizard-Abbruch. Persistiert tourSkippedAt
 // (blockt Tour-Auto-Trigger dauerhaft) + markOnboarded. Wird vom X-Button und
@@ -7686,7 +7967,7 @@ function renderActiveTest(questions, timeMinutes, subjectId, yearId, topicId, su
     <div class="test-active">
       <div class="test-topbar">
         <div class="test-progress">
-          Frage <strong id="qProgress">–</strong> von <strong>${questions.length}</strong>
+          <strong id="qProgress">0</strong> von <strong>${questions.length}</strong> beantwortet
         </div>
         <div class="timer" id="timer">${formatTime(testState.remaining)}</div>
         <button class="btn btn-secondary btn-sm" onclick="window.LF.submitTest()">Abgeben</button>
@@ -7722,7 +8003,8 @@ function renderAllQuestions(questions) {
               oninput="window.LF.setAnswer(${i}, this.value)"></textarea>`}
     </div>`).join('');
 
-  document.getElementById('qProgress').textContent = '1';
+  // F2 (Casey/Wave-2): Initial-Wert "0 beantwortet" (vorher fix '1' — irrefuehrend
+  // wenn der User noch nichts angeklickt hat). updateProgress() rechnet eh sauber.
   updateProgress();
 }
 
@@ -7985,7 +8267,13 @@ window.LF.submitTest = async () => {
   // verlassen kann.
   if (testState) testState.results = true;
   _teardownMidTestGuards();
-  renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty, prevAttempt: _prevAttemptForResults });
+  // F5 (Casey/Wave-2): XP-Pop-In auf Result-Page. Wert spiegelt die clientseitige
+  // Berechnung (penalty=5 sonst calcXPForTest) — Achievements oben drauf laufen
+  // separat ueber grantXPAndAchievements(). Wenn der Server final +/- berechnet,
+  // ist die Differenz minimal; ein motivationaler Pop ist hier wichtiger als
+  // server-pixel-genau. Anti-Penalty: bei Tab-Wechsel zeigt der Pop trotzdem +5.
+  const _xpAwardedDisplay = penalty ? 5 : calcXPForTest(grade.grade);
+  renderResults(questions, effectiveAns, results, grade, total, max, timeUsed, { subjectName, topicName, timeMinutes, penalty, prevAttempt: _prevAttemptForResults, xpAwarded: _xpAwardedDisplay });
   } finally {
     if (testState) testState._submitting = false;
     // B3 Sophie-Audit-Fix (2026-05-08): wenn evaluateAnswers/CF wirft, hat
@@ -8160,6 +8448,35 @@ function toggleErrorExplanation(qId) {
   if (caret) caret.textContent = wasCollapsed ? '▲' : '▼';
 }
 
+// Wave-4 (Maya/Bereich-3): Celebration-Block fuer Note 1-2, Empathie-Banner fuer 4-6.
+// Note 3 bleibt ohne Celebration — improvementBanner deckt das ab.
+// Confetti-Punkte nutzen 4 verschiedene Status-Variable, sodass jedes Theme
+// eigene Konfetti-Farben hat (keine hardcoded green/yellow).
+function _renderCelebrationBlock(grade, xpEarned, isNewBest) {
+  if (grade >= 4) {
+    return `<div class="empathy-banner">Das war z\xe4h — aber genau daf\xfcr sind die Action-Cards unten.</div>`;
+  }
+  if (grade > 2) return '';
+  const headline = grade === 1 ? '\u{1F389} Sehr gut!' : 'Gut gemacht!';
+  const xpPill = xpEarned > 0
+    ? `<span class="cb-xp-pill">+${escapeHtml(String(xpEarned))} XP</span>`
+    : '';
+  const confetti = grade === 1 ? '<div class="cb-confetti" aria-hidden="true"></div>' : '';
+  const bestPill = isNewBest
+    ? `<span class="cb-best-pill" title="Neue Bestleistung in diesem Thema">\u{1F3C6} Bestleistung</span>`
+    : '';
+  return `
+    <div class="celebration-block celebration-block-grade${grade}">
+      ${confetti}
+      <div class="cb-header">
+        <span class="cb-headline">${headline}</span>
+        ${xpPill}
+        ${bestPill}
+      </div>
+      <div class="cb-sub">Note ${escapeHtml(String(grade))}</div>
+    </div>`;
+}
+
 function renderResults(questions, answers, results, grade, total, max, timeUsed, meta) {
   const mins = Math.floor(timeUsed/60);
   const secs = timeUsed % 60;
@@ -8170,7 +8487,21 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
   // Note: kleinere Zahl = bessere Note (1 = beste, 6 = schlechteste).
   // Penalty (Tab-Wechsel = automatisch Note 6) blendet Banner aus —
   // der User sieht eh schon die rote Penalty-Bar.
+  // Wave-4 (Maya/Bereich-3): zusätzlich "Neue Bestnote!"-Variante, wenn
+  // newG strikt besser ist als jede Note in der Topic-History (history
+  // schliesst den aktuellen Run NICHT mit ein, da grades[key].history erst
+  // nach renderResults aktualisiert wird — der eben gespielte Run ist
+  // hier prevAttempt). Maya: emotional staerkste Message in der App.
   let improvementBanner = '';
+  let isNewBest = false;
+  const subjectIdForKey = testState?.subjectId;
+  const yearIdForKey    = testState?.yearId;
+  const topicIdForKey   = testState?.topicId;
+  const _gradeKey  = (subjectIdForKey && yearIdForKey && topicIdForKey)
+    ? `${subjectIdForKey}__${yearIdForKey}__${topicIdForKey}`
+    : null;
+  const _gradeEntry = (_gradeKey && userData?.grades) ? userData.grades[_gradeKey] : null;
+  const _topicNameForBanner = escapeHtml(meta.topicName || '');
   if (meta.prevAttempt && !meta.penalty) {
     const prevG = meta.prevAttempt.grade;
     const newG  = grade.grade;
@@ -8179,13 +8510,25 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     // aber escapeHtml gehört zum V-23-Sweep dazu.
     const safePrev = escapeHtml(String(prevG));
     const safeNew  = escapeHtml(String(newG));
-    if (newG < prevG) {
+    const history  = _gradeEntry?.history || [];
+    const minHistoryGrade = history.length
+      ? Math.min(...history.map(h => h.grade).filter(g => typeof g === 'number'))
+      : Infinity;
+    if (history.length > 0 && newG < minHistoryGrade) {
+      isNewBest = true;
+      // Wave-5b MED-2: Wenn newG <= 2 zeigt der celebration-block oben schon
+      // den Trophy ("cb-best-pill"). Doppel-Trophy waere visuell redundant.
+      // Trophy nur im Banner zeigen, wenn newG > 2 (= kein celebration-block).
+      const trophyPrefix = newG > 2 ? '\u{1F3C6} ' : '';
+      improvementBanner = `<div class="result-improvement-banner improvement-best">${trophyPrefix}Neue Bestnote in ${_topicNameForBanner}! Letztes Mal: Note ${safePrev}, jetzt: Note ${safeNew}.</div>`;
+    } else if (newG < prevG) {
       improvementBanner = `<div class="result-improvement-banner">Verbesserung! Letztes Mal hattest du Note ${safePrev}, jetzt Note ${safeNew}.</div>`;
     } else if (newG === prevG) {
       improvementBanner = `<div class="result-constant-banner">Konstant — wieder Note ${safeNew}.</div>`;
     }
     // newG > prevG → kein Banner (demotiviert; Note ist schon sichtbar).
   }
+  const celebrationBlock = _renderCelebrationBlock(grade.grade, meta.xpAwarded || 0, isNewBest);
 
   const resultItems = questions.map((q, i) => {
     const r   = results[i];
@@ -8414,14 +8757,35 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     };
   }
 
+  // Wave-4 (Maya/Bereich-3): vierte Action-Card "Mit Freunden teilen" — nur
+  // wenn User Freunde hat. Kopiert die Note in die Zwischenablage. Topic-Name
+  // wird via escapeAttr fuer den onclick-String gehaertet.
+  let cardShare = null;
+  const friendCount = (userData?.friendIds || []).length;
+  if (friendCount > 0) {
+    const safeTopicAttr = escapeAttr(meta.topicName || '');
+    cardShare = {
+      key: 'share',
+      html: (cls) => `
+        <div class="${cls}" onclick="window.LF.shareGradeWithFriends('${safeTopicAttr}','${grade.grade}')">
+          <div class="action-card-icon">${lfIcon('users')}</div>
+          <div class="action-card-body">
+            <div class="action-card-title">Mit Freunden teilen</div>
+            <div class="action-card-sub">Hab in ${safeTopicName} Note ${grade.grade} geschrieben! \u{1F389}</div>
+          </div>
+          <div class="action-card-arrow">›</div>
+        </div>`
+    };
+  }
+
   // Reihenfolge je Note (Maya-Spec):
-  //   Note 1-2: [3 → 2 → 1]
+  //   Note 1-2: [3 → 2 → 1]  + Share am Ende (gute Note teilt man gern)
   //   Note 3:   [2 → 1 → 3]
-  //   Note 4-6 / Penalty: [1 → 2 → 3]
+  //   Note 4-6 / Penalty: [1 → 2 → 3]  (Share nicht — schlechte Note teilt man nicht)
   let order;
   if (isLowGrade)      order = [card1, card2, card3];
-  else if (isMidGrade) order = [card2, card1, card3];
-  else                 order = [card3, card2, card1];
+  else if (isMidGrade) order = [card2, card1, card3, cardShare];
+  else                 order = [card3, card2, card1, cardShare];
 
   const visibleCards = order.filter(Boolean);
   const actionCardsHtml = visibleCards.length
@@ -8455,6 +8819,7 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
       <!-- Bildschirm-Ansicht -->
       <div class="no-print">
         ${meta.penalty ? `<div class="penalty-banner">Tab-Wechsel während des Tests erkannt — automatisch Note 6 (Ungenügend)</div>` : ''}
+        ${celebrationBlock}
         <div class="grade-display">
           <div class="grade-circle" style="background:${grade.color}">${grade.grade}</div>
           <div class="grade-label">${grade.label}</div>
@@ -8477,7 +8842,8 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
           <button class="btn btn-secondary" onclick="window.LF.startTest('${testState.subjectId}','${testState.yearId}','${testState.topicId}')">
             Nochmal testen
           </button>
-          <button class="btn btn-secondary" onclick="location.hash='#/'">Zur\xfcck</button>
+          <button class="btn btn-secondary" onclick="location.hash='#/fach/${testState.subjectId}/${testState.yearId}/${testState.topicId}'">Zum Thema</button>
+          <button class="btn btn-ghost" onclick="location.hash='#/'">Zum Dashboard</button>
         </div>
       </div>
 
@@ -8504,6 +8870,20 @@ function renderResults(questions, answers, results, grade, total, max, timeUsed,
     </div>`;
 
   testState._copyText = generateCopyText(questions, answers, results, timeUsed, meta);
+
+  // F5 (Casey/Wave-2): XP-Pop-In zentriert ueber der Note. Pattern wie
+  // theme-drop-toast (Body-fixed, Animation), aber einfacher (nur XP-Zahl).
+  // Fade nach 1.5s — schnell genug dass der User nicht warten muss, lang genug
+  // zum Wahrnehmen.
+  if (typeof meta.xpAwarded === 'number' && meta.xpAwarded > 0) {
+    setTimeout(() => {
+      const pop = document.createElement('div');
+      pop.className = 'xp-pop-in';
+      pop.textContent = `+${meta.xpAwarded} XP`;
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 1700);
+    }, 220);
+  }
 }
 
 window.LF.copyResults = async () => {
@@ -8562,6 +8942,40 @@ function showToast(msg, type = 'info') {
   toast.textContent = msg;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), type === 'error' ? 8000 : 3000);
+}
+
+// ── V11 (Casey/Wave-2): Toast mit Undo-Button ──
+// 5s persistent Toast. onUndo wird gerufen wenn der User klickt; Toast verschwindet
+// vorzeitig. Wenn der Timer ablaeuft ohne Klick, geschieht nichts (caller hat
+// die Mutation schon vorher ausgefuehrt).
+function showUndoToast(msg, onUndo, ms = 5000) {
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast info toast-undo';
+  const span = document.createElement('span');
+  span.className = 'toast-undo-msg';
+  span.textContent = msg;
+  const btn = document.createElement('button');
+  btn.className = 'toast-undo-btn';
+  btn.type = 'button';
+  btn.textContent = 'R\xfcckg\xe4ngig';
+  let consumed = false;
+  const remove = () => { if (toast.parentNode) toast.remove(); };
+  btn.addEventListener('click', () => {
+    if (consumed) return;
+    consumed = true;
+    try { onUndo && onUndo(); } catch (e) { console.warn('[showUndoToast]', e); }
+    remove();
+  });
+  toast.appendChild(span);
+  toast.appendChild(btn);
+  container.appendChild(toast);
+  setTimeout(() => { if (!consumed) remove(); }, ms);
 }
 
 // ── Hilfsfunktionen ───────────────────────
@@ -8920,6 +9334,7 @@ window.LF.downloadTestPDF = async (subjectId, yearId, topicId) => {
 <meta charset="UTF-8">
 <title>Testbogen</title>
 <style>
+  /* Print = Theme-agnostisch by design — hardcoded colors fuer schwarzweiss-output. */
   @page { size: A4; margin: 20mm 20mm 20mm 20mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #111; line-height: 1.5; }
@@ -9003,6 +9418,19 @@ function _avatar(photo, name) {
     : `<span class="comment-avatar-letter">${escapeHtml((name || '?')[0].toUpperCase())}</span>`;
 }
 
+// Wave-4 (Maya/Bereich-5): Default-Avatar-Color aus uid-Hash. Stable per User
+// (gleiche uid → immer gleiche Farbe), aber ueber 8 Buckets verteilt. Keine
+// Backend-Roundtrips, kein persistierter State. Variablen werden als
+// `var(--avatar-color-N)` aufgeloest, sodass jedes Theme eine eigene Palette
+// haben koennte (heute: alle erben aus :root via inheritance — Hard-Rule-OK).
+function _generateDefaultAvatarHsl(uid) {
+  const s = String(uid || '');
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
+  const idx = Math.abs(hash) % 8;
+  return `var(--avatar-color-${idx + 1})`;
+}
+
 // ── F-30: Freunde ─────────────────────────
 async function renderFriends() {
   const app = document.getElementById('app');
@@ -9016,6 +9444,7 @@ async function renderFriends() {
   const myRequests  = Object.entries(userData?.friendRequests || {});
   const friends     = await getFriendsData(myFriendIds);
 
+  // Wave-1-Ramsey CHEAT-24: User-controlled Display-Name + Photo escapen.
   const reqHtml = myRequests.length ? `
     <div class="card" style="margin-bottom:20px">
       <div class="section-title" style="margin-bottom:16px">Anfragen (${myRequests.length})</div>
@@ -9023,14 +9452,14 @@ async function renderFriends() {
         <div class="friend-request-card">
           <div class="friend-avatar ${outlineFor(req)}">${_avatar(req.photo, req.name)}</div>
           <div class="friend-info">
-            <div class="friend-name">${req.name} ${roleBadge(req.role)}</div>
+            <div class="friend-name">${escapeHtml(req.name || '')} ${roleBadge(req.role)}</div>
             <div class="friend-sub">Möchte dein Freund sein</div>
           </div>
           <div class="friend-btns">
             <button class="btn btn-primary btn-sm"
-              onclick="window.LF.acceptFriend('${fromUid}','${req.name.replace(/'/g,"\\'")}','${req.photo||''}')">Annehmen</button>
+              onclick="window.LF.acceptFriend('${escapeAttr(fromUid)}','${escapeAttr(req.name || '')}','${escapeAttr(req.photo || '')}')">Annehmen</button>
             <button class="btn btn-secondary btn-sm"
-              onclick="window.LF.rejectFriend('${fromUid}')">Ablehnen</button>
+              onclick="window.LF.rejectFriend('${escapeAttr(fromUid)}')">Ablehnen</button>
           </div>
         </div>`).join('')}
     </div>` : '';
@@ -9042,14 +9471,20 @@ async function renderFriends() {
           <div class="friend-card">
             <div class="friend-avatar ${outlineFor(f)}">${_avatar(f.photo, f.name)}</div>
             <div class="friend-info">
-              <div class="friend-name">${f.name} ${roleBadge(f.role)}</div>
-              <div class="friend-sub">Lv. ${lv.level} — ${lv.title}</div>
+              <div class="friend-name">${escapeHtml(f.name || '')} ${roleBadge(f.role)}</div>
+              <div class="friend-sub">Lv. ${lv.level} — ${escapeHtml(lv.title || '')}</div>
             </div>
             <button class="btn btn-ghost btn-sm"
-              onclick="window.LF.unfriendUser('${f.uid}','${f.name.replace(/'/g,"\\'")}')">Entfreunden</button>
+              onclick="window.LF.unfriendUser('${escapeAttr(f.uid)}','${escapeAttr(f.name || '')}')">Entfreunden</button>
           </div>`;
       }).join('')
-    : `<div class="empty-state" style="padding:20px 0"><p>Noch keine Freunde hinzugefügt.</p></div>`;
+    : renderEmptyState({
+        icon: 'users',
+        title: 'Noch keine Freunde',
+        sub: 'Such oben nach deinem Klassenkameraden — Name reicht.',
+        ctaLabel: 'Such-Feld fokussieren',
+        ctaAction: "document.getElementById('friendSearch')?.focus()",
+      });
 
   app.innerHTML = renderNav([{ label: 'Freunde' }]) + `
     <div class="page">
@@ -9108,13 +9543,18 @@ async function renderFeed() {
         const topic = escapeHtml(e.payload?.topic || '');
         const title = escapeHtml(e.payload?.title || '');
         const grade = escapeHtml(e.payload?.grade ?? '');
-        const text = e.type === 'test'
-          ? `<strong>${name}</strong> hat <em>${topic}</em> mit Note <strong>${grade}</strong> abgeschlossen`
-          : e.type === 'achievement'
-          ? `<strong>${name}</strong> hat das Achievement <em>${title}</em> erhalten`
-          : e.type === 'content'
-          ? `<strong>${name}</strong> hat neuen Inhalt hochgeladen: <em>${topic}</em>`
-          : `<strong>${name}</strong> war aktiv`;
+        // H7 (Casey/Wave-2): unbekannte Event-Types skip-rendern statt
+        // generisches "war aktiv" anzuzeigen — das wirkte wie Filler-Content.
+        let text;
+        if (e.type === 'test') {
+          text = `<strong>${name}</strong> hat <em>${topic}</em> mit Note <strong>${grade}</strong> abgeschlossen`;
+        } else if (e.type === 'achievement') {
+          text = `<strong>${name}</strong> hat das Achievement <em>${title}</em> erhalten`;
+        } else if (e.type === 'content') {
+          text = `<strong>${name}</strong> hat neuen Inhalt hochgeladen: <em>${topic}</em>`;
+        } else {
+          return ''; // unbekannter Event-Type → nicht rendern
+        }
         return `
           <div class="feed-entry">
             <div class="feed-icon">${icon}</div>
@@ -9123,8 +9563,21 @@ async function renderFeed() {
               <div class="feed-time">${time}</div>
             </div>
           </div>`;
-      }).join('')
-    : `<div class="empty-state" style="padding:20px 0"><p>Noch keine Aktivitäten von deinen Freunden.</p></div>`;
+      }).filter(Boolean).join('') ||
+      renderEmptyState({
+        icon: 'zap',
+        title: 'Hier wird was los, sobald deine Freunde lernen',
+        sub: 'Füge mehr Freunde hinzu, dann erscheinen ihre Tests im Feed.',
+        ctaLabel: 'Mehr Freunde finden',
+        ctaAction: "location.hash='#/freunde'",
+      })
+    : renderEmptyState({
+        icon: 'zap',
+        title: 'Hier wird was los, sobald deine Freunde lernen',
+        sub: 'Füge mehr Freunde hinzu, dann erscheinen ihre Tests im Feed.',
+        ctaLabel: 'Mehr Freunde finden',
+        ctaAction: "location.hash='#/freunde'",
+      });
 
   app.innerHTML = renderNav([{ label: 'Feed' }]) + `
     <div class="page">
@@ -9134,36 +9587,10 @@ async function renderFeed() {
   initNavCollapse();
 }
 
-// ── F-40: Lernplan ───────────────────────
-function renderLernplan() {
-  const recs = getRecommendations();
-  const days = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
-  const plan = days.map((day, i) => ({ day, rec: recs[i % Math.max(recs.length, 1)] }));
-
-  document.getElementById('app').innerHTML = `
-    ${renderNav([{ label: 'Lernplan' }])}
-    <div class="page">
-      <div class="page-header">
-        <h1>&#x1F4C5; Lernplan</h1>
-        <div class="sub">Dein personalisierter Wochenplan</div>
-      </div>
-      ${recs.length === 0
-        ? `<div class="empty-state"><div class="empty-icon">&#x1F4C5;</div>Alle Themen auf dem neuesten Stand!</div>`
-        : `<div class="lernplan-grid">
-            ${plan.filter(p => p.rec).map(p => `
-              <div class="lernplan-card" onclick="location.hash='#/fach/${p.rec.subjectId}/${p.rec.yearId}/${p.rec.topicId}'">
-                <div class="lernplan-day">${p.day}</div>
-                <div class="lernplan-topic">
-                  <span class="lernplan-icon">${getSubjectIcon(p.rec.subjectId)}</span>
-                  <div>
-                    <div class="lernplan-topic-name">${p.rec.topic.name}</div>
-                    <div class="lernplan-reason">${p.rec.reason}</div>
-                  </div>
-                </div>
-              </div>`).join('')}
-           </div>`}
-    </div>`;
-}
+// ── F-40: Lernplan — retired 2026-05-08 (Wave-2) ─────────
+// Page hide per Maya-Decision-Spec lernplan-decision-2026-05-08.md.
+// Echte Logik liegt jetzt in decideHeuteZuerstStep() (Dashboard-Card).
+// Bookmark-Fallback: route()-else-Branch faengt #/lernplan auf Dashboard.
 
 // ── F-46: Eltern-Bericht ─────────────────
 async function renderShareReport(token) {
@@ -9319,7 +9746,10 @@ window.LF.submitComment = async () => {
   input.disabled = true;
   if (submitBtn) submitBtn.disabled = true;
   try {
-    await addComment(_commentTopicKey, currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, text, userRole());
+    // Wave-5b HIGH-1: Marcus's Rules cross-checken request.resource.data.name
+    // gegen users/uid.name. Wenn Auth.displayName != userData.name (Edge-Case),
+    // schlaegt das silent fehl. userData.name first, dann fallbacks.
+    await addComment(_commentTopicKey, currentUser.uid, userData?.name || currentUser.displayName || 'Nutzer', userData?.photoURL || currentUser.photoURL, text, userRole());
     input.value = '';
     await window.LF.loadComments();
   } catch (e) {
@@ -9358,19 +9788,21 @@ window.LF.searchFriends = async (query) => {
   if (!results.length) { res.innerHTML = '<div class="text-muted" style="padding:8px 0">Keine Nutzer gefunden.</div>'; return; }
   const myFriendIds  = userData?.friendIds || [];
   const myReqSentTo  = userData?.friendRequestsSent || [];
+  // Wave-1-Ramsey CHEAT-24: Suchergebnisse escapen — Display-Name + Photo
+  // sind User-controlled.
   res.innerHTML = results.map(u => {
     const isFriend  = myFriendIds.includes(u.uid);
     const isPending = myReqSentTo.includes(u.uid);
     return `
       <div class="friend-search-item">
         <div class="friend-avatar ${outlineFor(u)}">${_avatar(u.photo, u.name)}</div>
-        <div class="friend-name" style="flex:1">${u.name} ${roleBadge(u.role)}</div>
+        <div class="friend-name" style="flex:1">${escapeHtml(u.name || '')} ${roleBadge(u.role)}</div>
         ${isFriend
           ? `<span class="badge badge-success">Freund</span>`
           : isPending
           ? `<span class="badge badge-muted">Angefragt</span>`
           : `<button class="btn btn-primary btn-sm"
-               onclick="window.LF.sendFriendReq('${u.uid}','${u.name.replace(/'/g,"\\'")}','${u.photo||''}')">Hinzufügen</button>`}
+               onclick="window.LF.sendFriendReq('${escapeAttr(u.uid)}','${escapeAttr(u.name || '')}','${escapeAttr(u.photo || '')}')">Hinzufügen</button>`}
       </div>`;
   }).join('');
 };
@@ -9386,7 +9818,10 @@ window.LF.sendFriendReq = async (toUid, toName, toPhoto) => {
   const btn = document.querySelector(`button[onclick*="sendFriendReq('${toUid}'"]`);
   if (btn) { btn.disabled = true; setTimeout(() => { btn.disabled = false; }, 1000); }
   try {
-    await sendFriendRequest(currentUser.uid, currentUser.displayName || 'Nutzer', currentUser.photoURL, toUid, userRole());
+    // Wave-5b HIGH-1: gleicher Pattern wie addComment — userData.name first,
+    // damit Marcus's Rules-Cross-Check (request.resource.data.name == users/uid.name)
+    // nicht silent fehlschlaegt bei Auth.displayName != userData.name.
+    await sendFriendRequest(currentUser.uid, userData?.name || currentUser.displayName || 'Nutzer', userData?.photoURL || currentUser.photoURL, toUid, userRole());
     userData.friendRequestsSent = [...(userData.friendRequestsSent || []), toUid];
     showToast(`Anfrage an ${toName} gesendet.`, 'success');
     await window.LF.searchFriends(document.getElementById('friendSearch')?.value || '');
@@ -9558,31 +9993,59 @@ let _pendingProfilePhotoURL = null;
 
 window.LF.profileEditOpen = () => {
   _pendingProfilePhotoURL = null;
-  // Mission 1: profileView wrapper wurde im neuen Profile-Layout entfernt;
-  // profileHeaderCard ist die View-Repräsentation. Optional-chain um Crash zu vermeiden.
-  const view = document.getElementById('profileView') || document.querySelector('.profile-header-card');
+  // V3 (Casey/Wave-2): Header-Card (Avatar + Name + Klasse) sichtbar lassen,
+  // damit der User sieht WER bearbeitet wird. Vorher wurde sie ebenfalls
+  // versteckt — Form ohne Kontext wirkte wie eine separate Page.
+  // Jetzt blenden wir nur Tabs + Tab-Content aus, das Edit-Form schiebt sich
+  // unter die Header-Card.
   const tabs = document.querySelector('.profile-tabs');
   const tabContent = document.querySelector('.profile-tab-content');
   const form = document.getElementById('profileEditForm');
-  if (view) view.style.display = 'none';
   if (tabs) tabs.style.display = 'none';
   if (tabContent) tabContent.style.display = 'none';
   if (form) form.style.display = '';
 };
 
+// Wave-3 (Maya/Bereich-4): Klick auf "Klasse nicht gesetzt"-Pill oeffnet das
+// Edit-Sheet und fokussiert direkt das Klassen-Select.
+window.LF.openProfileEditOnKlasse = () => {
+  window.LF.profileEditOpen();
+  setTimeout(() => document.getElementById('profileKlasseInput')?.focus(), 60);
+};
+
 window.LF.profileEditClose = () => {
   _pendingProfilePhotoURL = null;
-  const view = document.getElementById('profileView') || document.querySelector('.profile-header-card');
   const tabs = document.querySelector('.profile-tabs');
   const tabContent = document.querySelector('.profile-tab-content');
   const form = document.getElementById('profileEditForm');
-  if (view) view.style.display = '';
   if (tabs) tabs.style.display = '';
   if (tabContent) tabContent.style.display = '';
   if (form) form.style.display = 'none';
 };
 
 // Mission 8 Q1=C: window.LF.pickEmoji entfernt (Emoji-Picker abgeschafft).
+
+// Wave-3 (Maya/Bereich-4): "Bild entfernen" im Profile-Edit-Sheet. Nutzt
+// existing updateUserProfile() mit photoURL=null — Hard-Rule 5 ist sauber,
+// weil set+merge im wrapper genutzt wird (kein delete()). Default-Avatar =
+// Initial-Buchstabe greift dann automatisch.
+window.LF.removeProfilePhoto = async () => {
+  if (!currentUser) return;
+  if (!confirm('Profilbild entfernen?')) return;
+  try {
+    const newName = document.getElementById('profileNameInput')?.value?.trim()
+                 || userData?.name || currentUser.displayName || 'Nutzer';
+    await updateUserProfile(currentUser.uid, newName, null);
+    userData.photoURL = null;
+    _pendingProfilePhotoURL = null;
+    showToast('Profilbild entfernt.', 'success');
+    renderProfile();
+    window.LF.profileEditOpen();
+  } catch(e) {
+    console.error('[removeProfilePhoto]', e);
+    showToast('Fehler beim Entfernen.', 'error');
+  }
+};
 
 window.LF.handleProfileFile = async (input) => {
   const file = input.files?.[0];
@@ -9902,7 +10365,7 @@ function renderTesting() {
 
       ${isA ? `
         <div class="testing-section admin-section">
-          <div class="testing-section-title" style="color:#f59e0b">&#128081; ADMIN-Bereich</div>
+          <div class="testing-section-title" style="color:var(--warning)">&#128081; ADMIN-Bereich</div>
           <div style="margin-bottom:12px">
             <input class="form-input" id="adminUserSearch" placeholder="Nutzer suchen (Name oder E-Mail)..." oninput="window.LF.adminSearchUsers(this.value)" style="margin-bottom:8px">
             <div id="adminUserResults"></div>
@@ -10058,23 +10521,24 @@ window.LF.adminSearchUsers = async (query) => {
       (u.email||'').toLowerCase().includes(q)
     ).slice(0, 10);
     if (!matches.length) { res.innerHTML = '<div class="text-muted">Keine Treffer.</div>'; return; }
+    // Wave-1-Ramsey CHEAT-24: Admin-Search-Resultate escapen.
     res.innerHTML = matches.map(u => `
       <div class="friend-search-item" style="margin-bottom:6px">
         <div class="friend-avatar ${outlineFor(u)}">${_avatar(u.photoURL, u.name)}</div>
         <div class="friend-name" style="flex:1">
-          ${u.name || 'Unbekannt'} ${roleBadge(u.role)}
-          <div style="font-size:11px;color:var(--text-muted)">${u.email || ''}</div>
+          ${escapeHtml(u.name || 'Unbekannt')} ${roleBadge(u.role)}
+          <div style="font-size:11px;color:var(--text-muted)">${escapeHtml(u.email || '')}</div>
         </div>
         <div style="display:flex;gap:4px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${u.uid}', 'admin')">+Admin</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${u.uid}', 'tester')">+Tester</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${u.uid}', null)">Rolle entfernen</button>
-          <button class="btn btn-${u.isBanned ? 'secondary' : 'danger'} btn-sm" onclick="window.LF.adminToggleBan('${u.uid}', ${!u.isBanned})">${u.isBanned ? 'Entsperren' : 'Sperren'}</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${escapeAttr(u.uid)}', 'admin')">+Admin</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${escapeAttr(u.uid)}', 'tester')">+Tester</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.LF.adminSetRole('${escapeAttr(u.uid)}', null)">Rolle entfernen</button>
+          <button class="btn btn-${u.isBanned ? 'secondary' : 'danger'} btn-sm" onclick="window.LF.adminToggleBan('${escapeAttr(u.uid)}', ${!u.isBanned})">${u.isBanned ? 'Entsperren' : 'Sperren'}</button>
         </div>
       </div>`).join('');
   } catch(e) {
     console.error('[adminSearch]', e);
-    res.innerHTML = `<div class="text-muted" style="color:#ef4444">Fehler: ${e.message}</div>`;
+    res.innerHTML = `<div class="text-muted" style="color:var(--danger)">Fehler: ${e.message}</div>`;
   }
 };
 
@@ -10113,7 +10577,7 @@ window.LF.openBugReport = () => {
         <textarea class="form-input" id="bugReportText" rows="5"
           placeholder="z.B. 'Auf der Rangliste-Seite ist der XP-Tab abgeschnitten...'"></textarea>
       </div>
-      <div id="bugReportErr" style="color:#ef4444;font-size:12px;min-height:16px;margin-bottom:8px"></div>
+      <div id="bugReportErr" style="color:var(--danger);font-size:12px;min-height:16px;margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn btn-secondary btn-sm" onclick="this.closest('.kb-overlay').remove()">Abbrechen</button>
         <button class="btn btn-primary btn-sm" onclick="window.LF.sendBugReport()">Absenden</button>
@@ -10214,3 +10678,19 @@ window.LF.toggleKlausurTopic = (key) => {
 // F-3 KI-Erklaerung pro falscher Frage
 window.LF.requestErrorExplanation = requestErrorExplanation;
 window.LF.toggleErrorExplanation  = toggleErrorExplanation;
+
+// Wave-4 (Maya/Bereich-3): Note-mit-Freunden-teilen-Handler. Kopiert eine
+// kurze Mitteilung in die Zwischenablage (kein automatischer Direct-Share —
+// User klebt das selbst in WhatsApp/Discord/etc, wo seine Freunde sind).
+window.LF.shareGradeWithFriends = (topic, gradeNum) => {
+  const t = String(topic ?? '');
+  const g = String(gradeNum ?? '');
+  const text = `Hab in ${t} Note ${g} geschrieben! \u{1F389} - LearningForge`;
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('In Zwischenablage kopiert', 'success'))
+      .catch(() => showToast('Kopieren fehlgeschlagen.', 'error'));
+  } else {
+    showToast('Zwischenablage nicht verf\xfcgbar.', 'error');
+  }
+};

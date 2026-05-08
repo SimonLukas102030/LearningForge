@@ -253,27 +253,66 @@
   --accent: #4ade80; --accent-subtle: #14532d; --border: #166534;
 }
 
-/* Mission 7 Phase 1 — Sand (common, Stub).
-   Maya refint die Farben in Phase 2; das hier ist eine warme Beige-Palette
-   als Platzhalter, damit der Worker den Theme-ID droppen kann. */
+/* Sand (common) — Phase 2 Refinement 2026-05-08 */
 [data-app-theme="sand"] {
-  --accent: #b45309; --accent-hover: #92400e; --accent-subtle: #fef3c7;
-  --bg: #fefce8;
+  --bg:            #fdf8ed;          /* warmes off-white, Tendenz Strandgelb */
+  --bg-card:       #ffffff;          /* clean white, lesbarkeit-anker */
+  --bg-input:      #fbf2dc;          /* leicht waermer als bg, abgrenzbar */
+  --text:          #3a2410;          /* dunkles roest-braun, NICHT pures schwarz */
+  --text-muted:    #8a6a3f;          /* warmes mittelbraun */
+  --border:        #e8d8b5;          /* sandbeige */
+  --accent:        #d97706;          /* amber-600, warmes Gold */
+  --accent-hover:  #b45309;          /* amber-700 */
+  --accent-subtle: #fef3c7;          /* amber-100 — bleibt fuer Subtle-BGs */
+  --success:       #15803d;          /* dunkleres gruen, harmoniert mit warm-bg */
+  --success-subtle:#dcfce7;
+  --success-text:  #14532d;
+  --warning:       #ea580c;          /* orange-600 — staerker als default warning, weil bg amber ist */
+  --warning-subtle:#ffedd5;
+  --warning-text:  #7c2d12;
+  --danger:        #b91c1c;          /* red-700, satter wegen warmer Umgebung */
+  --highlight-me:  #fed7aa;          /* orange-200 — Override fuer Sand-light */
+  --highlight-me-border: #ea580c;    /* orange-600 */
 }
 [data-app-theme="sand"][data-theme="dark"] {
-  --bg: #1c1305; --bg-card: #2a1d09; --bg-input: #3a280f;
-  --accent: #fbbf24; --accent-subtle: #3a280f; --border: #78350f;
+  --bg:            #1f1608;          /* tiefes warm-schwarz, kein blau-stich */
+  --bg-card:       #2d1f0c;          /* warmes dunkelbraun */
+  --bg-input:      #3a2810;
+  --text:          #fef3c7;          /* warmes creme (amber-100) — nicht pures weiss */
+  --text-muted:    #d4a574;          /* warm tan */
+  --border:        #5c3d14;          /* dunkles bernstein */
+  --accent:        #fbbf24;          /* amber-400 — leuchtendes gold im dunkel */
+  --accent-hover:  #f59e0b;          /* amber-500 */
+  --accent-subtle: #3a2810;          /* eigene tiefe schicht, nicht =bg */
+  --highlight-me:  rgba(234,88,12,0.22); /* Override fuer Sand-dark */
+  --highlight-me-border: #fb923c;
+  /* default-dark-Werte fuer success/warning/danger bleiben (harmonieren mit amber-Akzent). */
 }
 
-/* Mission 7 Phase 1 — Schiefer (common, Stub).
-   Grau-purple Tone als Platzhalter, Phase-2-Refinement durch Maya. */
+/* Schiefer (common) — Phase 2 Refinement 2026-05-08 */
 [data-app-theme="schiefer"] {
-  --accent: #475569; --accent-hover: #334155; --accent-subtle: #f1f5f9;
-  --bg: #f8fafc;
+  --bg:            #f1f5f9;          /* slate-100, kuehl-blass */
+  --bg-card:       #ffffff;
+  --bg-input:      #e2e8f0;          /* slate-200 */
+  --text:          #0f172a;          /* slate-900 — hartes anchor-dark */
+  --text-muted:    #475569;          /* slate-600 */
+  --border:        #cbd5e1;          /* slate-300 */
+  --accent:        #475569;          /* slate-600 — blaeulich-grau, nicht knallig */
+  --accent-hover:  #334155;          /* slate-700 */
+  --accent-subtle: #e0e7ef;          /* eigener subtle-tone, leicht blau-getoent (nicht slate-100, sonst =bg) */
+  /* success/warning/danger: defaults aus :root sind ok — slate-bg ist neutral genug */
 }
 [data-app-theme="schiefer"][data-theme="dark"] {
-  --bg: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
-  --accent: #cbd5e1; --accent-subtle: #334155; --border: #475569;
+  --bg:            #0f172a;          /* slate-900 */
+  --bg-card:       #1e293b;          /* slate-800 */
+  --bg-input:      #334155;          /* slate-700 */
+  --text:          #f1f5f9;          /* slate-100 */
+  --text-muted:    #94a3b8;          /* slate-400 */
+  --border:        #334155;          /* slate-700 */
+  --accent:        #94a3b8;          /* slate-400 — gedeckt, NICHT bloomend wie Aurora */
+  --accent-hover:  #cbd5e1;          /* slate-300 */
+  --accent-subtle: #1e293b;          /* identisch zu bg-card, gibt unsichtbare Hinweis-BGs */
+  /* success/warning/danger: dark-defaults bleiben */
 }
 
 [data-app-theme="sunset"] {

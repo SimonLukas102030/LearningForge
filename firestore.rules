@@ -13,6 +13,21 @@ rules_version = '2';
 //  uid-bind, shareLinks owner-only-read, users.list admin-only.
 //  Soft-caps mark spots where Cloud Functions (Mission 3 ADR) are the
 //  real fix.
+//
+//  Wave-1 hardening (Marcus, 2026-05-08, post-XXL-Polish-Cycle Phase 3):
+//   - CHEAT-23  themeDrops dropped from ownerSafeFields (worker-only writes)
+//   - CHEAT-26  activeOutline/activeTheme must be in owned list
+//   - CHEAT-27  friendRequests role spoofing blocked (cross-check user-doc)
+//   - CHEAT-29  bugReports name/photoURL spoofing blocked (cross-check)
+//   - CHEAT-30  comment name/photo/role spoofing blocked (cross-check)
+//   - CHEAT-33  comment text-size cap + createdAt == request.time
+//   - CHEAT-34  klasse mirror to leaderboard now allowed (cross-check)
+//   - CHEAT-38  shareLinks expiresAt required at create
+//   - B-M01     appConfig rule added (admin-write, auth-read)
+//   - B-M02     groups.update self-join carve-out re-added
+//   - B-M04     leaderboard xp/displayName/photoURL/role mirrors allowed
+//   - B-M05     leaderboard owner-mirror cross-checks user-doc values
+//   - B-M07     dailyChallengesCompleted / srs / questions counter caps
 // ════════════════════════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -50,6 +65,16 @@ service cloud.firestore {
     // their own doc. EXCLUDES role, isBanned, isClaude, isHacker — those
     // are role-sensitive and only writable via the admin-whitelist branch
     // or by a real admin.
+    //
+    // Wave-1 hardening 2026-05-08 (Marcus, CHEAT-23 from Ramsey):
+    //   `themeDrops` REMOVED from this list. The only legitimate writer
+    //   for themeDrops is the submitTestResult worker (service-account,
+    //   bypasses rules). A direct client `set({themeDrops:[...]},
+    //   {merge:true})` to forge "I rolled this drop" was the bypass for
+    //   unlockCosmetic's drop-history check (themeDrops includes id ->
+    //   arrayUnion themes). With themeDrops out of ownerSafeFields the
+    //   write is denied — Mission-7 Variant-B server-roll is the only
+    //   legitimate path to a new theme.
     function ownerSafeFields() {
       return [
         'name', 'photoURL', 'klasse', 'email', 'createdAt', 'onboardedAt',
@@ -58,7 +83,7 @@ service cloud.firestore {
         'freezeDays', 'dailyChallenges', 'totalQuestionsAnswered',
         'srsReviewsTotal', 'dailyChallengesCompleted',
         'streakCount', 'lastStreakDate', 'testsToday',
-        'activeOutline', 'activeTheme', 'outlines', 'themes', 'themeDrops',
+        'activeOutline', 'activeTheme', 'outlines', 'themes',
         'friendIds', 'friendRequests', 'friendRequestsSent', 'groupIds',
         'weakQuestions',
         // Mission 1 settings page (Farben + Icons pro Fach)
@@ -75,6 +100,33 @@ service cloud.firestore {
       ];
     }
 
+    // CHEAT-26 (Wave-1, Marcus, 2026-05-08): activeOutline/activeTheme must
+    // be in the user's owned list before being set as active. Without this
+    // a user could `set({activeOutline:'cosmic'}, {merge:true})` to wear a
+    // legendary outline they never earned. The owned-list check covers all
+    // outlines-user-doc state (admin/tester unlock-all, drop-roll-derived,
+    // etc.) — anything in `outlines` is by definition legitimate.
+    //
+    // 'none' (outline) and 'default' (theme) are always allowed even when
+    // not in the owned-list, because they are the no-cosmetic fallback.
+    //
+    // Field absent in resource = old doc lacked it; treat that as still
+    // "no change to the affected key" to avoid blocking unrelated writes.
+    function activeOutlineOk() {
+      return !('activeOutline' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.activeOutline == null
+          || request.resource.data.activeOutline == 'none'
+          || (request.resource.data.outlines is list
+              && request.resource.data.activeOutline in request.resource.data.outlines);
+    }
+    function activeThemeOk() {
+      return !('activeTheme' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.activeTheme == null
+          || request.resource.data.activeTheme == 'default'
+          || (request.resource.data.themes is list
+              && request.resource.data.activeTheme in request.resource.data.themes);
+    }
+
     // Soft-cap helpers (real fix = Cloud Function in Mission 3 ADR)
     // ----------------------------------------------------------------
     // XP delta per write capped at 200 (rough max from one perfect
@@ -86,9 +138,24 @@ service cloud.firestore {
     }
 
     // Klasse must be one of the allowed grade strings 5..13.
+    //
+    // Wave-1 transitional fix (Marcus, 2026-05-08, B-M08): legacy users
+    // (pre-Mission-2 era) have a NUMERIC `klasse` field on their user-doc.
+    // Mission 2 standardised writes on String(klasse), but Bestands-User-
+    // Docs were never migrated. Firestore-rules type-strictly compare
+    // `9 in ['5'..,'13']` -> false, so EVERY set+merge by a legacy
+    // numeric-klasse user was denied (the projected `klasse` after merge
+    // is still numeric). The frontend-side migration (forward-only,
+    // client-init) is Ethan's lane (B-M08); until all legacy users have
+    // logged in once and triggered the migration, the rule accepts BOTH:
+    //   - numeric 5..13 (legacy, transitional)
+    //   - string  '5'..'13' (canonical)
+    // After the migration has soaked through the user base (probably
+    // ~30 days), drop the numeric branch in a follow-up wave.
     function klasseOk() {
       return !('klasse' in request.resource.data)
-          || request.resource.data.klasse in ['5','6','7','8','9','10','11','12','13'];
+          || request.resource.data.klasse in ['5','6','7','8','9','10','11','12','13']
+          || request.resource.data.klasse in [5,6,7,8,9,10,11,12,13];
     }
 
     // Outlines / themes / achievements: bound growth per write.
@@ -159,6 +226,45 @@ service cloud.firestore {
              );
     }
 
+    // B-M07 (Wave-1, Marcus, 2026-05-08): per-write delta caps for the
+    // counter fields in ownerSafeFields(). Without these caps a user
+    // could `set({dailyChallengesCompleted: 9999}, {merge:true})` from
+    // the console and unlock `daily_7` / `daily_30` achievements
+    // instantly. The Worker (submitDailyChallenge) increments by exactly
+    // 1 per legitimate submit; the test-engine bumps totalQuestionsAnswered
+    // by question-count (max ~25 per 90-min test) and srsReviewsTotal by
+    // a few tens per session. Caps are generous: dailyChallenges +1 per
+    // write (atomic counter increment), srsReviews + 50, questions + 50.
+    // The Worker writes via Service-Account so it bypasses these caps.
+    //
+    // RULES-LIMITATION: Firestore rules can't index `request.resource.data`
+    // with a runtime field name, so we inline one helper per field instead
+    // of a parameterised counterDeltaOk(field, cap) generic.
+    function dailyCompletedDeltaOk() {
+      return !('dailyChallengesCompleted' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.dailyChallengesCompleted is number
+              && request.resource.data.dailyChallengesCompleted
+                   - resource.data.get('dailyChallengesCompleted', 0) <= 1
+              && request.resource.data.dailyChallengesCompleted
+                   - resource.data.get('dailyChallengesCompleted', 0) >= 0);
+    }
+    function srsReviewsDeltaOk() {
+      return !('srsReviewsTotal' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.srsReviewsTotal is number
+              && request.resource.data.srsReviewsTotal
+                   - resource.data.get('srsReviewsTotal', 0) <= 50
+              && request.resource.data.srsReviewsTotal
+                   - resource.data.get('srsReviewsTotal', 0) >= 0);
+    }
+    function totalQAnsweredDeltaOk() {
+      return !('totalQuestionsAnswered' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.totalQuestionsAnswered is number
+              && request.resource.data.totalQuestionsAnswered
+                   - resource.data.get('totalQuestionsAnswered', 0) <= 50
+              && request.resource.data.totalQuestionsAnswered
+                   - resource.data.get('totalQuestionsAnswered', 0) >= 0);
+    }
+
     // ── users ─────────────────────────────────────────────────────────────
     // Read:    any auth'd user may .get() a single user doc (needed for
     //          friend lookups, comment-author display, etc.).
@@ -207,7 +313,20 @@ service cloud.firestore {
                           && outlinesGrowthOk()
                           && themesGrowthOk()
                           && achievementsGrowthOk()
-                          && studyTimeDeltaOk())
+                          && studyTimeDeltaOk()
+                          // CHEAT-26 (2026-05-08, Wave-1, Marcus): activeOutline/
+                          // activeTheme must reference an owned cosmetic, otherwise
+                          // a user could equip legendary themes/outlines via
+                          // `set({activeOutline:'cosmic'}, {merge:true})`.
+                          && activeOutlineOk()
+                          && activeThemeOk()
+                          // B-M07 (Wave-1, Marcus): cap the counter-increment
+                          // fields so a user cannot `set({dailyChallenges
+                          // Completed: 9999})` to unlock daily_7/daily_30 or
+                          // similar achievement gates instantly.
+                          && dailyCompletedDeltaOk()
+                          && srsReviewsDeltaOk()
+                          && totalQAnsweredDeltaOk())
                         // Case B-admin: full Case-B power for the admin whitelist
                         || (isOwner(uid) && request.auth.token.email in adminEmails())
                         // Case B-tester: owner-safe-fields without soft-caps.
@@ -246,6 +365,14 @@ service cloud.firestore {
                         // keys can be touched (no spam, no clearing
                         // someone else's pending requests).
                         //
+                        // Wave-1 hardening 2026-05-08 (Marcus, CHEAT-27/30):
+                        // the role/name/photo on the friendRequest entry
+                        // MUST match the sender's actual user-doc so an
+                        // attacker cannot impersonate "Simon (admin)" in
+                        // a friend-request notification. The role-check
+                        // is the critical one — UI badges trust it and
+                        // an admin-impersonator could phish credentials.
+                        //
                         // Followup (Mission 3 scope): move friendRequests
                         // into a subcollection `users/{uid}/friendRequests/
                         // {fromUid}` so each request is its own doc and
@@ -255,7 +382,37 @@ service cloud.firestore {
                             && request.resource.data.friendRequests
                                  .diff(resource.data.get('friendRequests', {}))
                                  .affectedKeys()
-                                 .hasOnly([request.auth.uid]))
+                                 .hasOnly([request.auth.uid])
+                            && (
+                                 // Removal/null-clear of the sender's own
+                                 // pending request is always OK (cancel-
+                                 // sent path; null-marker pattern instead
+                                 // of FieldValue.delete per Hard rule 5).
+                                 request.resource.data.friendRequests[request.auth.uid] == null
+                                 ||
+                                 // Add/overwrite path: role MUST mirror the
+                                 // sender's own user-doc — admin-impersonation
+                                 // is the critical vector (badges trust role).
+                                 // name MUST also mirror — UI shows the sender
+                                 // name verbatim, no impersonation. photo can
+                                 // mirror OR be null (auth.photoURL gets
+                                 // nulled when the user uploads a large
+                                 // data-URL profile pic; auth.js:50-53 has
+                                 // the size-limit. So the legitimate "no
+                                 // photo on Auth, big photo on Firestore"
+                                 // case must still go through).
+                                 (
+                                   request.resource.data.friendRequests[request.auth.uid].role
+                                     == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null)
+                                   && request.resource.data.friendRequests[request.auth.uid].name
+                                        == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('name', null)
+                                   && (
+                                        request.resource.data.friendRequests[request.auth.uid].photo == null
+                                        || request.resource.data.friendRequests[request.auth.uid].photo
+                                             == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('photoURL', null)
+                                      )
+                                 )
+                               ))
                         // Case D-friendIds/groupIds: cross-user array
                         // membership writes used by acceptFriendRequest
                         // (writes friendIds on the requester's doc),
@@ -276,15 +433,59 @@ service cloud.firestore {
     }
 
     // ── groups ────────────────────────────────────────────────────────────
-    // members carve-out REMOVED (Cheat #14). If we add a public-join flow
-    // later, carve out a tighter rule that only lets the auth user touch
-    // their OWN key in the members map.
+    // members carve-out REMOVED (Cheat #14), then SELF-JOIN-CARVEOUT
+    // RE-ADDED (B-M02 Wave-1 hardening, Marcus, 2026-05-08): the previous
+    // removal broke joinGroupByCode entirely — the joining user is not the
+    // creator, so the "creatorUid == request.auth.uid || isAdmin()" branch
+    // denied the members.{uid} write. Group-join has been silently broken
+    // since the Cheat-#14-fix shipped.
+    //
+    // Self-join carve-out:
+    //   - touches ONLY the `members` field (no name/code/creator rewrite)
+    //   - the diff against members keys MUST be exactly [request.auth.uid]
+    //   - the auth UID was NOT a member before (no double-join overwrite)
+    // That last check stops a member from rewriting their OWN entry to
+    // role:'admin' inside the members map (auth.js writes role:'member'
+    // for joiners). It also blocks kick-and-rejoin races.
+    //
+    // Leaving a group via Hard-rule-4-compliant `set+merge` writes a null
+    // marker on members.{uid}; the original member-entry is non-null so
+    // `not in resource.data.members.keys()` no longer holds. Removal is
+    // covered by either the creator path (creator clears another member),
+    // or the user's OWN delete-pattern (set members.{uid}: null) below.
     match /groups/{groupId} {
       allow read, list: if isAuth();
       allow create:     if isAuth() && request.resource.data.creatorUid == request.auth.uid;
       allow update:     if isAuth()
-                         && (resource.data.creatorUid == request.auth.uid
-                             || isAdmin());
+                         && (
+                              // Case A: creator does anything they want.
+                              resource.data.creatorUid == request.auth.uid
+                              || isAdmin()
+                              // Case B: self-join — touches only `members`,
+                              // diff is exactly the auth uid, the auth uid
+                              // was NOT already a member.
+                              || (
+                                   onlyChanged(['members'])
+                                   && request.resource.data.members
+                                        .diff(resource.data.members)
+                                        .affectedKeys()
+                                        .hasOnly([request.auth.uid])
+                                   && !(request.auth.uid in resource.data.members)
+                                 )
+                              // Case C: self-leave — touches only `members`,
+                              // diff is exactly the auth uid, the auth uid
+                              // WAS a member (Hard-rule-5-compliant null-
+                              // marker pattern: members.{uid}: null instead
+                              // of FieldValue.delete).
+                              || (
+                                   onlyChanged(['members'])
+                                   && request.resource.data.members
+                                        .diff(resource.data.members)
+                                        .affectedKeys()
+                                        .hasOnly([request.auth.uid])
+                                   && request.auth.uid in resource.data.members
+                                 )
+                            );
       allow delete:     if isAuth() && (resource.data.creatorUid == request.auth.uid || isAdmin());
     }
 
@@ -311,8 +512,61 @@ service cloud.firestore {
     //
     // Admin write stays open for manual anomaly correction via admin
     // tooling. Reads stay auth-only so the Rangliste UI keeps working.
+    // B-M04 / B-M05 / CHEAT-34 (Wave-1 hardening, Marcus, 2026-05-08):
+    // `lbOwnerSafeFields()` was previously only `[activeTheme,
+    // activeOutline, scores, updatedAt]` — too narrow. The Mirror-block in
+    // `grantXPAndAchievements` (app.js:5593) writes xp/displayName/photoURL/
+    // role to leaderboard/{uid}, and `setUserKlasse` (auth.js:setUserKlasse)
+    // mirrors `klasse`. Both fail silent at the rules layer. Result: SRS-
+    // power-users (no tests, only reviews) and class-changers see permanent
+    // mirror-drift on the leaderboard.
+    //
+    // We add the missing fields to the allow-list AND add a per-write
+    // `lbXpDeltaOk()` cap that mirrors users.xp's V-24 hardening — the
+    // leaderboard worker (submitTestResult) is still authoritative because
+    // it sets `xp` to (oldXp + totalXpDelta), but the owner can also write
+    // their own `xp` value as long as it does not exceed `users.xp`. That
+    // way an SRS-Mirror cannot inflate xp on the leaderboard while still
+    // letting the cosmetic-pick-mirror (activeTheme/activeOutline) and the
+    // legitimate xp-mirror (which equals the user-doc value) go through.
+    //
+    // klasse: must equal the user's actual users.{uid}.klasse (verified
+    // server-side via get()). Otherwise a klasse-mirror could be used to
+    // fake-jump leaderboards (e.g. set klasse:'12' to compete in 12th-grade
+    // ranking without studying that material).
+    //
+    // role/displayName/photoURL: cross-checked the same way — the owner
+    // mirrors what their users.{uid} doc already says, no impersonation.
     function lbOwnerSafeFields() {
-      return ['activeTheme', 'activeOutline', 'scores', 'updatedAt'];
+      return [
+        'activeTheme', 'activeOutline', 'scores', 'updatedAt',
+        'xp', 'displayName', 'photoURL', 'role', 'klasse'
+      ];
+    }
+    function lbXpEqualsUserDoc() {
+      return !('xp' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.xp
+               == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('xp', 0);
+    }
+    function lbKlasseEqualsUserDoc() {
+      return !('klasse' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.klasse
+               == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('klasse', null);
+    }
+    function lbDisplayNameEqualsUserDoc() {
+      return !('displayName' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.displayName
+               == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('name', null);
+    }
+    function lbPhotoEqualsUserDoc() {
+      return !('photoURL' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.photoURL
+               == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('photoURL', null);
+    }
+    function lbRoleEqualsUserDoc() {
+      return !('role' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.role
+               == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null);
     }
     match /leaderboard/{uid} {
       allow read, list: if isAuth();
@@ -331,6 +585,11 @@ service cloud.firestore {
                                  || (request.resource.data.scores is map
                                      && request.resource.data.scores.keys().size() == 0)
                                )
+                            && lbXpEqualsUserDoc()
+                            && lbKlasseEqualsUserDoc()
+                            && lbDisplayNameEqualsUserDoc()
+                            && lbPhotoEqualsUserDoc()
+                            && lbRoleEqualsUserDoc()
                           )
                           || isAdmin();
       allow delete:     if isOwner(uid) || isAdmin();
@@ -384,9 +643,31 @@ service cloud.firestore {
     // Kommentar-Eintraege — DAS ist die richtige Stelle (Subcollection!)
     // Cheat #11: likes-only branch tightened. A user may only flip THEIR
     // OWN key in the likes map, not the entire map.
+    //
+    // Wave-1 hardening 2026-05-08 (Marcus, CHEAT-30/33):
+    //   - On create, the comment author's `name`/`photo`/`role` MUST mirror
+    //     their users/{uid} doc (no admin-impersonation in the comment
+    //     bubble UI).
+    //   - `text` capped at 2000 chars — prevents user-doc-bloat / 1MB-DoS
+    //     via giant-comment spam.
+    //   - `createdAt` MUST equal request.time (no future-dated or
+    //     backdated comments to game ordering).
     match /comments/{topicKey}/entries/{commentId} {
       allow read, list: if isAuth();
-      allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow create:     if isAuth()
+                         && request.resource.data.uid == request.auth.uid
+                         && request.resource.data.text is string
+                         && request.resource.data.text.size() <= 2000
+                         && request.resource.data.createdAt == request.time
+                         && request.resource.data.name
+                              == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('name', null)
+                         && (
+                              request.resource.data.photo == null
+                              || request.resource.data.photo
+                                   == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('photoURL', null)
+                            )
+                         && request.resource.data.get('role', null)
+                              == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null);
       allow update:     if isAuth() && (
                             resource.data.uid == request.auth.uid
                             || isAdmin()
@@ -403,18 +684,55 @@ service cloud.firestore {
     // doc directly — Ethan owns the deeper fix (curated payload via a
     // future shareData Cloud Function in Mission 3). For now: lock down
     // the shareLinks doc itself so it cannot be enumerated.
+    //
+    // Wave-1 hardening 2026-05-08 (Marcus, CHEAT-38): expiry-stamp now
+    // required at create-time. The worker `getParentShareReport` checks
+    // `expiresAt > now` and rejects expired links. The rule does not
+    // enforce a max-TTL on create (the client picks the value), but it
+    // requires the field to be present so leaked old tokens cannot be
+    // re-purposed indefinitely.
     match /shareLinks/{tokenId} {
       allow get, list:  if isAuth() && resource.data.uid == request.auth.uid;
-      allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow create:     if isAuth()
+                         && request.resource.data.uid == request.auth.uid
+                         && request.resource.data.expiresAt is number;
       allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // ── appConfig ─────────────────────────────────────────────────────────
+    // B-M01 (Wave-1, Marcus, 2026-05-08): admin-only writes for app-wide
+    // configuration. The Admin-Tab's "Hilfsmittel speichern" button
+    // (app.js:6741) writes appConfig/subjectTools to override per-subject
+    // calculator/tafelwerk visibility. Without this rule the write was
+    // permission-denied, the toast was an error, and any saved override
+    // never persisted. Read is open to all authed users so the loadpath
+    // (app.js:8767) can apply the override to render-time tool gating.
+    match /appConfig/{docId} {
+      allow read:  if isAuth();
+      allow write: if isAdmin();
     }
 
     // ── bugReports ────────────────────────────────────────────────────────
     // Cheat #16: bind report.uid to request.auth.uid on create (already
     // done — restated explicitly here for clarity).
+    //
+    // Wave-1 hardening 2026-05-08 (Marcus, CHEAT-29): name + photoURL on
+    // the bug-report MUST mirror the reporter's users/{uid} doc — without
+    // this an attacker could file a "bug" as "Simon (admin)" and bait the
+    // real admin into clicking a phishing link from the bug-resolve UI.
+    // The auth-pair binding is on uid (already enforced), the display
+    // fields are now also pinned.
     match /bugReports/{reportId} {
       allow read, list: if isAuth();
-      allow create:     if isAuth() && request.resource.data.uid == request.auth.uid;
+      allow create:     if isAuth()
+                         && request.resource.data.uid == request.auth.uid
+                         && request.resource.data.name
+                              == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('name', null)
+                         && (
+                              request.resource.data.photoURL == null
+                              || request.resource.data.photoURL
+                                   == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('photoURL', null)
+                            );
       allow update:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
       allow delete:     if isAuth() && (resource.data.uid == request.auth.uid || isAdmin());
     }
