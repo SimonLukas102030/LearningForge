@@ -4,7 +4,14 @@
 
 import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
-import { initPhysikSimulations } from './physik-sim.js';
+// Bridge-Stub für Phase-0 Widget-Plugin-Migration (Commit 10):
+// physik-sim.js wurde nach widgets/physics-throw.js migriert. Bestehende
+// [data-sim]-Embeds in Müllers Wurfbewegungen-Topic werden in Welle 1 auf
+// widgetType:'physics-throw' umgeschrieben. Bis dahin sind die alten Embeds
+// inert (kein Render). Aufruf-Sites bleiben erhalten und werden in Commit 11
+// (Glue) komplett entfernt.
+// TODO: remove after Wave 1 — Müller migriert [data-sim]-Embeds zu widgetType:'physics-throw'
+function initPhysikSimulations(_container) { /* no-op — siehe Bridge-Stub oben */ }
 import { auth, db, logout, getUserData, saveGrade, saveGradeConfidence, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, getPublicLibraryTopics, getPendingApprovals, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, loginAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
