@@ -352,6 +352,15 @@
   --lf-pi-fb-correct: var(--success-subtle);
   --lf-pi-fb-wrong:   var(--danger-subtle);
 
+  /* Welle 5.5 — step-sequencer Light. */
+  --lf-sq-bg:         var(--bg-card);
+  --lf-sq-step-off:   var(--bg-input);
+  --lf-sq-kick:       #ef4444;
+  --lf-sq-snare:      #f97316;
+  --lf-sq-hihat:      #eab308;
+  --lf-sq-melody:     #3b82f6;
+  --lf-sq-cursor:     rgba(255, 255, 255, 0.55);
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -594,6 +603,15 @@
   --lf-pi-btn-active-text: #ffffff;
   --lf-pi-fb-correct:   var(--success-subtle);
   --lf-pi-fb-wrong:     var(--danger-subtle);
+
+  /* Welle 5.5 — step-sequencer Dark. */
+  --lf-sq-bg:         var(--bg-card);
+  --lf-sq-step-off:   var(--bg-input);
+  --lf-sq-kick:       #f87171;
+  --lf-sq-snare:      #fb923c;
+  --lf-sq-hihat:      #facc15;
+  --lf-sq-melody:     #60a5fa;
+  --lf-sq-cursor:     rgba(255, 255, 255, 0.45);
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -11414,4 +11432,176 @@ input.lf-fb-blank.lf-fb-pulse {
     flex: 1 1 100%;
   }
   .lf-widget-piano-intervals { padding: 12px; }
+}
+
+/* ── Welle 5.5 — step-sequencer Widget ───────────────────
+   16-Step-Grid × 4 Spuren. Lookahead-Web-Audio.
+   Layout: Header (Titel + Controls) → Grid (4 Spuren). */
+
+.lf-widget-step-sequencer {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--lf-sq-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  box-sizing: border-box;
+}
+
+/* ── Header ── */
+.lf-sq-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+.lf-sq-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lf-sq-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Buttons ── */
+.lf-sq-btn {
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.lf-sq-btn:hover {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  color: #fff;
+}
+.lf-sq-play-btn.lf-sq-playing {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  color: #fff;
+}
+
+/* ── BPM Slider ── */
+.lf-sq-bpm-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: default;
+}
+.lf-sq-bpm-label {
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+.lf-sq-bpm-label b {
+  color: var(--text);
+  font-weight: 700;
+  min-width: 2ch;
+  display: inline-block;
+}
+.lf-sq-bpm-slider {
+  width: 90px;
+  accent-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  cursor: pointer;
+}
+
+/* ── Grid ── */
+.lf-sq-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lf-sq-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lf-sq-label {
+  width: 52px;
+  min-width: 52px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+/* Per-track label accent color */
+.lf-sq-label-kick   { color: var(--lf-sq-kick);   }
+.lf-sq-label-snare  { color: var(--lf-sq-snare);  }
+.lf-sq-label-hihat  { color: var(--lf-sq-hihat);  }
+.lf-sq-label-melody { color: var(--lf-sq-melody); }
+
+.lf-sq-steps {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* ── Step Buttons ── */
+.lf-sq-step {
+  flex: 1 1 0;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--lf-sq-step-off);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, box-shadow 0.08s;
+  padding: 0;
+}
+.lf-sq-step:hover {
+  border-color: var(--text-muted);
+  filter: brightness(1.12);
+}
+/* On-state per track */
+[data-sq-row="kick"]   .lf-sq-step.lf-sq-on { background: var(--lf-sq-kick);   border-color: var(--lf-sq-kick);   }
+[data-sq-row="snare"]  .lf-sq-step.lf-sq-on { background: var(--lf-sq-snare);  border-color: var(--lf-sq-snare);  }
+[data-sq-row="hihat"]  .lf-sq-step.lf-sq-on { background: var(--lf-sq-hihat);  border-color: var(--lf-sq-hihat);  }
+[data-sq-row="melody"] .lf-sq-step.lf-sq-on { background: var(--lf-sq-melody); border-color: var(--lf-sq-melody); }
+
+/* Cursor (aktiver Spielschritt) */
+.lf-sq-step.lf-sq-cursor {
+  box-shadow: inset 0 0 0 2px var(--lf-sq-cursor), 0 0 6px 1px var(--lf-sq-cursor);
+}
+
+/* ── Empty state ── */
+.lf-sq-empty {
+  padding: 16px;
+  color: var(--danger-text);
+  background: var(--danger-subtle);
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 520px) {
+  .lf-sq-header { gap: 8px; }
+  .lf-sq-label  { width: 40px; min-width: 40px; font-size: 10px; }
+  .lf-sq-bpm-slider { width: 70px; }
+  .lf-sq-steps  { gap: 2px; }
+  .lf-sq-step   { border-radius: 3px; }
+}
+@media (max-width: 380px) {
+  .lf-widget-step-sequencer { padding: 10px 8px; }
+  .lf-sq-label { width: 32px; min-width: 32px; }
 }

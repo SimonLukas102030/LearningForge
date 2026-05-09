@@ -47,6 +47,7 @@ export const WIDGET_REGISTRY = {
   'tense-timeline':        () => import('./tense-timeline.js?v=' + WIDGET_VERSION),
   'conditional-builder':   () => import('./conditional-builder.js?v=' + WIDGET_VERSION),
   'piano-intervals':       () => import('./piano-intervals.js?v=' + WIDGET_VERSION),
+  'step-sequencer':        () => import('./step-sequencer.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.
