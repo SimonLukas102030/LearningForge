@@ -255,6 +255,19 @@
   --lf-tv-tangent:   #ef4444;            /* Tangente (rot, gestrichelt) */
   --lf-tv-text:      var(--sim-text);
 
+  /* Welle 3.2 — unit-circle-sync. Einheitskreis + Sinus-/Cosinus-Welle.
+     Pure SVG, alle Farben ueber CSS-Vars. Light. */
+  --lf-uc-bg:         var(--bg-card);
+  --lf-uc-circle:     var(--text-muted);
+  --lf-uc-radius:     var(--accent);
+  --lf-uc-point:      #ef4444;            /* red-500: Punkt P */
+  --lf-uc-projection: var(--text-muted);
+  --lf-uc-sin:        #0ea5e9;            /* sky-500 */
+  --lf-uc-cos:        #f97316;            /* orange-500 */
+  --lf-uc-axis:       var(--text-muted);
+  --lf-uc-arc:        var(--accent);
+  --lf-uc-wave-bg:    var(--bg-input);
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -418,6 +431,12 @@
   --lf-tv-point-q:   #60a5fa;          /* blue-400 */
   --lf-tv-secant:    #60a5fa;          /* blue-400 */
   --lf-tv-tangent:   #f87171;          /* red-400 */
+
+  /* Welle 3.2 — unit-circle-sync Dark. Punkt + Wellen aufgehellt fuer
+     Kontrast auf dunklem Card-BG. Radius/Arc erben --accent. */
+  --lf-uc-point:      #f87171;          /* red-400 */
+  --lf-uc-sin:        #38bdf8;          /* sky-400 */
+  --lf-uc-cos:        #fb923c;          /* orange-400 */
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -1844,6 +1863,197 @@ input, textarea, select { font-family: var(--font); }
   color: var(--lf-tv-tangent);
   font-weight: 600;
 }
+
+/* Welle 3.2 — unit-circle-sync widget-specific layout. */
+.lf-uc-host { /* erbt von .lf-widget-process-flow (margin/padding/border-left) */ }
+.lf-uc-title {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.lf-uc-stage {
+  width: 100%;
+  background: var(--lf-uc-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.lf-uc-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  touch-action: none;
+  cursor: grab;
+}
+.lf-uc-svg:active { cursor: grabbing; }
+
+.lf-uc-axis-line {
+  stroke: var(--lf-uc-axis);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+.lf-uc-axis-label {
+  fill: var(--text-muted);
+  font: 600 11px sans-serif;
+  pointer-events: none;
+}
+.lf-uc-axis-tick {
+  fill: var(--text-muted);
+  font: 10px sans-serif;
+  pointer-events: none;
+}
+.lf-uc-circle {
+  fill: none;
+  stroke: var(--lf-uc-circle);
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+.lf-uc-radius {
+  stroke: var(--lf-uc-radius);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.lf-uc-projection {
+  stroke: var(--lf-uc-projection);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.8;
+}
+.lf-uc-projection-x { stroke: var(--lf-uc-cos); opacity: 0.7; }
+.lf-uc-projection-y { stroke: var(--lf-uc-sin); opacity: 0.7; }
+.lf-uc-point {
+  fill: var(--lf-uc-point);
+  stroke: var(--bg-card);
+  stroke-width: 2;
+  cursor: grab;
+}
+.lf-uc-point:active { cursor: grabbing; }
+.lf-uc-origin {
+  fill: var(--text-muted);
+}
+.lf-uc-arc {
+  fill: none;
+  stroke: var(--lf-uc-arc);
+  stroke-width: 2;
+  opacity: 0.55;
+}
+
+/* Wellen-Bereich. */
+.lf-uc-wave-bg {
+  fill: var(--lf-uc-wave-bg);
+  opacity: 0.45;
+}
+.lf-uc-wave-axis {
+  stroke: var(--lf-uc-axis);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+.lf-uc-wave-label {
+  fill: var(--text-muted);
+  font: 600 11px sans-serif;
+  pointer-events: none;
+}
+.lf-uc-wave-sin {
+  fill: none;
+  stroke: var(--lf-uc-sin);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.lf-uc-wave-cos {
+  fill: none;
+  stroke: var(--lf-uc-cos);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.lf-uc-wave-marker-line {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+.lf-uc-wave-marker-dot {
+  stroke: var(--bg-card);
+  stroke-width: 1.5;
+}
+.lf-uc-wave-marker-sin { fill: var(--lf-uc-sin); }
+.lf-uc-wave-marker-cos { fill: var(--lf-uc-cos); }
+
+/* Controls. */
+.lf-uc-controls {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lf-uc-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lf-uc-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+}
+.lf-uc-slider-label {
+  color: var(--text);
+  font-weight: 500;
+}
+.lf-uc-slider-value {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+.lf-uc-slider {
+  width: 100%;
+  accent-color: var(--lf-uc-radius);
+}
+.lf-uc-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lf-uc-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.lf-uc-btn:hover:not(:disabled) {
+  background: var(--bg-card);
+  border-color: var(--lf-uc-radius);
+}
+.lf-uc-btn[aria-pressed="true"] {
+  background: var(--lf-uc-radius);
+  color: var(--bg-card);
+  border-color: var(--lf-uc-radius);
+}
+.lf-uc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.lf-uc-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color: var(--text);
+}
+.lf-uc-rd b { font-weight: 700; }
+.lf-uc-rd-sin { color: var(--lf-uc-sin); }
+.lf-uc-rd-cos { color: var(--lf-uc-cos); }
 
 /* Collapsible details */
 .content-body details.lf-collapse {
