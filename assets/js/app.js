@@ -21,7 +21,7 @@ import { lfIcon, lfFlag, ICONS as LUCIDE_ICONS, FLAGS as FLAG_ICONS } from './ic
 
 // ── Globaler State ───────────────────────
 // Jake bumpt APP_VERSION zusammen mit sw.js CACHE_NAME bei jedem Release.
-const APP_VERSION   = 'lf-v40';
+const APP_VERSION   = 'lf-v41';
 const ADMIN_EMAIL = 'simonkoper27@gmail.com';
 
 // ── Rollen-Helper ─────────────────────────
