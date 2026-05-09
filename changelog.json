@@ -2,6 +2,15 @@
   "_comment": "Liste aller inhaltlichen Änderungen am Lernmaterial. Neueste zuerst. Felder: date (YYYY-MM-DD), type (added|expanded|fixed), subject, year, topic, title, description.",
   "entries": [
     {
+      "date": "2026-05-09",
+      "type": "added",
+      "subject": "",
+      "year": "",
+      "topic": "",
+      "title": "13 neue interaktive Widgets (Wellen 1–3)",
+      "description": "Newton-Kraft-Animator, Funktions-Plotter, Wellenüberlagerung, Pendel, Zeitstrahl-Drop, Treibhauseffekt-Flow, Phasen-Stepper, pH-Titration, Stöchiometrie-Balancer, Sekante→Tangente, Einheitskreis, Vektor-Addition, Wahrscheinlichkeitsbaum. Über 30 Topics in Mathe, Physik, Bio, Chemie, Geo, Geschichte neu animiert."
+    },
+    {
       "date": "2026-05-07",
       "type": "added",
       "subject": "",

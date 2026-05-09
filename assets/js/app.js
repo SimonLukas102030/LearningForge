@@ -20,6 +20,8 @@ import * as cf from './cf.js';
 import { lfIcon, lfFlag, ICONS as LUCIDE_ICONS, FLAGS as FLAG_ICONS } from './icons.js';
 
 // ── Globaler State ───────────────────────
+// Jake bumpt APP_VERSION zusammen mit sw.js CACHE_NAME bei jedem Release.
+const APP_VERSION   = 'lf-v40';
 const ADMIN_EMAIL = 'simonkoper27@gmail.com';
 
 // ── Rollen-Helper ─────────────────────────
@@ -1215,6 +1217,7 @@ function renderDashboard() {
       ${renderChangelogSection()}
       ${recentHtml}
       <div id="bugReportSection"></div>
+      <div style="text-align:center;margin-top:32px;font-size:11px;color:var(--text-muted);letter-spacing:.04em;user-select:none">${APP_VERSION}</div>
     </div>
     <!-- Bug-Report-FAB nur Mobile (CSS @media) — Mission 1 Open-Q-3 -->
     <button class="bug-fab" data-tour="bug-fab" onclick="window.LF.openBugReport()" title="Problem melden" aria-label="Problem melden">${lfIcon('bug')}</button>`;
