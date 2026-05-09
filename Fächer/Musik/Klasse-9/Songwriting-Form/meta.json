@@ -1,5 +1,5 @@
 {
-  "name": "Songwriting &amp; Form",
+  "name": "Songwriting & Form",
   "description": "Wie aus 3 Minuten Musik ein Song wird, der hängenbleibt.",
   "subtopics": [
     {
@@ -22,13 +22,47 @@
           ],
           "correctOrder": ["intro", "v1", "c1", "v2", "c2", "br", "c3", "out"],
           "reveal": "Standard-Pop-Song: Intro → Strophe 1 → Refrain → Strophe 2 → Refrain → Bridge → Refrain → Outro. Die Bridge bricht die Wiederholung auf und gibt dem Song neuen Schwung. Der finale Refrain ist oft die Steigerung — lauter, höher, voller."
-        }}
+        }},
+        {
+          "type": "widget",
+          "widgetType": "step-sequencer",
+          "config": {
+            "label": "Rhythmus-Maschine — baue deinen ersten Beat",
+            "bpm": 120,
+            "steps": 16,
+            "pattern": {
+              "kick":   [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+              "snare":  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+              "hihat":  [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+              "melody": [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0]
+            }
+          }
+        },
+        {"type": "text", "content": "<div class=\"lf-box lf-info\"><strong>Rhythmus und Songform:</strong> Der vorgeladene Beat zeigt einen typischen 4/4-Takt — Kick auf 1 und 3, Snare auf 2 und 4. Das ist das Grundgerüst eines Strophen- oder Refrain-Beats. Verändere das Pattern und höre, wie der Charakter kippt.</div>"}
       ]
     },
     {
       "name": "Andere Formen — AABA, Verse-Pre-Chorus-Chorus, 12-Bar-Blues",
       "description": "Variationen für verschiedene Genres.",
-      "content": "<h3>AABA (klassische Popform)</h3><p>A = Hauptteil. B = Bridge (Kontrast). Beispiel: viele Beatles-Songs.</p><h3>Verse-Pre-Chorus-Chorus</h3><p>Pre-Chorus baut Spannung auf, Chorus löst sie. Standardform im modernen Pop.</p><h3>12-Bar-Blues</h3><p>12 Takte mit fester Akkordfolge: I-I-I-I-IV-IV-I-I-V-IV-I-V. Grundlage von Blues, Rock, R&amp;B.</p>"
+      "blocks": [
+        {"type": "text", "content": "<h3>AABA (klassische Popform)</h3><p>A = Hauptteil. B = Bridge (Kontrast). Beispiel: viele Beatles-Songs.</p><h3>Verse-Pre-Chorus-Chorus</h3><p>Pre-Chorus baut Spannung auf, Chorus löst sie. Standardform im modernen Pop.</p><h3>12-Bar-Blues</h3><p>12 Takte mit fester Akkordfolge: I-I-I-I-IV-IV-I-I-V-IV-I-V. Grundlage von Blues, Rock, R&amp;B.</p><p>Im 12-Bar-Blues ist der Rhythmus genauso fest wie die Akkorde. Ein typischer Blues-Beat hat ein <em>Shuffle</em>-Gefühl — die Achtel werden leicht verzögert.</p>"},
+        {
+          "type": "widget",
+          "widgetType": "step-sequencer",
+          "config": {
+            "label": "Blues-Rhythmus — Shuffle-Beat",
+            "bpm": 100,
+            "steps": 16,
+            "pattern": {
+              "kick":   [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0],
+              "snare":  [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+              "hihat":  [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0],
+              "melody": [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0]
+            }
+          }
+        },
+        {"type": "text", "content": "<div class=\"lf-box lf-info\"><strong>Tipp:</strong> Der Blues-Beat unterscheidet sich vom Pop-Beat durch den synkopierten Kick und das verschobene Hihat-Pattern. Das gibt den typischen „Swing“-Charakter. Vergleiche beide Beats — hörst du den Unterschied?</div>"}
+      ]
     },
     {
       "name": "Hook und Bridge — was macht einen Song memorabel?",

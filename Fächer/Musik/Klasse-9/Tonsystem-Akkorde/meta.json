@@ -1,16 +1,42 @@
 {
-  "name": "Tonsystem &amp; Akkorde",
+  "name": "Tonsystem & Akkorde",
   "description": "Wie aus 12 Tönen Tonleitern werden, wie aus Tonleitern Dreiklänge entstehen.",
   "subtopics": [
     {
-      "name": "Töne &amp; Tonsystem (chromatisch)",
+      "name": "Töne & Tonsystem (chromatisch)",
       "description": "Die 12 Töne, aus denen alle Musik besteht.",
-      "content": "<h3>Die 12 Töne</h3><p>In der westlichen Musik gibt es <strong>12 Töne</strong> pro Oktave: C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B/H</p><div class=\"lf-formula\">Halbtonschritt = kleinster Schritt | Ganztonschritt = 2 Halbtöne</div><h3>Klaviertastatur</h3><p>Weiße Tasten: C, D, E, F, G, A, H. Schwarze Tasten: die Fünf dazwischen (Cis, Dis, Fis, Gis, Ais).</p><div class=\"lf-box lf-info\"><strong>Achtung:</strong> Zwischen E→F und H→C ist nur ein Halbtonschritt (keine schwarze Taste). Sonst zwei Halbtonschritte.</div>"
+      "blocks": [
+        {"type": "text", "content": "<h3>Die 12 Töne</h3><p>In der westlichen Musik gibt es <strong>12 Töne</strong> pro Oktave: C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B/H</p><div class=\"lf-formula\">Halbtonschritt = kleinster Schritt | Ganztonschritt = 2 Halbtöne</div><h3>Klaviertastatur</h3><p>Weiße Tasten: C, D, E, F, G, A, H. Schwarze Tasten: die Fünf dazwischen (Cis, Dis, Fis, Gis, Ais).</p><div class=\"lf-box lf-info\"><strong>Achtung:</strong> Zwischen E→F und H→C ist nur ein Halbtonschritt (keine schwarze Taste). Sonst zwei Halbtonschritte.</div>"},
+        {
+          "type": "widget",
+          "widgetType": "piano-intervals",
+          "config": {
+            "label": "Töne und Halbtöne am Klavier",
+            "mode": "play",
+            "octaves": 2,
+            "startNote": "C4"
+          }
+        },
+        {"type": "text", "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">12 chromatische Töne pro Oktave. Zwischen E-F und H-C nur Halbtonschritt — keine schwarze Taste dazwischen. Alles andere: zwei Halbtöne = ein Ganztonschritt.</div></div>"}
+      ]
     },
     {
       "name": "Intervalle — der Abstand zwischen zwei Tönen",
       "description": "Sekunde, Terz, Quinte — was bedeuten diese Namen?",
-      "content": "<table class=\"lf-table\"><thead><tr><th>Intervall</th><th>Halbtöne</th><th>Beispiel</th></tr></thead><tbody><tr><td>Prime</td><td>0</td><td>C-C</td></tr><tr><td>kleine Sekunde</td><td>1</td><td>C-Cis</td></tr><tr><td>große Sekunde</td><td>2</td><td>C-D</td></tr><tr><td>kleine Terz</td><td>3</td><td>C-Es (Moll)</td></tr><tr><td>große Terz</td><td>4</td><td>C-E (Dur)</td></tr><tr><td>Quarte</td><td>5</td><td>C-F</td></tr><tr><td>Quinte</td><td>7</td><td>C-G</td></tr><tr><td>Oktave</td><td>12</td><td>C-c</td></tr></tbody></table><div class=\"lf-box lf-info\"><strong>Klangcharakter:</strong> Prime, Oktave, Quinte = sehr konsonant (wohlklingend). Kleine Sekunde, Tritonus = dissonant (spannungsvoll).</div>"
+      "blocks": [
+        {"type": "text", "content": "<table class=\"lf-table\"><thead><tr><th>Intervall</th><th>Halbtöne</th><th>Beispiel</th></tr></thead><tbody><tr><td>Prime</td><td>0</td><td>C-C</td></tr><tr><td>kleine Sekunde</td><td>1</td><td>C-Cis</td></tr><tr><td>große Sekunde</td><td>2</td><td>C-D</td></tr><tr><td>kleine Terz</td><td>3</td><td>C-Es (Moll)</td></tr><tr><td>große Terz</td><td>4</td><td>C-E (Dur)</td></tr><tr><td>Quarte</td><td>5</td><td>C-F</td></tr><tr><td>Quinte</td><td>7</td><td>C-G</td></tr><tr><td>Oktave</td><td>12</td><td>C-c</td></tr></tbody></table><div class=\"lf-box lf-info\"><strong>Klangcharakter:</strong> Prime, Oktave, Quinte = sehr konsonant (wohlklingend). Kleine Sekunde, Tritonus = dissonant (spannungsvoll).</div>"},
+        {
+          "type": "widget",
+          "widgetType": "piano-intervals",
+          "config": {
+            "label": "Intervalle hören und spielen",
+            "mode": "play",
+            "octaves": 2,
+            "startNote": "C4"
+          }
+        },
+        {"type": "text", "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Intervall = Abstand in Halbtönen. Kleine Terz (3 Halbtöne) = Moll-Klang. Große Terz (4 Halbtöne) = Dur-Klang. Diese zwei sind der Schlüssel zu Akkorden.</div></div>"}
+      ]
     },
     {
       "name": "Dur- und Moll-Tonleiter",

@@ -19,6 +19,45 @@
           ],
           "reveal": "Faustregel: jede Zeitform geht einen Schritt zurück. Modale folgen demselben Prinzip: can → could, may → might, must → had to. past simple wird zu past perfect (denn weiter zurück als past perfect geht es nicht)."
         }},
+        {
+          "type": "widget",
+          "widgetType": "tense-timeline",
+          "config": {
+            "label": "Backshift — welche Zeit passt nach dem Reporting Verb?",
+            "sentences": [
+              {
+                "verb": "to be",
+                "context": "Anna said she ___ tired. (direkt: „I am tired.“)",
+                "zones": {
+                  "present": { "tense": "Simple Present", "form": "is", "hint": "Kein Backshift — nur korrekt wenn Reporting Verb im Präsens steht (says)." },
+                  "past": { "tense": "Simple Past", "form": "was", "hint": "Richtig! 'said' ist Vergangenheit → Backshift: am → was." },
+                  "future": { "tense": "Will-Future", "form": "will be", "hint": "Zukunft macht hier keinen Sinn — sie war damals müde." }
+                },
+                "correct": "past"
+              },
+              {
+                "verb": "to go",
+                "context": "He told me he ___ to the concert. (direkt: „I went to the concert.“)",
+                "zones": {
+                  "present": { "tense": "Simple Present", "form": "goes", "hint": "Present? Nein — der Kontext ist Vergangenheit." },
+                  "past": { "tense": "Past Perfect", "form": "had gone", "hint": "Richtig! Simple Past (went) wird zu Past Perfect (had gone) — weitere Rückverschiebung." },
+                  "future": { "tense": "Will-Future", "form": "would go", "hint": "Would go = Backshift von will go, nicht von went." }
+                },
+                "correct": "past"
+              },
+              {
+                "verb": "to finish",
+                "context": "She says she ___ the homework. (direkt: „I finish the homework.“)",
+                "zones": {
+                  "present": { "tense": "Simple Present", "form": "finishes", "hint": "Richtig! 'says' ist Präsens → kein Backshift nötig." },
+                  "past": { "tense": "Simple Past", "form": "finished", "hint": "Backshift wäre nur nötig wenn das Reporting Verb in der Vergangenheit steht (said)." },
+                  "future": { "tense": "Will-Future", "form": "will finish", "hint": "Zukunft — nur bei Backshift von will (wenn said statt says)." }
+                },
+                "correct": "present"
+              }
+            ]
+          }
+        },
         {"type": "text", "content": "<h3>Pronomen anpassen</h3><ul><li><em>„I love my dog.“</em> (Tom) → <em>Tom said he loved his dog.</em></li><li><em>„You are my best friend.“</em> (Lisa zu mir) → <em>Lisa said I was her best friend.</em></li></ul><h3>Zeit- und Ortsangaben</h3><table class=\"lf-table\"><thead><tr><th>Direkt</th><th>Reported</th></tr></thead><tbody><tr><td>now</td><td>then</td></tr><tr><td>today</td><td>that day</td></tr><tr><td>yesterday</td><td>the day before</td></tr><tr><td>tomorrow</td><td>the next/following day</td></tr><tr><td>here</td><td>there</td></tr></tbody></table><h3>Wann <em>kein</em> Backshift?</h3><div class=\"lf-box lf-info\"><strong>Ausnahme:</strong> Wenn das Reporting Verb in der <strong>Gegenwart</strong> steht (<em>says, tells</em>), bleibt die Zeit, wie sie ist. <em>„I am tired.“</em> → <em>She <strong>says</strong> she is tired.</em> — kein Backshift nötig.</div><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Reported Speech ohne Anführungszeichen. Drei Anpassungen: Pronomen logisch, Zeit eine Stufe zurück, Zeit-/Ortswörter ebenfalls verschieben.</div></div>"}
       ]
     },
@@ -30,7 +69,15 @@
     {
       "name": "Special cases (questions, commands)",
       "description": "Wenn die direkte Rede keine Aussage ist — sondern eine Frage oder ein Befehl.",
-      "content": "<p>Bisher hatten wir nur Aussagesätze. Aber was, wenn jemand etwas fragt oder befiehlt? Da gelten Sonderregeln.</p><h3>1. Yes/No-Fragen → if / whether</h3><div class=\"lf-formula\">ask (+ sb) + if/whether + Subject + Verb (Aussagesatz-Wortstellung!)</div><ul><li><em>„Are you OK?“</em> → <em>She asked me <strong>if</strong> I <strong>was</strong> OK.</em></li><li><em>„Do you speak French?“</em> → <em>He asked her <strong>if</strong> she <strong>spoke</strong> French.</em></li></ul><div class=\"lf-box lf-warn\"><strong>Wichtigster Punkt:</strong> Die Wortstellung wechselt zu <strong>Aussagesatz</strong>! Kein <em>do/does/did</em> mehr.</div><h3>2. W-Fragen → question word bleibt</h3><div class=\"lf-formula\">ask (+ sb) + question-word + Subject + Verb</div><ul><li><em>„Where do you live?“</em> → <em>She asked me <strong>where</strong> I lived.</em></li><li><em>„Why are you crying?“</em> → <em>He asked her <strong>why</strong> she was crying.</em></li></ul><h3>3. Befehle und Bitten → to-Infinitiv</h3><div class=\"lf-formula\">tell/ask/order (+ sb) + (not) + to + infinitive</div><ul><li><em>„Sit down!“</em> → <em>The teacher told us <strong>to sit down</strong>.</em></li><li><em>„Don&apos;t be late.“</em> → <em>She told him <strong>not to be</strong> late.</em></li></ul><dl class=\"lf-def\"><dt>tell sb to do sth</dt><dd>neutral bis bestimmt</dd><dt>ask sb to do sth</dt><dd>höflich</dd><dt>order sb to do sth</dt><dd>streng</dd><dt>warn sb (not) to do sth</dt><dd>warnen</dd></dl><div class=\"lf-box lf-warn\"><strong>Typische Fehler:</strong><br>• Frage-Wortstellung beibehalten: <em>where do I live</em> — falsch. Richtig: <em>where I lived</em>.<br>• Fragezeichen bei indirekten Fragen: nein, immer Punkt.<br>• <em>do/does/did</em> mitübernehmen: nein.</div><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Yes/No-Frage → <em>if/whether</em>. W-Frage → Fragewort bleibt. Beide werden zu Aussagesätzen. Befehle/Bitten → <em>(not) to</em> + Infinitiv.</div></div>"
+      "blocks": [
+        {"type": "text", "content": "<p>Bisher hatten wir nur Aussagesätze. Aber was, wenn jemand etwas fragt oder befiehlt? Da gelten Sonderregeln.</p><h3>1. Yes/No-Fragen → if / whether</h3><div class=\"lf-formula\">ask (+ sb) + if/whether + Subject + Verb (Aussagesatz-Wortstellung!)</div><ul><li><em>„Are you OK?“</em> → <em>She asked me <strong>if</strong> I <strong>was</strong> OK.</em></li><li><em>„Do you speak French?“</em> → <em>He asked her <strong>if</strong> she <strong>spoke</strong> French.</em></li></ul><div class=\"lf-box lf-warn\"><strong>Wichtigster Punkt:</strong> Die Wortstellung wechselt zu <strong>Aussagesatz</strong>! Kein <em>do/does/did</em> mehr.</div><h3>2. W-Fragen → question word bleibt</h3><div class=\"lf-formula\">ask (+ sb) + question-word + Subject + Verb</div><ul><li><em>„Where do you live?“</em> → <em>She asked me <strong>where</strong> I lived.</em></li><li><em>„Why are you crying?“</em> → <em>He asked her <strong>why</strong> she was crying.</em></li></ul><h3>3. Befehle und Bitten → to-Infinitiv</h3><div class=\"lf-formula\">tell/ask/order (+ sb) + (not) + to + infinitive</div><ul><li><em>„Sit down!“</em> → <em>The teacher told us <strong>to sit down</strong>.</em></li><li><em>„Don&apos;t be late.“</em> → <em>She told him <strong>not to be</strong> late.</em></li></ul><dl class=\"lf-def\"><dt>tell sb to do sth</dt><dd>neutral bis bestimmt</dd><dt>ask sb to do sth</dt><dd>höflich</dd><dt>order sb to do sth</dt><dd>streng</dd><dt>warn sb (not) to do sth</dt><dd>warnen</dd></dl><div class=\"lf-box lf-warn\"><strong>Typische Fehler:</strong><br>• Frage-Wortstellung beibehalten: <em>where do I live</em> — falsch. Richtig: <em>where I lived</em>.<br>• Fragezeichen bei indirekten Fragen: nein, immer Punkt.<br>• <em>do/does/did</em> mitübernehmen: nein.</div>"},
+        {
+          "type": "widget",
+          "widgetType": "conditional-builder",
+          "config": { "label": "If-Satz-Typen — Überblick", "showExplanation": true }
+        },
+        {"type": "text", "content": "<div class=\"lf-box lf-info\"><strong>Verbindung zu Conditionals:</strong> In Reported Speech musst du manchmal auch Conditional-Sätze verschieben. <em>„If it rains, I will stay.“</em> → <em>She said that if it rained, she would stay.</em> (Type 1 → Backshift zu Type 2-Form!)</div><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Yes/No-Frage → <em>if/whether</em>. W-Frage → Fragewort bleibt. Beide werden zu Aussagesätzen. Befehle/Bitten → <em>(not) to</em> + Infinitiv.</div></div>"}
+      ]
     }
   ]
 }
