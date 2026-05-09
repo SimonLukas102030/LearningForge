@@ -1,6 +1,6 @@
 {
   "name": "Mendel-Vererbung",
-  "description": "Wie Merkmale vererbt werden &mdash; mit Erbsen, Quadraten und einem M&ouml;nch namens Gregor.",
+  "description": "Wie Merkmale vererbt werden — mit Erbsen, Quadraten und einem Mönch namens Gregor.",
   "subtopics": [
     {
       "name": "Mendels Erbsen &amp; die Begriffe",
@@ -8,35 +8,35 @@
       "blocks": [
         {"type": "text", "content": "<p>Gregor Mendel kreuzte Erbsen im Klostergarten und entdeckte 1865 die Vererbungsgesetze.</p><h3>Wichtige Begriffe</h3>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
-          "setup": "Die Grundvokabeln der Genetik &mdash; ohne sie keine Mendel-Aufgabe l&ouml;sbar.",
+          "setup": "Die Grundvokabeln der Genetik — ohne sie keine Mendel-Aufgabe lösbar.",
           "question": "Verbinde Begriff mit Definition.",
           "pairs": [
             {"id": "gen", "left": "Gen", "right": "Abschnitt der DNA mit Bauanleitung"},
-            {"id": "all", "left": "Allel", "right": "Variante eines Gens (z.B. f&uuml;r rote/wei&szlig;e Bl&uuml;ten)"},
+            {"id": "all", "left": "Allel", "right": "Variante eines Gens (z.B. für rote/weiße Blüten)"},
             {"id": "gen2", "left": "Genotyp", "right": "Genetische Ausstattung (z.B. RR, Rr, rr)"},
-            {"id": "phen", "left": "Ph&auml;notyp", "right": "Sichtbares Merkmal (z.B. rote Bl&uuml;ten)"},
-            {"id": "hom", "left": "Homozygot", "right": "Beide Allele gleich (RR oder rr) &mdash; reinerbig"},
-            {"id": "het", "left": "Heterozygot", "right": "Allele verschieden (Rr) &mdash; mischerbig"}
+            {"id": "phen", "left": "Phänotyp", "right": "Sichtbares Merkmal (z.B. rote Blüten)"},
+            {"id": "hom", "left": "Homozygot", "right": "Beide Allele gleich (RR oder rr) — reinerbig"},
+            {"id": "het", "left": "Heterozygot", "right": "Allele verschieden (Rr) — mischerbig"}
           ],
-          "reveal": "Genotyp ist die genetische Information, Ph&auml;notyp ist was man sieht. Bei dominant-rezessiv: Rr sieht aus wie RR (beide rot), aber genotypisch verschieden."
+          "reveal": "Genotyp ist die genetische Information, Phänotyp ist was man sieht. Bei dominant-rezessiv: Rr sieht aus wie RR (beide rot), aber genotypisch verschieden."
         }},
-        {"type": "text", "content": "<h3>Dominant vs. rezessiv</h3><dl class=\"lf-def\"><dt>Dominantes Allel (gro&szlig;er Buchstabe, R)</dt><dd>Setzt sich gegen rezessives durch. Im heterozygoten Zustand sichtbar.</dd><dt>Rezessives Allel (kleiner Buchstabe, r)</dt><dd>Wird vom dominanten verdr&auml;ngt. Nur sichtbar, wenn beide Allele rezessiv (rr).</dd></dl>"}
+        {"type": "text", "content": "<h3>Dominant vs. rezessiv</h3><dl class=\"lf-def\"><dt>Dominantes Allel (großer Buchstabe, R)</dt><dd>Setzt sich gegen rezessives durch. Im heterozygoten Zustand sichtbar.</dd><dt>Rezessives Allel (kleiner Buchstabe, r)</dt><dd>Wird vom dominanten verdrängt. Nur sichtbar, wenn beide Allele rezessiv (rr).</dd></dl>"}
       ]
     },
     {
-      "name": "Mendel'sche Regeln 1&ndash;3",
+      "name": "Mendel'sche Regeln 1–3",
       "description": "Die drei Vererbungsgesetze.",
-      "content": "<h3>1. Uniformit&auml;tsregel</h3><p>Kreuzt man zwei reinerbige Eltern (RR &times; rr), sind alle Kinder (F1) genotypisch und ph&auml;notypisch <strong>gleich</strong> (alle Rr, alle rot).</p><h3>2. Spaltungsregel</h3><p>Kreuzt man F1-Tiere/Pflanzen miteinander (Rr &times; Rr), spalten sich die Merkmale in der F2-Generation auf:</p><div class=\"lf-formula\">Genotyp: 1 RR : 2 Rr : 1 rr<br>Ph&auml;notyp: 3 rot : 1 wei&szlig;</div><h3>3. Unabh&auml;ngigkeitsregel</h3><p>Werden zwei Merkmale gleichzeitig betrachtet (z.B. Farbe + Form), werden sie unabh&auml;ngig vererbt &mdash; in der F2 ergibt sich das Verh&auml;ltnis 9:3:3:1.</p><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Die 3. Regel gilt nur, wenn die Gene auf <em>verschiedenen</em> Chromosomen liegen. Auf demselben Chromosom: Kopplung.</div>"
+      "content": "<h3>1. Uniformitätsregel</h3><p>Kreuzt man zwei reinerbige Eltern (RR × rr), sind alle Kinder (F1) genotypisch und phänotypisch <strong>gleich</strong> (alle Rr, alle rot).</p><h3>2. Spaltungsregel</h3><p>Kreuzt man F1-Tiere/Pflanzen miteinander (Rr × Rr), spalten sich die Merkmale in der F2-Generation auf:</p><div class=\"lf-formula\">Genotyp: 1 RR : 2 Rr : 1 rr<br>Phänotyp: 3 rot : 1 weiß</div><h3>3. Unabhängigkeitsregel</h3><p>Werden zwei Merkmale gleichzeitig betrachtet (z.B. Farbe + Form), werden sie unabhängig vererbt — in der F2 ergibt sich das Verhältnis 9:3:3:1.</p><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Die 3. Regel gilt nur, wenn die Gene auf <em>verschiedenen</em> Chromosomen liegen. Auf demselben Chromosom: Kopplung.</div>"
     },
     {
       "name": "Kreuzungs-Quadrate (Punnett-Squares)",
       "description": "Das Werkzeug, um Vererbung vorherzusagen.",
-      "content": "<p>Ein Punnett-Square zeigt alle m&ouml;glichen Genotypen einer Kreuzung.</p><h3>Beispiel: Rr &times; Rr</h3><table class=\"lf-table\"><thead><tr><th></th><th>R</th><th>r</th></tr></thead><tbody><tr><td><strong>R</strong></td><td>RR</td><td>Rr</td></tr><tr><td><strong>r</strong></td><td>Rr</td><td>rr</td></tr></tbody></table><p>Ergebnis: 1 RR : 2 Rr : 1 rr (= 3:1 ph&auml;notypisch).</p><h3>Schritte</h3><ol class=\"lf-steps\"><li><strong>Allele der Eltern aufschreiben</strong> (z.B. Rr und Rr).</li><li><strong>M&ouml;gliche Gameten:</strong> Jedes Elternteil gibt ein Allel ab. Aus Rr werden R und r.</li><li><strong>Quadrat zeichnen:</strong> Eltern-Gameten an die R&auml;nder, Felder ausf&uuml;llen.</li><li><strong>Z&auml;hlen:</strong> Verh&auml;ltnis der Genotypen / Ph&auml;notypen.</li></ol>"
+      "content": "<p>Ein Punnett-Square zeigt alle möglichen Genotypen einer Kreuzung.</p><h3>Beispiel: Rr × Rr</h3><table class=\"lf-table\"><thead><tr><th></th><th>R</th><th>r</th></tr></thead><tbody><tr><td><strong>R</strong></td><td>RR</td><td>Rr</td></tr><tr><td><strong>r</strong></td><td>Rr</td><td>rr</td></tr></tbody></table><p>Ergebnis: 1 RR : 2 Rr : 1 rr (= 3:1 phänotypisch).</p><h3>Schritte</h3><ol class=\"lf-steps\"><li><strong>Allele der Eltern aufschreiben</strong> (z.B. Rr und Rr).</li><li><strong>Mögliche Gameten:</strong> Jedes Elternteil gibt ein Allel ab. Aus Rr werden R und r.</li><li><strong>Quadrat zeichnen:</strong> Eltern-Gameten an die Ränder, Felder ausfüllen.</li><li><strong>Zählen:</strong> Verhältnis der Genotypen / Phänotypen.</li></ol>"
     },
     {
       "name": "Stammbaum-Analyse",
       "description": "Vererbung in Familien lesen.",
-      "content": "<p>Ein Stammbaum zeigt, wer mit wem verwandt ist und wer welches Merkmal hat.</p><h3>Symbole</h3><ul><li>Kreis: weiblich. Quadrat: m&auml;nnlich.</li><li>Ausgef&uuml;llt: Merkmal vorhanden. Leer: nicht.</li><li>Halb ausgef&uuml;llt: Tr&auml;ger eines rezessiven Allels.</li><li>Linie zwischen zwei: Partnerschaft. Linie nach unten: Kinder.</li></ul><h3>Erbgang erkennen</h3><dl class=\"lf-def\"><dt>Autosomal dominant</dt><dd>Merkmal in jeder Generation. Beide Geschlechter gleich h&auml;ufig.</dd><dt>Autosomal rezessiv</dt><dd>Generationen werden &uuml;bersprungen. Beide Geschlechter gleich h&auml;ufig.</dd><dt>X-chromosomal rezessiv</dt><dd>Vor allem M&auml;nner betroffen (z.B. Rot-Gr&uuml;n-Schw&auml;che, Bluterkrankheit).</dd></dl>"
+      "content": "<p>Ein Stammbaum zeigt, wer mit wem verwandt ist und wer welches Merkmal hat.</p><h3>Symbole</h3><ul><li>Kreis: weiblich. Quadrat: männlich.</li><li>Ausgefüllt: Merkmal vorhanden. Leer: nicht.</li><li>Halb ausgefüllt: Träger eines rezessiven Allels.</li><li>Linie zwischen zwei: Partnerschaft. Linie nach unten: Kinder.</li></ul><h3>Erbgang erkennen</h3><dl class=\"lf-def\"><dt>Autosomal dominant</dt><dd>Merkmal in jeder Generation. Beide Geschlechter gleich häufig.</dd><dt>Autosomal rezessiv</dt><dd>Generationen werden übersprungen. Beide Geschlechter gleich häufig.</dd><dt>X-chromosomal rezessiv</dt><dd>Vor allem Männer betroffen (z.B. Rot-Grün-Schwäche, Bluterkrankheit).</dd></dl>"
     }
   ]
 }

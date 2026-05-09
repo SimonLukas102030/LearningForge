@@ -1,45 +1,45 @@
 {
   "name": "Superpositionsprinzip",
-  "description": "&Uuml;berlagerung von Bewegungen: waagerechter, senkrechter und schiefer Wurf",
+  "description": "Überlagerung von Bewegungen: waagerechter, senkrechter und schiefer Wurf",
   "subtopics": [
     {
-      "name": "Superpositionsprinzip &mdash; Grundlagen",
-      "description": "Mehrere Bewegungen gleichzeitig &mdash; einfach addieren.",
-      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Superpositionsprinzip</div><div class=\"lf-key-body\">Wirken mehrere Bewegungen gleichzeitig auf einen K&ouml;rper, kann man sie <strong>einzeln betrachten</strong> und dann <strong>addieren</strong>.</div></div><h3>Beispiel</h3><p>Du wirfst einen Ball waagerecht aus dem Fenster. Zwei Bewegungen &uuml;berlagern sich:</p><ol class=\"lf-steps\"><li><strong>Waagerecht:</strong> gleichf&ouml;rmige Bewegung mit deiner Wurfgeschwindigkeit.</li><li><strong>Senkrecht:</strong> freier Fall mit g = 9,81 m/s&sup2;.</li></ol><p>Die echte Flugbahn = beide Bewegungen unabh&auml;ngig zusammengesetzt = Wurfparabel.</p>"
+      "name": "Superpositionsprinzip — Grundlagen",
+      "description": "Mehrere Bewegungen gleichzeitig — einfach addieren.",
+      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Superpositionsprinzip</div><div class=\"lf-key-body\">Wirken mehrere Bewegungen gleichzeitig auf einen Körper, kann man sie <strong>einzeln betrachten</strong> und dann <strong>addieren</strong>.</div></div><h3>Beispiel</h3><p>Du wirfst einen Ball waagerecht aus dem Fenster. Zwei Bewegungen überlagern sich:</p><ol class=\"lf-steps\"><li><strong>Waagerecht:</strong> gleichförmige Bewegung mit deiner Wurfgeschwindigkeit.</li><li><strong>Senkrecht:</strong> freier Fall mit g = 9,81 m/s².</li></ol><p>Die echte Flugbahn = beide Bewegungen unabhängig zusammengesetzt = Wurfparabel.</p>"
     },
     {
       "name": "Waagerechter Wurf",
       "description": "Bewegung mit horizontaler Anfangsgeschwindigkeit.",
       "blocks": [
-        {"type": "text", "content": "<p>Beim waagerechten Wurf wird der K&ouml;rper horizontal mit Geschwindigkeit v<sub>0</sub> gestartet, dann zieht ihn die Schwerkraft nach unten.</p><div class=\"lf-formula\">x(t) = v<sub>0</sub> &middot; t<br>y(t) = &frac12; &middot; g &middot; t&sup2;</div><h3>Wichtig</h3><p>Die <strong>Fallzeit</strong> h&auml;ngt nur von der H&ouml;he ab, NICHT von v<sub>0</sub>. Eine fallengelassene Kugel und eine waagerecht abgeschossene treffen den Boden gleichzeitig (gleiche H&ouml;he vorausgesetzt).</p>"},
+        {"type": "text", "content": "<p>Beim waagerechten Wurf wird der Körper horizontal mit Geschwindigkeit v<sub>0</sub> gestartet, dann zieht ihn die Schwerkraft nach unten.</p><div class=\"lf-formula\">x(t) = v<sub>0</sub> · t<br>y(t) = ½ · g · t²</div><h3>Wichtig</h3><p>Die <strong>Fallzeit</strong> hängt nur von der Höhe ab, NICHT von v<sub>0</sub>. Eine fallengelassene Kugel und eine waagerecht abgeschossene treffen den Boden gleichzeitig (gleiche Höhe vorausgesetzt).</p>"},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
-          "setup": "Du stehst auf einem 5 m hohen Dach. Du wirfst einen Ball waagerecht weg. Gleichzeitig l&auml;sst dein Freund einen identischen Ball senkrecht fallen.",
+          "setup": "Du stehst auf einem 5 m hohen Dach. Du wirfst einen Ball waagerecht weg. Gleichzeitig lässt dein Freund einen identischen Ball senkrecht fallen.",
           "question": "Welcher Ball erreicht zuerst den Boden?",
           "options": [
-            {"label": "Der waagerecht geworfene", "correct": false, "explanation": "Falsch. Die horizontale Bewegung beeinflusst die vertikale Fallzeit nicht. Beide brauchen dieselbe Zeit f&uuml;r dieselben 5 m H&ouml;he."},
-            {"label": "Der senkrecht fallengelassene", "correct": false, "explanation": "Falsch. Der waagerechte Wurf hat zwar eine horizontale Geschwindigkeit, aber das ver&auml;ndert die Fallzeit nicht."},
-            {"label": "Beide gleichzeitig", "correct": true, "explanation": "Richtig! Das Superpositionsprinzip zeigt: die horizontale und vertikale Bewegung sind unabh&auml;ngig. Beide B&auml;lle haben dieselbe Fallzeit, weil sie aus derselben H&ouml;he starten und beide die Schwerkraft sp&uuml;ren."},
-            {"label": "Kommt auf v<sub>0</sub> an", "correct": false, "explanation": "Genau das ist das Verbl&uuml;ffende: v<sub>0</sub> ver&auml;ndert die Fallzeit NICHT. Es ver&auml;ndert nur, wie weit der Ball fliegt &mdash; nicht wie lange er zum Fallen braucht."}
+            {"label": "Der waagerecht geworfene", "correct": false, "explanation": "Falsch. Die horizontale Bewegung beeinflusst die vertikale Fallzeit nicht. Beide brauchen dieselbe Zeit für dieselben 5 m Höhe."},
+            {"label": "Der senkrecht fallengelassene", "correct": false, "explanation": "Falsch. Der waagerechte Wurf hat zwar eine horizontale Geschwindigkeit, aber das verändert die Fallzeit nicht."},
+            {"label": "Beide gleichzeitig", "correct": true, "explanation": "Richtig! Das Superpositionsprinzip zeigt: die horizontale und vertikale Bewegung sind unabhängig. Beide Bälle haben dieselbe Fallzeit, weil sie aus derselben Höhe starten und beide die Schwerkraft spüren."},
+            {"label": "Kommt auf v<sub>0</sub> an", "correct": false, "explanation": "Genau das ist das Verblüffende: v<sub>0</sub> verändert die Fallzeit NICHT. Es verändert nur, wie weit der Ball fliegt — nicht wie lange er zum Fallen braucht."}
           ],
-          "reveal": "Fallzeit h&auml;ngt nur von der H&ouml;he ab: t = &radic;(2h/g). Bei h=5m: t &asymp; 1,01 s. Egal ob v<sub>0</sub>=0 oder v<sub>0</sub>=100 m/s &mdash; der Ball f&auml;llt 1,01 s lang."
+          "reveal": "Fallzeit hängt nur von der Höhe ab: t = √(2h/g). Bei h=5m: t ≈ 1,01 s. Egal ob v<sub>0</sub>=0 oder v<sub>0</sub>=100 m/s — der Ball fällt 1,01 s lang."
         }},
-        {"type": "text", "content": "<h3>Wurfweite</h3><div class=\"lf-formula\">x<sub>max</sub> = v<sub>0</sub> &middot; t<sub>fall</sub> = v<sub>0</sub> &middot; &radic;(2h/g)</div>"}
+        {"type": "text", "content": "<h3>Wurfweite</h3><div class=\"lf-formula\">x<sub>max</sub> = v<sub>0</sub> · t<sub>fall</sub> = v<sub>0</sub> · √(2h/g)</div>"}
       ]
     },
     {
       "name": "Senkrechter Wurf nach oben",
       "description": "Hochwerfen, abbremsen, fallen.",
-      "content": "<p>Du wirfst einen Stein senkrecht nach oben mit v<sub>0</sub>. Schwerkraft bremst ihn ab, am h&ouml;chsten Punkt v=0, dann f&auml;llt er.</p><div class=\"lf-formula\">v(t) = v<sub>0</sub> &minus; g&middot;t<br>h(t) = v<sub>0</sub>&middot;t &minus; &frac12;&middot;g&middot;t&sup2;</div><h3>Maximale H&ouml;he</h3><div class=\"lf-formula\">h<sub>max</sub> = v<sub>0</sub>&sup2; / (2g)</div><h3>Steigzeit</h3><div class=\"lf-formula\">t<sub>steig</sub> = v<sub>0</sub> / g</div><p>Steigzeit = Fallzeit (im Vakuum). Gesamte Flugzeit = 2&middot;t<sub>steig</sub>.</p>"
+      "content": "<p>Du wirfst einen Stein senkrecht nach oben mit v<sub>0</sub>. Schwerkraft bremst ihn ab, am höchsten Punkt v=0, dann fällt er.</p><div class=\"lf-formula\">v(t) = v<sub>0</sub> − g·t<br>h(t) = v<sub>0</sub>·t − ½·g·t²</div><h3>Maximale Höhe</h3><div class=\"lf-formula\">h<sub>max</sub> = v<sub>0</sub>² / (2g)</div><h3>Steigzeit</h3><div class=\"lf-formula\">t<sub>steig</sub> = v<sub>0</sub> / g</div><p>Steigzeit = Fallzeit (im Vakuum). Gesamte Flugzeit = 2·t<sub>steig</sub>.</p>"
     },
     {
       "name": "Wurf nach unten",
       "description": "Mit Anfangsgeschwindigkeit nach unten geworfen.",
-      "content": "<p>Wenn du einen Stein nach unten wirfst (statt einfach loszulassen), addiert sich seine Anfangsgeschwindigkeit zur Fallbewegung.</p><div class=\"lf-formula\">v(t) = v<sub>0</sub> + g&middot;t<br>h(t) = v<sub>0</sub>&middot;t + &frac12;&middot;g&middot;t&sup2;</div><h3>Endgeschwindigkeit</h3><p>Aus Energieerhaltung: v<sub>end</sub>&sup2; = v<sub>0</sub>&sup2; + 2&middot;g&middot;h</p>"
+      "content": "<p>Wenn du einen Stein nach unten wirfst (statt einfach loszulassen), addiert sich seine Anfangsgeschwindigkeit zur Fallbewegung.</p><div class=\"lf-formula\">v(t) = v<sub>0</sub> + g·t<br>h(t) = v<sub>0</sub>·t + ½·g·t²</div><h3>Endgeschwindigkeit</h3><p>Aus Energieerhaltung: v<sub>end</sub>² = v<sub>0</sub>² + 2·g·h</p>"
     },
     {
       "name": "Schiefer Wurf",
       "description": "Wurf in beliebigem Winkel.",
-      "content": "<p>Beim schiefen Wurf wird mit Winkel &alpha; und Geschwindigkeit v<sub>0</sub> geworfen.</p><h3>Komponenten</h3><div class=\"lf-formula\">v<sub>x</sub> = v<sub>0</sub> &middot; cos(&alpha;)<br>v<sub>y</sub> = v<sub>0</sub> &middot; sin(&alpha;)</div><h3>Maximale Wurfweite</h3><p>Bei &alpha; = 45&deg; ist die Wurfweite maximal:</p><div class=\"lf-formula\">x<sub>max</sub> = v<sub>0</sub>&sup2; / g (bei 45&deg;)</div><div class=\"lf-box lf-tip\"><strong>Praxis:</strong> Kugelsto&szlig;er werfen unter ~42&deg;, Speerwerfer ~35-40&deg; &mdash; Abweichungen von 45&deg; wegen Luftwiderstand und Abwurfh&ouml;he.</div>"
+      "content": "<p>Beim schiefen Wurf wird mit Winkel α und Geschwindigkeit v<sub>0</sub> geworfen.</p><h3>Komponenten</h3><div class=\"lf-formula\">v<sub>x</sub> = v<sub>0</sub> · cos(α)<br>v<sub>y</sub> = v<sub>0</sub> · sin(α)</div><h3>Maximale Wurfweite</h3><p>Bei α = 45° ist die Wurfweite maximal:</p><div class=\"lf-formula\">x<sub>max</sub> = v<sub>0</sub>² / g (bei 45°)</div><div class=\"lf-box lf-tip\"><strong>Praxis:</strong> Kugelstoßer werfen unter ~42°, Speerwerfer ~35-40° — Abweichungen von 45° wegen Luftwiderstand und Abwurfhöhe.</div>"
     }
   ]
 }

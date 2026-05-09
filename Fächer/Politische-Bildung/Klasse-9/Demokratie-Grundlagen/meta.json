@@ -1,39 +1,39 @@
 {
   "name": "Demokratie-Grundlagen",
-  "description": "Was eine Demokratie wirklich ausmacht &mdash; Gewaltenteilung, Rechtsstaat, Sozialstaat.",
+  "description": "Was eine Demokratie wirklich ausmacht — Gewaltenteilung, Rechtsstaat, Sozialstaat.",
   "subtopics": [
     {
       "name": "Was ist Demokratie?",
       "description": "Mehr als Mehrheitsentscheidung.",
-      "content": "<dl class=\"lf-def\"><dt>Demokratie</dt><dd>Wortw&ouml;rtlich (griechisch): &bdquo;Herrschaft des Volkes&ldquo;. Das Volk ist der Tr&auml;ger der Staatsgewalt.</dd></dl><h3>Direkt vs. repr&auml;sentativ</h3><dl class=\"lf-def\"><dt>Direkte Demokratie</dt><dd>B&uuml;rger entscheiden selbst (Volksabstimmung). Antikes Athen, heute Schweiz.</dd><dt>Repr&auml;sentative Demokratie</dt><dd>B&uuml;rger w&auml;hlen Vertreter, die f&uuml;r sie entscheiden. Deutschland.</dd></dl><h3>Mehr als Mehrheit</h3><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Demokratie ist nicht nur &bdquo;die Mehrheit entscheidet&ldquo;. Eine Mehrheit, die Minderheitenrechte abschafft, ist <em>keine</em> Demokratie. Demokratie braucht: Gewaltenteilung, Rechtsstaat, Grundrechte.</div>"
+      "content": "<dl class=\"lf-def\"><dt>Demokratie</dt><dd>Wortwörtlich (griechisch): „Herrschaft des Volkes“. Das Volk ist der Träger der Staatsgewalt.</dd></dl><h3>Direkt vs. repräsentativ</h3><dl class=\"lf-def\"><dt>Direkte Demokratie</dt><dd>Bürger entscheiden selbst (Volksabstimmung). Antikes Athen, heute Schweiz.</dd><dt>Repräsentative Demokratie</dt><dd>Bürger wählen Vertreter, die für sie entscheiden. Deutschland.</dd></dl><h3>Mehr als Mehrheit</h3><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Demokratie ist nicht nur „die Mehrheit entscheidet“. Eine Mehrheit, die Minderheitenrechte abschafft, ist <em>keine</em> Demokratie. Demokratie braucht: Gewaltenteilung, Rechtsstaat, Grundrechte.</div>"
     },
     {
       "name": "Gewaltenteilung",
       "description": "Drei Gewalten, gegenseitige Kontrolle.",
       "blocks": [
-        {"type": "text", "content": "<p>Idee von Montesquieu (1748): Macht muss aufgeteilt werden, damit niemand zu m&auml;chtig wird.</p>"},
+        {"type": "text", "content": "<p>Idee von Montesquieu (1748): Macht muss aufgeteilt werden, damit niemand zu mächtig wird.</p>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
           "setup": "Drei Gewalten kontrollieren sich gegenseitig.",
           "question": "Verbinde die Gewalt mit ihrer Aufgabe und ihrem Hauptorgan.",
           "pairs": [
-            {"id": "leg", "left": "Legislative (gesetzgebende Gewalt)", "right": "Bundestag &mdash; macht Gesetze"},
-            {"id": "exe", "left": "Exekutive (vollziehende Gewalt)", "right": "Bundesregierung &mdash; setzt Gesetze um"},
-            {"id": "jud", "left": "Judikative (rechtsprechende Gewalt)", "right": "Gerichte &mdash; pr&uuml;fen Gesetze"}
+            {"id": "leg", "left": "Legislative (gesetzgebende Gewalt)", "right": "Bundestag — macht Gesetze"},
+            {"id": "exe", "left": "Exekutive (vollziehende Gewalt)", "right": "Bundesregierung — setzt Gesetze um"},
+            {"id": "jud", "left": "Judikative (rechtsprechende Gewalt)", "right": "Gerichte — prüfen Gesetze"}
           ],
-          "reveal": "Jede Gewalt kontrolliert die anderen. Bundestag macht Gesetze &mdash; aber das Bundesverfassungsgericht kann sie aufheben. Regierung setzt um &mdash; aber Bundestag kontrolliert sie. Diese Balance verhindert Macht-Anh&auml;ufung."
+          "reveal": "Jede Gewalt kontrolliert die anderen. Bundestag macht Gesetze — aber das Bundesverfassungsgericht kann sie aufheben. Regierung setzt um — aber Bundestag kontrolliert sie. Diese Balance verhindert Macht-Anhäufung."
         }},
-        {"type": "text", "content": "<h3>Checks &amp; Balances</h3><ul><li>Bundestag kontrolliert Regierung (Misstrauensvotum).</li><li>Bundesverfassungsgericht pr&uuml;ft Gesetze auf Verfassungstauglichkeit.</li><li>Bundesrat (L&auml;nderkammer) kontrolliert die Bundesgesetze.</li></ul>"}
+        {"type": "text", "content": "<h3>Checks &amp; Balances</h3><ul><li>Bundestag kontrolliert Regierung (Misstrauensvotum).</li><li>Bundesverfassungsgericht prüft Gesetze auf Verfassungstauglichkeit.</li><li>Bundesrat (Länderkammer) kontrolliert die Bundesgesetze.</li></ul>"}
       ]
     },
     {
       "name": "Rechtsstaat-Prinzip",
-      "description": "Niemand steht &uuml;ber dem Gesetz.",
-      "content": "<dl class=\"lf-def\"><dt>Rechtsstaat</dt><dd>Staat handelt nach festen Regeln (Gesetzen). Auch der Staat selbst ist an Recht und Gesetz gebunden.</dd></dl><h3>Merkmale</h3><ul><li><strong>Grundrechte:</strong> jeder hat Mindestrechte (Freiheit, Gleichheit, W&uuml;rde) &mdash; siehe GG Artikel 1-19.</li><li><strong>Gesetzm&auml;&szlig;igkeit:</strong> Staat handelt nur nach Gesetz. Kein willk&uuml;rliches Handeln.</li><li><strong>Rechtsweg:</strong> Jeder kann sich vor Gericht gegen Staatshandeln wehren.</li><li><strong>Unschuldsvermutung:</strong> Bis zur Verurteilung gilt jeder als unschuldig.</li><li><strong>Verh&auml;ltnism&auml;&szlig;igkeit:</strong> Staatliche Eingriffe d&uuml;rfen nicht weiter gehen als n&ouml;tig.</li></ul>"
+      "description": "Niemand steht über dem Gesetz.",
+      "content": "<dl class=\"lf-def\"><dt>Rechtsstaat</dt><dd>Staat handelt nach festen Regeln (Gesetzen). Auch der Staat selbst ist an Recht und Gesetz gebunden.</dd></dl><h3>Merkmale</h3><ul><li><strong>Grundrechte:</strong> jeder hat Mindestrechte (Freiheit, Gleichheit, Würde) — siehe GG Artikel 1-19.</li><li><strong>Gesetzmäßigkeit:</strong> Staat handelt nur nach Gesetz. Kein willkürliches Handeln.</li><li><strong>Rechtsweg:</strong> Jeder kann sich vor Gericht gegen Staatshandeln wehren.</li><li><strong>Unschuldsvermutung:</strong> Bis zur Verurteilung gilt jeder als unschuldig.</li><li><strong>Verhältnismäßigkeit:</strong> Staatliche Eingriffe dürfen nicht weiter gehen als nötig.</li></ul>"
     },
     {
       "name": "Sozialstaat &amp; Spannungsfeld zur Marktwirtschaft",
       "description": "Niemand soll am sozialen Existenzminimum scheitern.",
-      "content": "<dl class=\"lf-def\"><dt>Sozialstaat</dt><dd>Staat schafft soziale Sicherheit: Renten, Arbeitslosengeld, Sozialhilfe, Krankenversicherung.</dd></dl><h3>Soziale Sicherungssysteme</h3><table class=\"lf-table\"><thead><tr><th>Versicherung</th><th>Schutz</th></tr></thead><tbody><tr><td>Krankenversicherung</td><td>Gesundheitskosten</td></tr><tr><td>Rentenversicherung</td><td>Alter</td></tr><tr><td>Arbeitslosenversicherung</td><td>Jobverlust</td></tr><tr><td>Pflegeversicherung</td><td>Pflegebed&uuml;rftigkeit</td></tr><tr><td>Unfallversicherung</td><td>Arbeitsunfall</td></tr></tbody></table><h3>Spannungsfeld</h3><div class=\"lf-box lf-info\"><strong>Konflikt:</strong> Sozialstaat braucht Steuern und Abgaben. Marktwirtschaft will m&ouml;glichst niedrige Belastung. Politik balanciert: zu viel Sozialstaat &rarr; weniger Wachstum, zu wenig &rarr; soziale Ungleichheit.</div>"
+      "content": "<dl class=\"lf-def\"><dt>Sozialstaat</dt><dd>Staat schafft soziale Sicherheit: Renten, Arbeitslosengeld, Sozialhilfe, Krankenversicherung.</dd></dl><h3>Soziale Sicherungssysteme</h3><table class=\"lf-table\"><thead><tr><th>Versicherung</th><th>Schutz</th></tr></thead><tbody><tr><td>Krankenversicherung</td><td>Gesundheitskosten</td></tr><tr><td>Rentenversicherung</td><td>Alter</td></tr><tr><td>Arbeitslosenversicherung</td><td>Jobverlust</td></tr><tr><td>Pflegeversicherung</td><td>Pflegebedürftigkeit</td></tr><tr><td>Unfallversicherung</td><td>Arbeitsunfall</td></tr></tbody></table><h3>Spannungsfeld</h3><div class=\"lf-box lf-info\"><strong>Konflikt:</strong> Sozialstaat braucht Steuern und Abgaben. Marktwirtschaft will möglichst niedrige Belastung. Politik balanciert: zu viel Sozialstaat → weniger Wachstum, zu wenig → soziale Ungleichheit.</div>"
     }
   ]
 }

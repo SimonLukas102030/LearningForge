@@ -14526,7 +14526,10 @@ window.LF.toggleCalc = () => {
   const panel = document.getElementById('calcPanel');
   const arrow = document.getElementById('calcArrow');
   if (!panel) return;
-  const wasOpen = panel.style.display !== 'none';
+  // QA-fix (Sophie, 2026-05-09): inline style.display ist initial '' (leer),
+  // CSS-Default ist 'none'. getComputedStyle liest den effektiv gerenderten Wert,
+  // sonst First-Click-no-op weil wasOpen faelschlich true ist.
+  const wasOpen = getComputedStyle(panel).display !== 'none';
   panel.style.display = wasOpen ? 'none' : 'block';
   // .notes-arrow.open rotates chevron-down 180deg → pfeil zeigt nach oben (Panel zu).
   // Wenn Panel jetzt offen ist → 'open' entfernen → chevron zeigt nach unten.
@@ -14537,8 +14540,10 @@ window.LF.toggleTw = () => {
   const panel = document.getElementById('twPanel');
   const arrow = document.getElementById('twArrow');
   if (!panel) return;
-  const wasOpen = panel.style.display !== 'none';
-  panel.style.display = wasOpen ? 'none' : 'block';
+  // QA-fix (Sophie, 2026-05-09): wie toggleCalc — getComputedStyle statt style.display
+  // (CSS-Default ist 'none', inline-style initial leer → First-Click waere no-op).
+  const wasOpen = getComputedStyle(panel).display !== 'none';
+  panel.style.display = wasOpen ? 'none' : 'flex';
   if (arrow) arrow.classList.toggle('open', wasOpen);
 };
 

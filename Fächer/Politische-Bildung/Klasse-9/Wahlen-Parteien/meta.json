@@ -1,39 +1,39 @@
 {
   "name": "Wahlen-Parteien",
-  "description": "Wie wird in Deutschland gew&auml;hlt &mdash; und wie wird daraus eine Regierung?",
+  "description": "Wie wird in Deutschland gewählt — und wie wird daraus eine Regierung?",
   "subtopics": [
     {
       "name": "Wie funktioniert die Bundestagswahl? (Erst- &amp; Zweitstimme)",
       "description": "Zwei Stimmen, ein Wahlsystem.",
       "blocks": [
-        {"type": "text", "content": "<p>Bei der Bundestagswahl haben B&uuml;rger zwei Stimmen.</p><h3>Erststimme</h3><p>W&auml;hlt einen <strong>Direktkandidaten</strong> in deinem Wahlkreis. Wer vor Ort die meisten Stimmen hat, kommt in den Bundestag (Mehrheitswahl).</p><h3>Zweitstimme</h3><p>W&auml;hlt eine <strong>Partei</strong>. Bestimmt das Verh&auml;ltnis der Sitze im Bundestag (Verh&auml;ltniswahl).</p>"},
+        {"type": "text", "content": "<p>Bei der Bundestagswahl haben Bürger zwei Stimmen.</p><h3>Erststimme</h3><p>Wählt einen <strong>Direktkandidaten</strong> in deinem Wahlkreis. Wer vor Ort die meisten Stimmen hat, kommt in den Bundestag (Mehrheitswahl).</p><h3>Zweitstimme</h3><p>Wählt eine <strong>Partei</strong>. Bestimmt das Verhältnis der Sitze im Bundestag (Verhältniswahl).</p>"},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
-          "setup": "Eine Partei bekommt 30% der Zweitstimmen. Welche Stimme ist wichtiger f&uuml;r das Endergebnis im Bundestag?",
+          "setup": "Eine Partei bekommt 30% der Zweitstimmen. Welche Stimme ist wichtiger für das Endergebnis im Bundestag?",
           "question": "Welche Stimme bestimmt, wieviele Sitze die Partei insgesamt im Bundestag bekommt?",
           "options": [
-            {"label": "Die Erststimme", "correct": false, "explanation": "Falsch. Die Erststimme bestimmt nur, WER pers&ouml;nlich aus deinem Wahlkreis in den Bundestag einzieht (der Direktkandidat). Sie bestimmt nicht das Sitzverh&auml;ltnis der Parteien."},
-            {"label": "Die Zweitstimme", "correct": true, "explanation": "Richtig! Die Zweitstimme ist die wichtigere &mdash; sie bestimmt, wie viele Sitze jede Partei insgesamt bekommt. Sie entscheidet &uuml;ber die Mehrheitsverh&auml;ltnisse im Bundestag und damit &uuml;ber die Regierungsbildung."},
-            {"label": "Beide gleich", "correct": false, "explanation": "Nein. Die Zweitstimme entscheidet das Sitzverh&auml;ltnis &mdash; sie ist die strategisch wichtigere Stimme."},
-            {"label": "Die Stimme, die direkt eine Person w&auml;hlt", "correct": false, "explanation": "Das ist die Erststimme &mdash; aber sie bestimmt nur den Direktkandidaten, nicht das Sitzverh&auml;ltnis."}
+            {"label": "Die Erststimme", "correct": false, "explanation": "Falsch. Die Erststimme bestimmt nur, WER persönlich aus deinem Wahlkreis in den Bundestag einzieht (der Direktkandidat). Sie bestimmt nicht das Sitzverhältnis der Parteien."},
+            {"label": "Die Zweitstimme", "correct": true, "explanation": "Richtig! Die Zweitstimme ist die wichtigere — sie bestimmt, wie viele Sitze jede Partei insgesamt bekommt. Sie entscheidet über die Mehrheitsverhältnisse im Bundestag und damit über die Regierungsbildung."},
+            {"label": "Beide gleich", "correct": false, "explanation": "Nein. Die Zweitstimme entscheidet das Sitzverhältnis — sie ist die strategisch wichtigere Stimme."},
+            {"label": "Die Stimme, die direkt eine Person wählt", "correct": false, "explanation": "Das ist die Erststimme — aber sie bestimmt nur den Direktkandidaten, nicht das Sitzverhältnis."}
           ],
-          "reveal": "Zweitstimme = parteientscheidende Stimme. Sie bestimmt das Verh&auml;ltnis der Sitze im Bundestag und damit, wer regiert. Die Erststimme entscheidet nur &uuml;ber den lokalen Direktkandidaten. H&auml;ufige Verwechslung: Viele denken, die Erststimme sei die wichtigere &mdash; ist sie nicht."
+          "reveal": "Zweitstimme = parteientscheidende Stimme. Sie bestimmt das Verhältnis der Sitze im Bundestag und damit, wer regiert. Die Erststimme entscheidet nur über den lokalen Direktkandidaten. Häufige Verwechslung: Viele denken, die Erststimme sei die wichtigere — ist sie nicht."
         }}
       ]
     },
     {
-      "name": "Sainte-Lagu&euml; &amp; F&uuml;nf-Prozent-H&uuml;rde",
+      "name": "Sainte-Laguë &amp; Fünf-Prozent-Hürde",
       "description": "Wie wird aus Stimmen Sitzverteilung?",
-      "content": "<h3>Sainte-Lagu&euml;-Verfahren</h3><p>Mathematisches Verfahren zur Sitzverteilung. Stimmen werden durch ungerade Zahlen (1, 3, 5, 7...) geteilt, h&ouml;chste Quotienten bekommen Sitze.</p><h3>F&uuml;nf-Prozent-H&uuml;rde</h3><p>Eine Partei muss mindestens <strong>5% der Zweitstimmen</strong> bekommen, um in den Bundestag einzuziehen.</p><div class=\"lf-box lf-info\"><strong>Sinn der H&uuml;rde:</strong> Verhindert Zersplitterung des Parlaments. Lehre aus Weimar &mdash; dort gab es 30+ Parteien, niemand hatte Mehrheit.</div><h3>Ausnahme: Drei-Direktmandate-Klausel</h3><p>Wenn eine Partei 3 Direktmandate (Erststimmen) gewinnt, kommt sie auch unter 5% in den Bundestag.</p>"
+      "content": "<h3>Sainte-Laguë-Verfahren</h3><p>Mathematisches Verfahren zur Sitzverteilung. Stimmen werden durch ungerade Zahlen (1, 3, 5, 7...) geteilt, höchste Quotienten bekommen Sitze.</p><h3>Fünf-Prozent-Hürde</h3><p>Eine Partei muss mindestens <strong>5% der Zweitstimmen</strong> bekommen, um in den Bundestag einzuziehen.</p><div class=\"lf-box lf-info\"><strong>Sinn der Hürde:</strong> Verhindert Zersplitterung des Parlaments. Lehre aus Weimar — dort gab es 30+ Parteien, niemand hatte Mehrheit.</div><h3>Ausnahme: Drei-Direktmandate-Klausel</h3><p>Wenn eine Partei 3 Direktmandate (Erststimmen) gewinnt, kommt sie auch unter 5% in den Bundestag.</p>"
     },
     {
       "name": "Parteienlandschaft Deutschland 2026",
       "description": "Wer ist wo politisch?",
-      "content": "<table class=\"lf-table\"><thead><tr><th>Partei</th><th>Position</th><th>Schwerpunkt</th></tr></thead><tbody><tr><td>SPD</td><td>Mitte-Links</td><td>Soziale Gerechtigkeit, Arbeit</td></tr><tr><td>CDU/CSU</td><td>Mitte-Rechts</td><td>Konservativ, Wirtschaft</td></tr><tr><td>Gr&uuml;ne</td><td>Links</td><td>Klima, &Ouml;kologie</td></tr><tr><td>FDP</td><td>Wirtschaftsliberal</td><td>Markt, Freiheit</td></tr><tr><td>AfD</td><td>Rechts (rechtsau&szlig;en)</td><td>Migration, Souver&auml;nit&auml;t</td></tr><tr><td>Die Linke</td><td>Links</td><td>Soziale Gerechtigkeit</td></tr><tr><td>BSW</td><td>Quer (links-konservativ)</td><td>Soziales + Migration</td></tr></tbody></table><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Politische Ausrichtung ist kontinuierlich, nicht ein Punkt. Eine Partei kann in Wirtschaftsfragen rechts sein, in Migrationsfragen links.</div>"
+      "content": "<table class=\"lf-table\"><thead><tr><th>Partei</th><th>Position</th><th>Schwerpunkt</th></tr></thead><tbody><tr><td>SPD</td><td>Mitte-Links</td><td>Soziale Gerechtigkeit, Arbeit</td></tr><tr><td>CDU/CSU</td><td>Mitte-Rechts</td><td>Konservativ, Wirtschaft</td></tr><tr><td>Grüne</td><td>Links</td><td>Klima, Ökologie</td></tr><tr><td>FDP</td><td>Wirtschaftsliberal</td><td>Markt, Freiheit</td></tr><tr><td>AfD</td><td>Rechts (rechtsaußen)</td><td>Migration, Souveränität</td></tr><tr><td>Die Linke</td><td>Links</td><td>Soziale Gerechtigkeit</td></tr><tr><td>BSW</td><td>Quer (links-konservativ)</td><td>Soziales + Migration</td></tr></tbody></table><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Politische Ausrichtung ist kontinuierlich, nicht ein Punkt. Eine Partei kann in Wirtschaftsfragen rechts sein, in Migrationsfragen links.</div>"
     },
     {
       "name": "Koalitionsbildung",
       "description": "Wie aus Wahlergebnissen eine Regierung wird.",
-      "content": "<p>In Deutschland erh&auml;lt selten eine Partei die absolute Mehrheit (50%+). Daher: Koalitionen.</p><h3>Schritte</h3><ol class=\"lf-steps\"><li><strong>Wahlergebnis:</strong> Sitze nach Zweitstimmen verteilt.</li><li><strong>Sondierung:</strong> Parteien sprechen vorab &uuml;ber M&ouml;glichkeiten.</li><li><strong>Koalitionsverhandlungen:</strong> Gemeinsame Linie ausarbeiten.</li><li><strong>Koalitionsvertrag:</strong> Schriftliches Programm der Regierung.</li><li><strong>Kanzlerwahl:</strong> Bundestag w&auml;hlt Bundeskanzler/in.</li></ol><h3>Klassische Koalitionsmuster</h3><dl class=\"lf-def\"><dt>Gro&szlig;e Koalition (GroKo)</dt><dd>SPD + CDU/CSU. Stabil, aber konsensgepr&auml;gt.</dd><dt>Ampel</dt><dd>SPD + Gr&uuml;ne + FDP. Drei Parteien, schwierig zu balancieren.</dd><dt>Schwarz-Gr&uuml;n</dt><dd>CDU + Gr&uuml;ne. Auf Landesebene erprobt.</dd><dt>Jamaika</dt><dd>CDU + Gr&uuml;ne + FDP.</dd></dl><div class=\"lf-box lf-warn\"><strong>Brandmauer:</strong> Demokratische Parteien koalieren bislang nicht mit der AfD &mdash; ungeschriebenes Gesetz seit Aufstieg.</div>"
+      "content": "<p>In Deutschland erhält selten eine Partei die absolute Mehrheit (50%+). Daher: Koalitionen.</p><h3>Schritte</h3><ol class=\"lf-steps\"><li><strong>Wahlergebnis:</strong> Sitze nach Zweitstimmen verteilt.</li><li><strong>Sondierung:</strong> Parteien sprechen vorab über Möglichkeiten.</li><li><strong>Koalitionsverhandlungen:</strong> Gemeinsame Linie ausarbeiten.</li><li><strong>Koalitionsvertrag:</strong> Schriftliches Programm der Regierung.</li><li><strong>Kanzlerwahl:</strong> Bundestag wählt Bundeskanzler/in.</li></ol><h3>Klassische Koalitionsmuster</h3><dl class=\"lf-def\"><dt>Große Koalition (GroKo)</dt><dd>SPD + CDU/CSU. Stabil, aber konsensgeprägt.</dd><dt>Ampel</dt><dd>SPD + Grüne + FDP. Drei Parteien, schwierig zu balancieren.</dd><dt>Schwarz-Grün</dt><dd>CDU + Grüne. Auf Landesebene erprobt.</dd><dt>Jamaika</dt><dd>CDU + Grüne + FDP.</dd></dl><div class=\"lf-box lf-warn\"><strong>Brandmauer:</strong> Demokratische Parteien koalieren bislang nicht mit der AfD — ungeschriebenes Gesetz seit Aufstieg.</div>"
     }
   ]
 }

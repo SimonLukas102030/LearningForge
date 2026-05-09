@@ -1,42 +1,42 @@
 {
   "name": "Verfassungsorgane",
-  "description": "Wer macht in Deutschland eigentlich was? Bundestag, Bundesrat, Regierung, Bundespr&auml;sident, BVerfG.",
+  "description": "Wer macht in Deutschland eigentlich was? Bundestag, Bundesrat, Regierung, Bundespräsident, BVerfG.",
   "subtopics": [
     {
       "name": "Bundestag &amp; Bundesrat (Gesetzgebung)",
       "description": "Wer macht die Gesetze?",
       "blocks": [
-        {"type": "text", "content": "<h3>Bundestag</h3><dl class=\"lf-def\"><dt>Bundestag</dt><dd>Vom Volk direkt gew&auml;hlte Vertretung. 736 Abgeordnete (2024). 4 Jahre Wahlperiode.</dd></dl><h3>Aufgaben</h3><ul><li>Gesetze beschlie&szlig;en</li><li>Bundeskanzler/in w&auml;hlen</li><li>Regierung kontrollieren</li><li>Haushalt beschlie&szlig;en</li><li>&Uuml;ber Bundeswehr-Eins&auml;tze entscheiden</li></ul><h3>Bundesrat</h3><dl class=\"lf-def\"><dt>Bundesrat</dt><dd>Vertretung der 16 Bundesl&auml;nder. 69 Mitglieder, von Landesregierungen entsandt.</dd></dl>"},
+        {"type": "text", "content": "<h3>Bundestag</h3><dl class=\"lf-def\"><dt>Bundestag</dt><dd>Vom Volk direkt gewählte Vertretung. 736 Abgeordnete (2024). 4 Jahre Wahlperiode.</dd></dl><h3>Aufgaben</h3><ul><li>Gesetze beschließen</li><li>Bundeskanzler/in wählen</li><li>Regierung kontrollieren</li><li>Haushalt beschließen</li><li>Über Bundeswehr-Einsätze entscheiden</li></ul><h3>Bundesrat</h3><dl class=\"lf-def\"><dt>Bundesrat</dt><dd>Vertretung der 16 Bundesländer. 69 Mitglieder, von Landesregierungen entsandt.</dd></dl>"},
         {"type": "widget", "widgetType": "drag-sort", "config": {
           "setup": "Wie wird ein Gesetz in Deutschland gemacht?",
           "question": "Bring die Schritte in die richtige Reihenfolge.",
           "items": [
             {"id": "init", "label": "Gesetzentwurf wird eingebracht (Regierung, Bundestag, Bundesrat)"},
-            {"id": "bt1", "label": "Erste Lesung im Bundestag &mdash; Grundsatzdebatte"},
-            {"id": "aus", "label": "Beratung in den Aussch&uuml;ssen"},
-            {"id": "bt23", "label": "Zweite und dritte Lesung im Bundestag &mdash; Abstimmung"},
+            {"id": "bt1", "label": "Erste Lesung im Bundestag — Grundsatzdebatte"},
+            {"id": "aus", "label": "Beratung in den Ausschüssen"},
+            {"id": "bt23", "label": "Zweite und dritte Lesung im Bundestag — Abstimmung"},
             {"id": "br", "label": "Bundesrat stimmt zu (oder Vermittlungsausschuss)"},
-            {"id": "bp", "label": "Bundespr&auml;sident unterzeichnet, Gesetz tritt in Kraft"}
+            {"id": "bp", "label": "Bundespräsident unterzeichnet, Gesetz tritt in Kraft"}
           ],
           "correctOrder": ["init", "bt1", "aus", "bt23", "br", "bp"],
-          "reveal": "Reihenfolge: Initiative &rarr; 1. Lesung &rarr; Aussch&uuml;sse &rarr; 2./3. Lesung + Abstimmung &rarr; Bundesrat &rarr; Bundespr&auml;sident. Bei Zustimmungsgesetzen kann der Bundesrat blockieren. Bei Einspruchsgesetzen kann der Bundestag mit Mehrheit dr&uuml;ber gehen."
+          "reveal": "Reihenfolge: Initiative → 1. Lesung → Ausschüsse → 2./3. Lesung + Abstimmung → Bundesrat → Bundespräsident. Bei Zustimmungsgesetzen kann der Bundesrat blockieren. Bei Einspruchsgesetzen kann der Bundestag mit Mehrheit drüber gehen."
         }}
       ]
     },
     {
       "name": "Bundesregierung &amp; Kanzler",
       "description": "Die Exekutive an der Spitze.",
-      "content": "<h3>Bundeskanzler/in</h3><ul><li>Vom Bundestag gew&auml;hlt</li><li>Bestimmt die Richtlinien der Politik (Richtlinienkompetenz)</li><li>Schl&auml;gt Minister vor</li></ul><h3>Bundesregierung</h3><p>Kanzler/in + Minister/innen. Setzt Gesetze um, f&uuml;hrt die Verwaltung. Aktuelles Kabinett: 16 Ministerien.</p><h3>Misstrauensvotum</h3><p>Konstruktives Misstrauensvotum: Bundestag kann Kanzler nur abw&auml;hlen, wenn er gleichzeitig einen Nachfolger w&auml;hlt. Anti-Stabilit&auml;ts-Lehre aus Weimar.</p>"
+      "content": "<h3>Bundeskanzler/in</h3><ul><li>Vom Bundestag gewählt</li><li>Bestimmt die Richtlinien der Politik (Richtlinienkompetenz)</li><li>Schlägt Minister vor</li></ul><h3>Bundesregierung</h3><p>Kanzler/in + Minister/innen. Setzt Gesetze um, führt die Verwaltung. Aktuelles Kabinett: 16 Ministerien.</p><h3>Misstrauensvotum</h3><p>Konstruktives Misstrauensvotum: Bundestag kann Kanzler nur abwählen, wenn er gleichzeitig einen Nachfolger wählt. Anti-Stabilitäts-Lehre aus Weimar.</p>"
     },
     {
-      "name": "Bundespr&auml;sident",
+      "name": "Bundespräsident",
       "description": "Die zeremonielle Spitze.",
-      "content": "<dl class=\"lf-def\"><dt>Bundespr&auml;sident</dt><dd>Staatsoberhaupt. 5 Jahre Amtszeit, einmalige Wiederwahl m&ouml;glich. Von der Bundesversammlung gew&auml;hlt.</dd></dl><h3>Aufgaben</h3><ul><li>Repr&auml;sentation des Staates</li><li>Ernennung des Kanzlers (auf Vorschlag des Bundestags)</li><li>Unterzeichnung von Gesetzen (Pr&uuml;fung auf Verfassung)</li><li>Begnadigungsrecht</li></ul><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Eher symbolisch. Der Bundespr&auml;sident hat wenig politische Macht &mdash; im Gegensatz zum US-Pr&auml;sidenten.</div>"
+      "content": "<dl class=\"lf-def\"><dt>Bundespräsident</dt><dd>Staatsoberhaupt. 5 Jahre Amtszeit, einmalige Wiederwahl möglich. Von der Bundesversammlung gewählt.</dd></dl><h3>Aufgaben</h3><ul><li>Repräsentation des Staates</li><li>Ernennung des Kanzlers (auf Vorschlag des Bundestags)</li><li>Unterzeichnung von Gesetzen (Prüfung auf Verfassung)</li><li>Begnadigungsrecht</li></ul><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Eher symbolisch. Der Bundespräsident hat wenig politische Macht — im Gegensatz zum US-Präsidenten.</div>"
     },
     {
       "name": "BVerfG &amp; Grundgesetz",
-      "description": "Der H&uuml;ter der Verfassung.",
-      "content": "<dl class=\"lf-def\"><dt>Bundesverfassungsgericht</dt><dd>Sitz in Karlsruhe. Pr&uuml;ft Gesetze auf &Uuml;bereinstimmung mit dem Grundgesetz. 16 Richter, je 12 Jahre Amtszeit.</dd></dl><h3>Wichtige Funktionen</h3><ul><li><strong>Normenkontrolle:</strong> Pr&uuml;ft, ob Gesetze verfassungswidrig sind.</li><li><strong>Verfassungsbeschwerde:</strong> B&uuml;rger k&ouml;nnen klagen, wenn ihre Grundrechte verletzt werden.</li><li><strong>Organstreit:</strong> Streit zwischen Verfassungsorganen.</li></ul><h3>Grundgesetz</h3><p>Verfassung der BRD seit 1949. Kann nur mit 2/3-Mehrheit ge&auml;ndert werden. Artikel 1 (Menschenw&uuml;rde) und Artikel 20 (Demokratie, Rechtsstaat) sind <strong>unab&auml;nderlich</strong> (Ewigkeitsklausel, Art. 79 III).</p><div class=\"lf-box lf-warn\"><strong>Lehre aus Weimar:</strong> Die Ewigkeitsklausel verhindert, dass Demokratie sich selbst abschafft &mdash; wie es 1933 mit dem Erm&auml;chtigungsgesetz geschah.</div>"
+      "description": "Der Hüter der Verfassung.",
+      "content": "<dl class=\"lf-def\"><dt>Bundesverfassungsgericht</dt><dd>Sitz in Karlsruhe. Prüft Gesetze auf Übereinstimmung mit dem Grundgesetz. 16 Richter, je 12 Jahre Amtszeit.</dd></dl><h3>Wichtige Funktionen</h3><ul><li><strong>Normenkontrolle:</strong> Prüft, ob Gesetze verfassungswidrig sind.</li><li><strong>Verfassungsbeschwerde:</strong> Bürger können klagen, wenn ihre Grundrechte verletzt werden.</li><li><strong>Organstreit:</strong> Streit zwischen Verfassungsorganen.</li></ul><h3>Grundgesetz</h3><p>Verfassung der BRD seit 1949. Kann nur mit 2/3-Mehrheit geändert werden. Artikel 1 (Menschenwürde) und Artikel 20 (Demokratie, Rechtsstaat) sind <strong>unabänderlich</strong> (Ewigkeitsklausel, Art. 79 III).</p><div class=\"lf-box lf-warn\"><strong>Lehre aus Weimar:</strong> Die Ewigkeitsklausel verhindert, dass Demokratie sich selbst abschafft — wie es 1933 mit dem Ermächtigungsgesetz geschah.</div>"
     }
   ]
 }

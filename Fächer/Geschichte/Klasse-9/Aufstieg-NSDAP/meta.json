@@ -1,41 +1,41 @@
 {
   "name": "Aufstieg der NSDAP",
-  "description": "Wie aus einer Splitterpartei mit 2,6 % in vier Jahren die st&auml;rkste Kraft wurde &mdash; und wie sie ihre Macht in 18 Monaten total machte.",
+  "description": "Wie aus einer Splitterpartei mit 2,6 % in vier Jahren die stärkste Kraft wurde — und wie sie ihre Macht in 18 Monaten total machte.",
   "subtopics": [
     {
-      "name": "NSDAP-Aufstieg 1925&ndash;1932",
-      "description": "Wahlergebnisse, Strategie, Anh&auml;ngerschaft.",
+      "name": "NSDAP-Aufstieg 1925–1932",
+      "description": "Wahlergebnisse, Strategie, Anhängerschaft.",
       "blocks": [
-        {"type": "text", "content": "<p>Nach dem gescheiterten Hitler-Putsch (1923) wird die NSDAP 1925 neu gegr&uuml;ndet. Hitler entscheidet: keine Putsche mehr, sondern <strong>Eroberung der Macht auf legalem Weg</strong>.</p><h3>Der Aufstieg</h3>"},
+        {"type": "text", "content": "<p>Nach dem gescheiterten Hitler-Putsch (1923) wird die NSDAP 1925 neu gegründet. Hitler entscheidet: keine Putsche mehr, sondern <strong>Eroberung der Macht auf legalem Weg</strong>.</p><h3>Der Aufstieg</h3>"},
         {"type": "widget", "widgetType": "drag-sort", "config": {
-          "setup": "Die NSDAP wuchs in nur 4 Jahren von einer Splitterpartei zur st&auml;rksten Kraft.",
+          "setup": "Die NSDAP wuchs in nur 4 Jahren von einer Splitterpartei zur stärksten Kraft.",
           "question": "Bring die Wahlergebnisse in chronologische Reihenfolge.",
           "items": [
-            {"id": "1928", "label": "1928: 2,6% &mdash; Splitterpartei (12 Sitze)"},
-            {"id": "1930", "label": "1930: 18,3% &mdash; Durchbruch nach Wirtschaftskrise (107 Sitze)"},
-            {"id": "j32", "label": "Juli 1932: 37,3% &mdash; st&auml;rkste Partei (230 Sitze)"},
-            {"id": "n32", "label": "November 1932: 33,1% &mdash; leichter R&uuml;ckgang (196 Sitze)"}
+            {"id": "1928", "label": "1928: 2,6% — Splitterpartei (12 Sitze)"},
+            {"id": "1930", "label": "1930: 18,3% — Durchbruch nach Wirtschaftskrise (107 Sitze)"},
+            {"id": "j32", "label": "Juli 1932: 37,3% — stärkste Partei (230 Sitze)"},
+            {"id": "n32", "label": "November 1932: 33,1% — leichter Rückgang (196 Sitze)"}
           ],
           "correctOrder": ["1928", "1930", "j32", "n32"],
-          "reveal": "Verzehnfachung in 4 Jahren (800.000 &rarr; 13,7 Mio. W&auml;hler). Trotzdem nie absolute Mehrheit. Die NSDAP war im November 1932 sogar geschw&auml;cht &mdash; in dem Moment kam Hitler durch eine Hinterzimmer-Intrige (nicht durch Wahlen) ins Kanzleramt."
+          "reveal": "Verzehnfachung in 4 Jahren (800.000 → 13,7 Mio. Wähler). Trotzdem nie absolute Mehrheit. Die NSDAP war im November 1932 sogar geschwächt — in dem Moment kam Hitler durch eine Hinterzimmer-Intrige (nicht durch Wahlen) ins Kanzleramt."
         }},
-        {"type": "text", "content": "<h3>Wer w&auml;hlte NSDAP?</h3><ul><li>Protestantisches Land, Mittelstand, Handwerker</li><li>Beamte, Akademiker, Studenten</li><li>Junge Erstw&auml;hler</li></ul><h3>Warum?</h3><ol class=\"lf-steps\"><li>Wirtschaftliche Not (6 Mio. Arbeitslose 1932)</li><li>Versailles-Wut</li><li>Antikommunismus (Angst vor russischem Beispiel)</li><li>Antisemitismus (S&uuml;ndenbock-Funktion)</li><li>Hitlers Charisma + Goebbels-Propaganda</li><li>Modernit&auml;t der Wahlk&auml;mpfe (Hitler &uuml;ber Deutschland per Flugzeug)</li></ol>"}
+        {"type": "text", "content": "<h3>Wer wählte NSDAP?</h3><ul><li>Protestantisches Land, Mittelstand, Handwerker</li><li>Beamte, Akademiker, Studenten</li><li>Junge Erstwähler</li></ul><h3>Warum?</h3><ol class=\"lf-steps\"><li>Wirtschaftliche Not (6 Mio. Arbeitslose 1932)</li><li>Versailles-Wut</li><li>Antikommunismus (Angst vor russischem Beispiel)</li><li>Antisemitismus (Sündenbock-Funktion)</li><li>Hitlers Charisma + Goebbels-Propaganda</li><li>Modernität der Wahlkämpfe (Hitler über Deutschland per Flugzeug)</li></ol>"}
       ]
     },
     {
       "name": "Hitler wird Reichskanzler 1933",
       "description": "30. Januar 1933.",
-      "content": "<p>Am 30. Januar 1933 ernennt Hindenburg Hitler zum Reichskanzler. Kein Putsch, kein Wahlsieg &mdash; eine konservative Hinterzimmer-Intrige.</p><h3>Schl&uuml;sselfiguren</h3><ul><li><strong>Franz von Papen</strong> &mdash; gekr&auml;nkter Ex-Kanzler, will Rache</li><li><strong>Hindenburg</strong> &mdash; 86, m&uuml;de, st&uuml;tzt sich auf Berater</li><li><strong>Hitler</strong> &mdash; politisch geschw&auml;cht, aber strategisch klug</li></ul><h3>Papens Versprechen</h3><blockquote class=\"lf-quote\">&bdquo;Wir haben ihn uns engagiert.&ldquo; &mdash; Papen, sinngem&auml;&szlig;</blockquote><p>Papen glaubte, Hitler durch konservative Mehrheit im Kabinett &bdquo;einrahmen&ldquo; zu k&ouml;nnen. Eine fatale Fehleinsch&auml;tzung.</p><h3>Kabinett</h3><ul><li>Nur 3 NSDAP-Minister (Hitler, Frick, G&ouml;ring) gegen 8 Konservative</li><li>ABER: Innenministerien (Polizei!) bei NSDAP &mdash; entscheidendes Werkzeug</li></ul><div class=\"lf-box lf-warn\"><strong>Lehre:</strong> Eine Demokratie kann nicht nur durch ihre Feinde fallen, sondern durch ihre vermeintlichen Verteidiger, die Feinde benutzen wollen.</div>"
+      "content": "<p>Am 30. Januar 1933 ernennt Hindenburg Hitler zum Reichskanzler. Kein Putsch, kein Wahlsieg — eine konservative Hinterzimmer-Intrige.</p><h3>Schlüsselfiguren</h3><ul><li><strong>Franz von Papen</strong> — gekränkter Ex-Kanzler, will Rache</li><li><strong>Hindenburg</strong> — 86, müde, stützt sich auf Berater</li><li><strong>Hitler</strong> — politisch geschwächt, aber strategisch klug</li></ul><h3>Papens Versprechen</h3><blockquote class=\"lf-quote\">„Wir haben ihn uns engagiert.“ — Papen, sinngemäß</blockquote><p>Papen glaubte, Hitler durch konservative Mehrheit im Kabinett „einrahmen“ zu können. Eine fatale Fehleinschätzung.</p><h3>Kabinett</h3><ul><li>Nur 3 NSDAP-Minister (Hitler, Frick, Göring) gegen 8 Konservative</li><li>ABER: Innenministerien (Polizei!) bei NSDAP — entscheidendes Werkzeug</li></ul><div class=\"lf-box lf-warn\"><strong>Lehre:</strong> Eine Demokratie kann nicht nur durch ihre Feinde fallen, sondern durch ihre vermeintlichen Verteidiger, die Feinde benutzen wollen.</div>"
     },
     {
-      "name": "Reichstagsbrand bis Erm&auml;chtigungsgesetz",
+      "name": "Reichstagsbrand bis Ermächtigungsgesetz",
       "description": "52 Tage von der Demokratie zur Diktatur.",
-      "content": "<h3>27. Februar 1933: Reichstagsbrand</h3><p>Reichstag brennt. Marinus van der Lubbe verhaftet. NSDAP nutzt es politisch.</p><h3>28. Februar: Reichstagsbrandverordnung</h3><p>Hindenburg unterzeichnet. Setzt Grundrechte au&szlig;er Kraft (Meinungsfreiheit, Versammlung, Wohnung). Bis 1945 nicht aufgehoben.</p><h3>5. M&auml;rz: Wahlen unter Terror</h3><p>NSDAP nur 43,9%. Mit DNVP zusammen 51,9% &mdash; aber keine 2/3-Mehrheit.</p><h3>23. M&auml;rz: Erm&auml;chtigungsgesetz</h3><p>Reichstag erm&auml;chtigt die Regierung, Gesetze ohne Parlament zu beschlie&szlig;en. KPD-Sitze waren bereits gestrichen, das Zentrum gibt nach. SPD stimmt dagegen (94 Stimmen).</p><div class=\"lf-box lf-danger\"><strong>23. M&auml;rz 1933, 18 Uhr:</strong> Demokratie tot. Sie wurde nicht ermordet, sondern ist durch eigene Hand gefallen &mdash; durch eine Kette &bdquo;legaler&ldquo; Akte.</div>"
+      "content": "<h3>27. Februar 1933: Reichstagsbrand</h3><p>Reichstag brennt. Marinus van der Lubbe verhaftet. NSDAP nutzt es politisch.</p><h3>28. Februar: Reichstagsbrandverordnung</h3><p>Hindenburg unterzeichnet. Setzt Grundrechte außer Kraft (Meinungsfreiheit, Versammlung, Wohnung). Bis 1945 nicht aufgehoben.</p><h3>5. März: Wahlen unter Terror</h3><p>NSDAP nur 43,9%. Mit DNVP zusammen 51,9% — aber keine 2/3-Mehrheit.</p><h3>23. März: Ermächtigungsgesetz</h3><p>Reichstag ermächtigt die Regierung, Gesetze ohne Parlament zu beschließen. KPD-Sitze waren bereits gestrichen, das Zentrum gibt nach. SPD stimmt dagegen (94 Stimmen).</p><div class=\"lf-box lf-danger\"><strong>23. März 1933, 18 Uhr:</strong> Demokratie tot. Sie wurde nicht ermordet, sondern ist durch eigene Hand gefallen — durch eine Kette „legaler“ Akte.</div>"
     },
     {
-      "name": "Gleichschaltung von Staat und Gesellschaft 1933&ndash;1934",
+      "name": "Gleichschaltung von Staat und Gesellschaft 1933–1934",
       "description": "Wie alle Institutionen unter NS-Kontrolle kamen.",
-      "content": "<dl class=\"lf-def\"><dt>Gleichschaltung</dt><dd>NS-Begriff f&uuml;r die zwangsweise Anpassung aller Institutionen an die NS-Ideologie.</dd></dl><h3>Schl&uuml;sselma&szlig;nahmen</h3><ul><li><strong>Mai 1933:</strong> Aufl&ouml;sung der Gewerkschaften, Gr&uuml;ndung der Deutschen Arbeitsfront.</li><li><strong>Juni 1933:</strong> SPD verboten, andere Parteien l&ouml;sen sich auf.</li><li><strong>14. Juli 1933:</strong> NSDAP einzige zugelassene Partei.</li><li><strong>Oktober 1933:</strong> Aussto&szlig; aus dem V&ouml;lkerbund.</li><li><strong>Mai 1933:</strong> B&uuml;cherverbrennungen.</li><li><strong>April 1933:</strong> &bdquo;Arierparagraph&ldquo; &mdash; Juden werden aus Beamtentum entlassen.</li></ul><h3>R&ouml;hm-Putsch (30. Juni 1934)</h3><p>SS ermordet auf Hitlers Befehl die SA-F&uuml;hrung (Ernst R&ouml;hm) und unbequeme Konservative (Schleicher). 90+ Tote.</p><h3>2. August 1934</h3><p>Hindenburg stirbt. Hitler ist nun &bdquo;F&uuml;hrer und Reichskanzler&ldquo;. Reichswehr schw&ouml;rt pers&ouml;nlich auf Hitler.</p><div class=\"lf-key\"><div class=\"lf-key-title\">Bilanz nach 18 Monaten</div><div class=\"lf-key-body\">Eine Partei. Keine Pressefreiheit. Keine unabh&auml;ngige Justiz. Keine Gewerkschaften. Keine selbstst&auml;ndige Reichswehrf&uuml;hrung. Keine zivilen Grundrechte. Diktatur ist ein Prozess, kein einzelner Akt.</div></div>"
+      "content": "<dl class=\"lf-def\"><dt>Gleichschaltung</dt><dd>NS-Begriff für die zwangsweise Anpassung aller Institutionen an die NS-Ideologie.</dd></dl><h3>Schlüsselmaßnahmen</h3><ul><li><strong>Mai 1933:</strong> Auflösung der Gewerkschaften, Gründung der Deutschen Arbeitsfront.</li><li><strong>Juni 1933:</strong> SPD verboten, andere Parteien lösen sich auf.</li><li><strong>14. Juli 1933:</strong> NSDAP einzige zugelassene Partei.</li><li><strong>Oktober 1933:</strong> Ausstoß aus dem Völkerbund.</li><li><strong>Mai 1933:</strong> Bücherverbrennungen.</li><li><strong>April 1933:</strong> „Arierparagraph“ — Juden werden aus Beamtentum entlassen.</li></ul><h3>Röhm-Putsch (30. Juni 1934)</h3><p>SS ermordet auf Hitlers Befehl die SA-Führung (Ernst Röhm) und unbequeme Konservative (Schleicher). 90+ Tote.</p><h3>2. August 1934</h3><p>Hindenburg stirbt. Hitler ist nun „Führer und Reichskanzler“. Reichswehr schwört persönlich auf Hitler.</p><div class=\"lf-key\"><div class=\"lf-key-title\">Bilanz nach 18 Monaten</div><div class=\"lf-key-body\">Eine Partei. Keine Pressefreiheit. Keine unabhängige Justiz. Keine Gewerkschaften. Keine selbstständige Reichswehrführung. Keine zivilen Grundrechte. Diktatur ist ein Prozess, kein einzelner Akt.</div></div>"
     }
   ]
 }

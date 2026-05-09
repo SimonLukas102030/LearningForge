@@ -1,40 +1,40 @@
 {
   "name": "Energie-Erhaltung",
-  "description": "Energie kann sich umwandeln, geht aber nie verloren &mdash; einer der m&auml;chtigsten S&auml;tze der Physik.",
+  "description": "Energie kann sich umwandeln, geht aber nie verloren — einer der mächtigsten Sätze der Physik.",
   "subtopics": [
     {
       "name": "Was ist Energie? Formen der Energie",
-      "description": "Energie ist die F&auml;higkeit, Arbeit zu verrichten.",
-      "content": "<p>Energie ist die F&auml;higkeit eines Systems, <strong>Arbeit zu verrichten</strong> &mdash; also etwas zu bewegen, zu erw&auml;rmen, zu verformen.</p><h3>Formen der Energie</h3><dl class=\"lf-def\"><dt>Kinetische Energie (E<sub>kin</sub>)</dt><dd>Bewegungsenergie. Alles, was sich bewegt, hat sie.</dd><dt>Potenzielle Energie (E<sub>pot</sub>)</dt><dd>Lage-Energie. Etwas, was hoch ist, kann fallen.</dd><dt>Spannenergie (E<sub>spann</sub>)</dt><dd>Energie in einer gespannten Feder oder einem gedehnten Gummi.</dd><dt>Thermische Energie</dt><dd>W&auml;rme. Bewegung der Atome.</dd><dt>Chemische Energie</dt><dd>In Brennstoffen, Akkus, Lebensmitteln gespeichert.</dd><dt>Elektrische Energie</dt><dd>In Batterien, Stromnetzen.</dd></dl><div class=\"lf-formula\">Einheit: 1 Joule (J) = 1 N&middot;m = 1 kg&middot;m&sup2;/s&sup2;</div>"
+      "description": "Energie ist die Fähigkeit, Arbeit zu verrichten.",
+      "content": "<p>Energie ist die Fähigkeit eines Systems, <strong>Arbeit zu verrichten</strong> — also etwas zu bewegen, zu erwärmen, zu verformen.</p><h3>Formen der Energie</h3><dl class=\"lf-def\"><dt>Kinetische Energie (E<sub>kin</sub>)</dt><dd>Bewegungsenergie. Alles, was sich bewegt, hat sie.</dd><dt>Potenzielle Energie (E<sub>pot</sub>)</dt><dd>Lage-Energie. Etwas, was hoch ist, kann fallen.</dd><dt>Spannenergie (E<sub>spann</sub>)</dt><dd>Energie in einer gespannten Feder oder einem gedehnten Gummi.</dd><dt>Thermische Energie</dt><dd>Wärme. Bewegung der Atome.</dd><dt>Chemische Energie</dt><dd>In Brennstoffen, Akkus, Lebensmitteln gespeichert.</dd><dt>Elektrische Energie</dt><dd>In Batterien, Stromnetzen.</dd></dl><div class=\"lf-formula\">Einheit: 1 Joule (J) = 1 N·m = 1 kg·m²/s²</div>"
     },
     {
       "name": "Kinetische Energie + potenzielle Energie",
       "description": "Die zwei wichtigsten Formeln in Klasse 9.",
       "blocks": [
-        {"type": "text", "content": "<h3>Kinetische Energie</h3><div class=\"lf-formula\">E<sub>kin</sub> = &frac12; &middot; m &middot; v&sup2;</div><p>Bei doppelter Geschwindigkeit: <strong>vierfache</strong> kinetische Energie. Das ist der Grund, warum doppelte Geschwindigkeit beim Auto vier Mal so viel Bremsweg bedeutet.</p><h3>Potenzielle Energie</h3><div class=\"lf-formula\">E<sub>pot</sub> = m &middot; g &middot; h</div><p>m = Masse, g &asymp; 9,81 m/s&sup2;, h = H&ouml;he &uuml;ber Bezugspunkt.</p>"},
+        {"type": "text", "content": "<h3>Kinetische Energie</h3><div class=\"lf-formula\">E<sub>kin</sub> = ½ · m · v²</div><p>Bei doppelter Geschwindigkeit: <strong>vierfache</strong> kinetische Energie. Das ist der Grund, warum doppelte Geschwindigkeit beim Auto vier Mal so viel Bremsweg bedeutet.</p><h3>Potenzielle Energie</h3><div class=\"lf-formula\">E<sub>pot</sub> = m · g · h</div><p>m = Masse, g ≈ 9,81 m/s², h = Höhe über Bezugspunkt.</p>"},
         {"type": "widget", "widgetType": "number-slider", "config": {
-          "setup": "Ein Stein (Masse 2 kg) wird auf eine H&ouml;he von 5 m angehoben. (g = 10 m/s&sup2; zur Vereinfachung).",
-          "question": "Wie gro&szlig; ist seine potenzielle Energie in Joule?",
+          "setup": "Ein Stein (Masse 2 kg) wird auf eine Höhe von 5 m angehoben. (g = 10 m/s² zur Vereinfachung).",
+          "question": "Wie groß ist seine potenzielle Energie in Joule?",
           "min": 0,
           "max": 200,
           "step": 1,
           "correct": 100,
           "tolerance": 5,
           "unit": "J",
-          "reveal": "E<sub>pot</sub> = m&middot;g&middot;h = 2 kg &middot; 10 m/s&sup2; &middot; 5 m = 100 J. Wenn der Stein f&auml;llt, wird genau diese 100 J in kinetische Energie umgewandelt &mdash; daraus folgt v&apos;= 10 m/s am Boden."
+          "reveal": "E<sub>pot</sub> = m·g·h = 2 kg · 10 m/s² · 5 m = 100 J. Wenn der Stein fällt, wird genau diese 100 J in kinetische Energie umgewandelt — daraus folgt v&apos;= 10 m/s am Boden."
         }},
-        {"type": "text", "content": "<h3>Worked Example</h3><p>Ein Auto (1000 kg) f&auml;hrt 20 m/s. Wieviel kinetische Energie?</p><div class=\"lf-formula\">E<sub>kin</sub> = &frac12; &middot; 1000 &middot; 20&sup2; = 200.000 J = 200 kJ</div>"}
+        {"type": "text", "content": "<h3>Worked Example</h3><p>Ein Auto (1000 kg) fährt 20 m/s. Wieviel kinetische Energie?</p><div class=\"lf-formula\">E<sub>kin</sub> = ½ · 1000 · 20² = 200.000 J = 200 kJ</div>"}
       ]
     },
     {
       "name": "Energieerhaltungssatz",
-      "description": "Energie geht nicht verloren &mdash; sie wandelt sich nur um.",
-      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Energieerhaltungssatz</div><div class=\"lf-key-body\">In einem geschlossenen System bleibt die Gesamtenergie <strong>konstant</strong>. Sie kann sich von einer Form in eine andere umwandeln, aber nie entstehen oder verschwinden.</div></div><div class=\"lf-formula\">E<sub>gesamt</sub> = E<sub>kin</sub> + E<sub>pot</sub> + E<sub>therm</sub> + ... = konstant</div><h3>Klassisches Beispiel: Pendel</h3><p>An den Umkehrpunkten: nur E<sub>pot</sub> (steht still). Im tiefsten Punkt: nur E<sub>kin</sub> (h=0, schnellste Bewegung). Dazwischen: Mischung. Summe immer gleich.</p><h3>Worked Example: Fallender Apfel</h3><p>Ein Apfel (m = 0,1 kg) f&auml;llt aus 5 m H&ouml;he. Mit welcher Geschwindigkeit kommt er unten an? (g = 10 m/s&sup2;)</p><ol class=\"lf-steps\"><li>E<sub>pot</sub> oben = m&middot;g&middot;h = 0,1&middot;10&middot;5 = 5 J</li><li>Energieerhaltung: E<sub>kin</sub> unten = 5 J</li><li>&frac12;&middot;m&middot;v&sup2; = 5 &rarr; v&sup2; = 100 &rarr; <strong>v = 10 m/s</strong></li></ol>"
+      "description": "Energie geht nicht verloren — sie wandelt sich nur um.",
+      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Energieerhaltungssatz</div><div class=\"lf-key-body\">In einem geschlossenen System bleibt die Gesamtenergie <strong>konstant</strong>. Sie kann sich von einer Form in eine andere umwandeln, aber nie entstehen oder verschwinden.</div></div><div class=\"lf-formula\">E<sub>gesamt</sub> = E<sub>kin</sub> + E<sub>pot</sub> + E<sub>therm</sub> + ... = konstant</div><h3>Klassisches Beispiel: Pendel</h3><p>An den Umkehrpunkten: nur E<sub>pot</sub> (steht still). Im tiefsten Punkt: nur E<sub>kin</sub> (h=0, schnellste Bewegung). Dazwischen: Mischung. Summe immer gleich.</p><h3>Worked Example: Fallender Apfel</h3><p>Ein Apfel (m = 0,1 kg) fällt aus 5 m Höhe. Mit welcher Geschwindigkeit kommt er unten an? (g = 10 m/s²)</p><ol class=\"lf-steps\"><li>E<sub>pot</sub> oben = m·g·h = 0,1·10·5 = 5 J</li><li>Energieerhaltung: E<sub>kin</sub> unten = 5 J</li><li>½·m·v² = 5 → v² = 100 → <strong>v = 10 m/s</strong></li></ol>"
     },
     {
       "name": "Reibung + reale Systeme",
       "description": "Warum es im echten Leben anders aussieht.",
-      "content": "<p>In echten Systemen gibt es immer Reibung &mdash; mechanische Energie wird in W&auml;rmeenergie umgewandelt.</p><div class=\"lf-formula\">E<sub>kin, vorher</sub> = E<sub>kin, nachher</sub> + W<sub>Reibung</sub></div><h3>Beispiele</h3><ul><li>Auto bremst: Bewegungsenergie &rarr; W&auml;rme in den Bremsen.</li><li>Heizung: chemische Energie (Gas) &rarr; W&auml;rme.</li><li>Rutsche: potenzielle Energie &rarr; teils kinetische, teils W&auml;rme durch Reibung.</li></ul><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Energie geht nicht verloren &mdash; sie wird nur in Formen umgewandelt, die wir oft nicht mehr nutzen k&ouml;nnen (z.B. W&auml;rme verteilt sich).</div><h3>Wirkungsgrad</h3><div class=\"lf-formula\">&eta; = E<sub>nutz</sub> / E<sub>gesamt</sub></div><p>Auto: ~25-30%. Gl&uuml;hbirne: ~5%. LED: ~50%. Solarzelle: ~20%.</p>"
+      "content": "<p>In echten Systemen gibt es immer Reibung — mechanische Energie wird in Wärmeenergie umgewandelt.</p><div class=\"lf-formula\">E<sub>kin, vorher</sub> = E<sub>kin, nachher</sub> + W<sub>Reibung</sub></div><h3>Beispiele</h3><ul><li>Auto bremst: Bewegungsenergie → Wärme in den Bremsen.</li><li>Heizung: chemische Energie (Gas) → Wärme.</li><li>Rutsche: potenzielle Energie → teils kinetische, teils Wärme durch Reibung.</li></ul><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Energie geht nicht verloren — sie wird nur in Formen umgewandelt, die wir oft nicht mehr nutzen können (z.B. Wärme verteilt sich).</div><h3>Wirkungsgrad</h3><div class=\"lf-formula\">η = E<sub>nutz</sub> / E<sub>gesamt</sub></div><p>Auto: ~25-30%. Glühbirne: ~5%. LED: ~50%. Solarzelle: ~20%.</p>"
     }
   ]
 }

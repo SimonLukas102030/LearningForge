@@ -1,41 +1,41 @@
 {
-  "name": "S&auml;uren &amp; Laugen",
-  "description": "pH-Wert, Indikatoren, Neutralisation &mdash; was unterscheidet Essig von Seifenlauge?",
+  "name": "Säuren &amp; Laugen",
+  "description": "pH-Wert, Indikatoren, Neutralisation — was unterscheidet Essig von Seifenlauge?",
   "subtopics": [
     {
-      "name": "Was sind S&auml;uren &amp; Laugen? Br&oslash;nsted-Konzept",
-      "description": "Protonen-&Uuml;bergeber und -Empf&auml;nger.",
-      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Br&oslash;nsted-Konzept</div><div class=\"lf-key-body\">Eine <strong>S&auml;ure</strong> ist ein Stoff, der ein Proton (H<sup>+</sup>) abgeben kann. Eine <strong>Base</strong> ist ein Stoff, der ein Proton aufnehmen kann.</div></div><h3>Beispiele</h3><table class=\"lf-table\"><thead><tr><th>S&auml;ure</th><th>Formel</th><th>Vorkommen</th></tr></thead><tbody><tr><td>Salzs&auml;ure</td><td>HCl</td><td>Magen</td></tr><tr><td>Schwefels&auml;ure</td><td>H<sub>2</sub>SO<sub>4</sub></td><td>Autobatterie</td></tr><tr><td>Essigs&auml;ure</td><td>CH<sub>3</sub>COOH</td><td>K&uuml;chenessig</td></tr><tr><td>Kohlens&auml;ure</td><td>H<sub>2</sub>CO<sub>3</sub></td><td>Sprudelwasser</td></tr></tbody></table><table class=\"lf-table\"><thead><tr><th>Base</th><th>Formel</th><th>Vorkommen</th></tr></thead><tbody><tr><td>Natronlauge</td><td>NaOH</td><td>Rohrreiniger</td></tr><tr><td>Kalkwasser</td><td>Ca(OH)<sub>2</sub></td><td>Bauchemie</td></tr><tr><td>Ammoniak-Lsg.</td><td>NH<sub>3</sub></td><td>Reiniger</td></tr></tbody></table>"
+      "name": "Was sind Säuren &amp; Laugen? Brønsted-Konzept",
+      "description": "Protonen-Übergeber und -Empfänger.",
+      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Brønsted-Konzept</div><div class=\"lf-key-body\">Eine <strong>Säure</strong> ist ein Stoff, der ein Proton (H<sup>+</sup>) abgeben kann. Eine <strong>Base</strong> ist ein Stoff, der ein Proton aufnehmen kann.</div></div><h3>Beispiele</h3><table class=\"lf-table\"><thead><tr><th>Säure</th><th>Formel</th><th>Vorkommen</th></tr></thead><tbody><tr><td>Salzsäure</td><td>HCl</td><td>Magen</td></tr><tr><td>Schwefelsäure</td><td>H<sub>2</sub>SO<sub>4</sub></td><td>Autobatterie</td></tr><tr><td>Essigsäure</td><td>CH<sub>3</sub>COOH</td><td>Küchenessig</td></tr><tr><td>Kohlensäure</td><td>H<sub>2</sub>CO<sub>3</sub></td><td>Sprudelwasser</td></tr></tbody></table><table class=\"lf-table\"><thead><tr><th>Base</th><th>Formel</th><th>Vorkommen</th></tr></thead><tbody><tr><td>Natronlauge</td><td>NaOH</td><td>Rohrreiniger</td></tr><tr><td>Kalkwasser</td><td>Ca(OH)<sub>2</sub></td><td>Bauchemie</td></tr><tr><td>Ammoniak-Lsg.</td><td>NH<sub>3</sub></td><td>Reiniger</td></tr></tbody></table>"
     },
     {
       "name": "pH-Wert &amp; Indikatoren",
-      "description": "Wie misst man S&auml;ure und Base?",
+      "description": "Wie misst man Säure und Base?",
       "blocks": [
-        {"type": "text", "content": "<p>Der pH-Wert ist ein Ma&szlig; f&uuml;r die Konzentration von H<sup>+</sup>-Ionen in einer L&ouml;sung.</p><div class=\"lf-formula\">pH 0&ndash;6: sauer | pH 7: neutral | pH 8&ndash;14: basisch</div><div class=\"lf-box lf-info\"><strong>Logarithmische Skala:</strong> pH 4 ist <strong>10x</strong> so sauer wie pH 5 und <strong>100x</strong> so sauer wie pH 6.</div><h3>Indikatoren</h3><dl class=\"lf-def\"><dt>Lackmus</dt><dd>Sauer: rot. Basisch: blau.</dd><dt>Universalindikator</dt><dd>Farbskala &uuml;ber den ganzen pH-Bereich.</dd><dt>Phenolphthalein</dt><dd>Sauer/neutral: farblos. Basisch: pink.</dd><dt>Rotkohlsaft</dt><dd>Nat&uuml;rlicher Indikator: rot (sauer) &rarr; lila (neutral) &rarr; gr&uuml;n/gelb (basisch).</dd></dl>"},
+        {"type": "text", "content": "<p>Der pH-Wert ist ein Maß für die Konzentration von H<sup>+</sup>-Ionen in einer Lösung.</p><div class=\"lf-formula\">pH 0–6: sauer | pH 7: neutral | pH 8–14: basisch</div><div class=\"lf-box lf-info\"><strong>Logarithmische Skala:</strong> pH 4 ist <strong>10x</strong> so sauer wie pH 5 und <strong>100x</strong> so sauer wie pH 6.</div><h3>Indikatoren</h3><dl class=\"lf-def\"><dt>Lackmus</dt><dd>Sauer: rot. Basisch: blau.</dd><dt>Universalindikator</dt><dd>Farbskala über den ganzen pH-Bereich.</dd><dt>Phenolphthalein</dt><dd>Sauer/neutral: farblos. Basisch: pink.</dd><dt>Rotkohlsaft</dt><dd>Natürlicher Indikator: rot (sauer) → lila (neutral) → grün/gelb (basisch).</dd></dl>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
           "setup": "Verschiedene Alltagsstoffe haben charakteristische pH-Werte.",
-          "question": "Verbinde Stoff mit ungef&auml;hrem pH-Wert.",
+          "question": "Verbinde Stoff mit ungefährem pH-Wert.",
           "pairs": [
-            {"id": "magen", "left": "Magens&auml;ure", "right": "pH ~1 (stark sauer)"},
+            {"id": "magen", "left": "Magensäure", "right": "pH ~1 (stark sauer)"},
             {"id": "essig", "left": "Haushaltsessig", "right": "pH ~3 (sauer)"},
             {"id": "wasser", "left": "Reines Wasser", "right": "pH 7 (neutral)"},
             {"id": "blut", "left": "Menschliches Blut", "right": "pH ~7,4 (leicht basisch)"},
             {"id": "seife", "left": "Seifenlauge", "right": "pH ~10 (basisch)"},
             {"id": "rohr", "left": "Rohrreiniger", "right": "pH ~14 (stark basisch)"}
           ],
-          "reveal": "Magens&auml;ure ist extrem sauer (pH 1) &mdash; tot&ouml;tlich f&uuml;r Bakterien. Blut muss zwischen 7,35 und 7,45 bleiben &mdash; Schwankungen sind lebensgef&auml;hrlich. Rohrreiniger basiert auf Natriumhydroxid (NaOH), &auml;tzend wie Magens&auml;ure, nur in die andere Richtung."
+          "reveal": "Magensäure ist extrem sauer (pH 1) — totötlich für Bakterien. Blut muss zwischen 7,35 und 7,45 bleiben — Schwankungen sind lebensgefährlich. Rohrreiniger basiert auf Natriumhydroxid (NaOH), ätzend wie Magensäure, nur in die andere Richtung."
         }}
       ]
     },
     {
-      "name": "Neutralisation: S&auml;ure + Base &rarr; Salz + Wasser",
-      "description": "Wenn S&auml;ure und Base sich aufheben.",
-      "content": "<div class=\"lf-formula\">S&auml;ure + Base &rarr; Salz + Wasser</div><h3>Beispiel: Salzs&auml;ure + Natronlauge</h3><div class=\"lf-formula\">HCl + NaOH &rarr; NaCl + H<sub>2</sub>O</div><p>Aus Salzs&auml;ure und Natronlauge entsteht <strong>Kochsalz</strong> und Wasser. Die L&ouml;sung wird neutral (pH 7).</p><h3>Was passiert auf Teilchenebene?</h3><p>S&auml;ure gibt H<sup>+</sup> ab. Base gibt OH<sup>-</sup> ab. Beide reagieren:</p><div class=\"lf-formula\">H<sup>+</sup> + OH<sup>-</sup> &rarr; H<sub>2</sub>O</div><p>Die anderen Ionen (Na<sup>+</sup>, Cl<sup>-</sup>) bleiben gel&ouml;st &mdash; bilden das Salz.</p><h3>Anwendungen</h3><ul><li>Sodbrennen: basisches Magnesiumhydroxid neutralisiert &uuml;bersch&uuml;ssige Magens&auml;ure.</li><li>Boden d&uuml;ngen: Sauerer Boden wird mit Kalk (Ca(OH)<sub>2</sub>) neutralisiert.</li></ul>"
+      "name": "Neutralisation: Säure + Base → Salz + Wasser",
+      "description": "Wenn Säure und Base sich aufheben.",
+      "content": "<div class=\"lf-formula\">Säure + Base → Salz + Wasser</div><h3>Beispiel: Salzsäure + Natronlauge</h3><div class=\"lf-formula\">HCl + NaOH → NaCl + H<sub>2</sub>O</div><p>Aus Salzsäure und Natronlauge entsteht <strong>Kochsalz</strong> und Wasser. Die Lösung wird neutral (pH 7).</p><h3>Was passiert auf Teilchenebene?</h3><p>Säure gibt H<sup>+</sup> ab. Base gibt OH<sup>-</sup> ab. Beide reagieren:</p><div class=\"lf-formula\">H<sup>+</sup> + OH<sup>-</sup> → H<sub>2</sub>O</div><p>Die anderen Ionen (Na<sup>+</sup>, Cl<sup>-</sup>) bleiben gelöst — bilden das Salz.</p><h3>Anwendungen</h3><ul><li>Sodbrennen: basisches Magnesiumhydroxid neutralisiert überschüssige Magensäure.</li><li>Boden düngen: Sauerer Boden wird mit Kalk (Ca(OH)<sub>2</sub>) neutralisiert.</li></ul>"
     },
     {
       "name": "Stark vs schwach + Anwendungen",
-      "description": "Nicht alle S&auml;uren sind gleich gef&auml;hrlich.",
-      "content": "<h3>Starke vs. schwache S&auml;uren</h3><dl class=\"lf-def\"><dt>Starke S&auml;ure</dt><dd>Gibt fast vollst&auml;ndig Protonen ab. HCl, H<sub>2</sub>SO<sub>4</sub>, HNO<sub>3</sub>.</dd><dt>Schwache S&auml;ure</dt><dd>Gibt nur teilweise Protonen ab. Essigs&auml;ure, Kohlens&auml;ure, Zitronens&auml;ure.</dd></dl><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Stark/schwach sagt nichts &uuml;ber die Konzentration. Verd&uuml;nnte HCl ist immer noch eine starke S&auml;ure &mdash; nur eben verd&uuml;nnt. Konzentrierte Essigs&auml;ure ist eine schwache S&auml;ure &mdash; aber konzentriert.</div><h3>Anwendungen</h3><ul><li>Magens&auml;ure: HCl t&ouml;tet Bakterien, hilft bei Verdauung.</li><li>Sodawasser: Kohlens&auml;ure CO<sub>2</sub> + H<sub>2</sub>O.</li><li>Backpulver: Reaktion von Natron (basisch) und Wein-/Zitronens&auml;ure setzt CO<sub>2</sub> frei.</li><li>Akku: Schwefels&auml;ure als Elektrolyt.</li><li>Seife: Lauge l&ouml;st Fett.</li></ul>"
+      "description": "Nicht alle Säuren sind gleich gefährlich.",
+      "content": "<h3>Starke vs. schwache Säuren</h3><dl class=\"lf-def\"><dt>Starke Säure</dt><dd>Gibt fast vollständig Protonen ab. HCl, H<sub>2</sub>SO<sub>4</sub>, HNO<sub>3</sub>.</dd><dt>Schwache Säure</dt><dd>Gibt nur teilweise Protonen ab. Essigsäure, Kohlensäure, Zitronensäure.</dd></dl><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Stark/schwach sagt nichts über die Konzentration. Verdünnte HCl ist immer noch eine starke Säure — nur eben verdünnt. Konzentrierte Essigsäure ist eine schwache Säure — aber konzentriert.</div><h3>Anwendungen</h3><ul><li>Magensäure: HCl tötet Bakterien, hilft bei Verdauung.</li><li>Sodawasser: Kohlensäure CO<sub>2</sub> + H<sub>2</sub>O.</li><li>Backpulver: Reaktion von Natron (basisch) und Wein-/Zitronensäure setzt CO<sub>2</sub> frei.</li><li>Akku: Schwefelsäure als Elektrolyt.</li><li>Seife: Lauge löst Fett.</li></ul>"
     }
   ]
 }

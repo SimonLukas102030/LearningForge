@@ -1,44 +1,44 @@
 {
   "name": "Weimarer Republik",
-  "description": "Deutschlands erste Demokratie &mdash; geboren aus einer Niederlage, gepr&auml;gt von Krisen, gescheitert an ihren Feinden.",
+  "description": "Deutschlands erste Demokratie — geboren aus einer Niederlage, geprägt von Krisen, gescheitert an ihren Feinden.",
   "subtopics": [
     {
       "name": "Geburt aus der Niederlage 1918/19",
-      "description": "Wie die Republik entstand &mdash; im Chaos.",
-      "content": "<h3>Niederlage und Revolution</h3><p>Oktober/November 1918: Deutschland verliert den Ersten Weltkrieg. Kieler Matrosenaufstand. Die Revolution breitet sich aus.</p><h3>9. November 1918</h3><p>Doppelte Ausrufung der Republik:</p><ul><li><strong>Philipp Scheidemann</strong> (SPD) ruft die <em>parlamentarische Republik</em> aus.</li><li><strong>Karl Liebknecht</strong> (Spartakusbund) ruft die <em>R&auml;terepublik</em> aus.</li></ul><h3>Versailles 1919</h3><p>Friedensvertrag mit harten Bedingungen f&uuml;r Deutschland:</p><ul><li>Kriegsschuld-Artikel 231</li><li>Reparationen: 132 Mrd. Goldmark</li><li>Verlust von 13% des Territoriums</li><li>Heeresreduktion auf 100.000 Mann</li></ul><div class=\"lf-box lf-warn\"><strong>Folge:</strong> Die Republik war von Anfang an mit dem &bdquo;Schanddiktat&ldquo; verbunden &mdash; obwohl die Republikaner Versailles geerbt, nicht verschuldet hatten.</div>"
+      "description": "Wie die Republik entstand — im Chaos.",
+      "content": "<h3>Niederlage und Revolution</h3><p>Oktober/November 1918: Deutschland verliert den Ersten Weltkrieg. Kieler Matrosenaufstand. Die Revolution breitet sich aus.</p><h3>9. November 1918</h3><p>Doppelte Ausrufung der Republik:</p><ul><li><strong>Philipp Scheidemann</strong> (SPD) ruft die <em>parlamentarische Republik</em> aus.</li><li><strong>Karl Liebknecht</strong> (Spartakusbund) ruft die <em>Räterepublik</em> aus.</li></ul><h3>Versailles 1919</h3><p>Friedensvertrag mit harten Bedingungen für Deutschland:</p><ul><li>Kriegsschuld-Artikel 231</li><li>Reparationen: 132 Mrd. Goldmark</li><li>Verlust von 13% des Territoriums</li><li>Heeresreduktion auf 100.000 Mann</li></ul><div class=\"lf-box lf-warn\"><strong>Folge:</strong> Die Republik war von Anfang an mit dem „Schanddiktat“ verbunden — obwohl die Republikaner Versailles geerbt, nicht verschuldet hatten.</div>"
     },
     {
-      "name": "Die Weimarer Verfassung &mdash; St&auml;rken und Schw&auml;chen",
-      "description": "Modern gedacht &mdash; mit eingebauten Bruchstellen.",
+      "name": "Die Weimarer Verfassung — Stärken und Schwächen",
+      "description": "Modern gedacht — mit eingebauten Bruchstellen.",
       "blocks": [
-        {"type": "text", "content": "<p>Die Verfassung von 1919 (Friedrich Ebert, Hugo Preu&szlig;) war damals eine der modernsten der Welt.</p><h3>St&auml;rken</h3><ul><li>Frauenwahlrecht (Deutschland 1918!)</li><li>Allgemeines, gleiches Wahlrecht ab 20</li><li>Grundrechte umfassend verankert</li><li>Sozialstaat-Anspruch (Recht auf Arbeit)</li></ul><h3>Schw&auml;chen</h3>"},
+        {"type": "text", "content": "<p>Die Verfassung von 1919 (Friedrich Ebert, Hugo Preuß) war damals eine der modernsten der Welt.</p><h3>Stärken</h3><ul><li>Frauenwahlrecht (Deutschland 1918!)</li><li>Allgemeines, gleiches Wahlrecht ab 20</li><li>Grundrechte umfassend verankert</li><li>Sozialstaat-Anspruch (Recht auf Arbeit)</li></ul><h3>Schwächen</h3>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
-          "setup": "Drei Konstruktionsfehler der Weimarer Verfassung wurden ihr Verh&auml;ngnis.",
-          "question": "Verbinde Verfassungs-Schw&auml;che mit Folge.",
+          "setup": "Drei Konstruktionsfehler der Weimarer Verfassung wurden ihr Verhängnis.",
+          "question": "Verbinde Verfassungs-Schwäche mit Folge.",
           "pairs": [
-            {"id": "art48", "left": "Artikel 48 (Notverordnungen)", "right": "Pr&auml;sident kann Parlament umgehen &mdash; ab 1930 missbraucht"},
-            {"id": "verh", "left": "Reines Verh&auml;ltniswahlrecht", "right": "Zersplitterung: 30+ Parteien, schwer zu regieren"},
-            {"id": "sturz", "left": "Misstrauensvotum ohne Nachfolger", "right": "Regierungen st&uuml;rzen, ohne dass eine neue da ist"}
+            {"id": "art48", "left": "Artikel 48 (Notverordnungen)", "right": "Präsident kann Parlament umgehen — ab 1930 missbraucht"},
+            {"id": "verh", "left": "Reines Verhältniswahlrecht", "right": "Zersplitterung: 30+ Parteien, schwer zu regieren"},
+            {"id": "sturz", "left": "Misstrauensvotum ohne Nachfolger", "right": "Regierungen stürzen, ohne dass eine neue da ist"}
           ],
-          "reveal": "Aus diesen drei Fehlern lernte das Grundgesetz 1949: keine Pr&auml;sidialdiktatur (Art. 48 abgeschafft), 5%-H&uuml;rde (gegen Zersplitterung), konstruktives Misstrauensvotum (nur mit Nachfolger). Demokratie braucht Schutzmechanismen vor sich selbst."
+          "reveal": "Aus diesen drei Fehlern lernte das Grundgesetz 1949: keine Präsidialdiktatur (Art. 48 abgeschafft), 5%-Hürde (gegen Zersplitterung), konstruktives Misstrauensvotum (nur mit Nachfolger). Demokratie braucht Schutzmechanismen vor sich selbst."
         }},
-        {"type": "text", "content": "<div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Die Verfassung war nicht zwangsl&auml;ufig zum Scheitern verurteilt. Aber sie machte es Demokratie-Feinden leichter, das System zu zerlegen.</div>"}
+        {"type": "text", "content": "<div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Die Verfassung war nicht zwangsläufig zum Scheitern verurteilt. Aber sie machte es Demokratie-Feinden leichter, das System zu zerlegen.</div>"}
       ]
     },
     {
-      "name": "Krisenjahre 1919&ndash;1923",
+      "name": "Krisenjahre 1919–1923",
       "description": "Putsch, Hyperinflation, Ruhrkampf.",
-      "content": "<h3>Politische Putsche</h3><ul><li><strong>1919:</strong> Spartakusaufstand (von links)</li><li><strong>1920:</strong> Kapp-Putsch (von rechts)</li><li><strong>1923:</strong> Hitler-Putsch in M&uuml;nchen</li></ul><h3>Hyperinflation 1923</h3><p>Deutschland kann Reparationen nicht zahlen. Frankreich besetzt das Ruhrgebiet. Deutschland druckt immer mehr Geld:</p><div class=\"lf-formula\">Brot 1922: 1,40 Mark | Brot Nov 1923: 200 Mrd. Mark</div><div class=\"lf-box lf-warn\"><strong>Folge:</strong> Mittelschicht verliert ihre Ersparnisse. Vertrauen in Demokratie sinkt &mdash; die Wurzel sp&auml;terer NSDAP-W&auml;hler.</div><h3>L&ouml;sung 1923</h3><p>Stresemann f&uuml;hrt Rentenmark ein. Hyperinflation gestoppt.</p>"
+      "content": "<h3>Politische Putsche</h3><ul><li><strong>1919:</strong> Spartakusaufstand (von links)</li><li><strong>1920:</strong> Kapp-Putsch (von rechts)</li><li><strong>1923:</strong> Hitler-Putsch in München</li></ul><h3>Hyperinflation 1923</h3><p>Deutschland kann Reparationen nicht zahlen. Frankreich besetzt das Ruhrgebiet. Deutschland druckt immer mehr Geld:</p><div class=\"lf-formula\">Brot 1922: 1,40 Mark | Brot Nov 1923: 200 Mrd. Mark</div><div class=\"lf-box lf-warn\"><strong>Folge:</strong> Mittelschicht verliert ihre Ersparnisse. Vertrauen in Demokratie sinkt — die Wurzel späterer NSDAP-Wähler.</div><h3>Lösung 1923</h3><p>Stresemann führt Rentenmark ein. Hyperinflation gestoppt.</p>"
     },
     {
-      "name": "Goldene Zwanziger 1924&ndash;1929",
-      "description": "Eine kurze Bl&uuml;te.",
-      "content": "<p>Mit der Stabilisierung 1924 beginnen die &bdquo;Goldenen Zwanziger&ldquo; &mdash; eine Phase wirtschaftlicher und kultureller Bl&uuml;te.</p><h3>Wirtschaft</h3><ul><li>Dawes-Plan (1924) reguliert Reparationen.</li><li>US-Kredite kurbeln Wirtschaft an.</li><li>Industrie modernisiert (Flie&szlig;band, Massenproduktion).</li></ul><h3>Kultur</h3><ul><li><strong>Berlin</strong> wird Kulturhauptstadt: Theater, Kabarett, Kino.</li><li>Bauhaus, Marlene Dietrich, Bertolt Brecht.</li><li>Erste Frauen in Hosen, Bubikopf, Charleston.</li></ul><h3>Politik</h3><p>Stresemann (Au&szlig;enminister, AP) integriert Deutschland in Europa: Locarno-Vertr&auml;ge 1925, V&ouml;lkerbund-Beitritt 1926, Friedensnobelpreis.</p><div class=\"lf-box lf-warn\"><strong>Aber:</strong> Die Bl&uuml;te war auf US-Krediten gebaut. Ein St&uuml;tzenzusammenbruch w&uuml;rde alles zerst&ouml;ren.</div>"
+      "name": "Goldene Zwanziger 1924–1929",
+      "description": "Eine kurze Blüte.",
+      "content": "<p>Mit der Stabilisierung 1924 beginnen die „Goldenen Zwanziger“ — eine Phase wirtschaftlicher und kultureller Blüte.</p><h3>Wirtschaft</h3><ul><li>Dawes-Plan (1924) reguliert Reparationen.</li><li>US-Kredite kurbeln Wirtschaft an.</li><li>Industrie modernisiert (Fließband, Massenproduktion).</li></ul><h3>Kultur</h3><ul><li><strong>Berlin</strong> wird Kulturhauptstadt: Theater, Kabarett, Kino.</li><li>Bauhaus, Marlene Dietrich, Bertolt Brecht.</li><li>Erste Frauen in Hosen, Bubikopf, Charleston.</li></ul><h3>Politik</h3><p>Stresemann (Außenminister, AP) integriert Deutschland in Europa: Locarno-Verträge 1925, Völkerbund-Beitritt 1926, Friedensnobelpreis.</p><div class=\"lf-box lf-warn\"><strong>Aber:</strong> Die Blüte war auf US-Krediten gebaut. Ein Stützenzusammenbruch würde alles zerstören.</div>"
     },
     {
-      "name": "Vom Schwarzen Freitag zur Aufl&ouml;sung 1929&ndash;1933",
+      "name": "Vom Schwarzen Freitag zur Auflösung 1929–1933",
       "description": "Wie das System zerbrach.",
-      "content": "<h3>Schwarzer Freitag (24.10.1929)</h3><p>Wall Street-Crash in New York. Die Kreditblase platzt. US-Banken ziehen Kredite aus Deutschland ab.</p><h3>Folgen in Deutschland</h3><ul><li>Massenarbeitslosigkeit: 1929: 1,4 Mio. &rarr; 1932: <strong>6 Mio.</strong></li><li>Banken-Krise 1931</li><li>Politische Radikalisierung</li></ul><h3>Br&uuml;ning + Sparpolitik</h3><p>Br&uuml;ning (Zentrum) regiert ab 1930 per Notverordnung (Art. 48). Sparpolitik macht Krise schlimmer (Deflation). Bevoelkerung leidet.</p><h3>NSDAP-Aufstieg</h3><table class=\"lf-table\"><thead><tr><th>Wahl</th><th>NSDAP-Stimmen</th></tr></thead><tbody><tr><td>Mai 1928</td><td>2,6%</td></tr><tr><td>Sep 1930</td><td>18,3%</td></tr><tr><td>Juli 1932</td><td>37,3%</td></tr></tbody></table><h3>Ende</h3><p>30. Januar 1933: Hindenburg ernennt Hitler zum Reichskanzler. Die Republik wird in 7 Wochen zur Diktatur (Reichstagsbrandverordnung, Erm&auml;chtigungsgesetz).</p><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Weimar zeigt: Demokratie schl&auml;gt nicht von selbst Wurzeln. Sie braucht Verteidiger, robuste Institutionen und das Vertrauen der Bev&ouml;lkerung. Wirtschaftliche Krisen + radikale Gegner + schwache Institutionen = das Ende.</div></div>"
+      "content": "<h3>Schwarzer Freitag (24.10.1929)</h3><p>Wall Street-Crash in New York. Die Kreditblase platzt. US-Banken ziehen Kredite aus Deutschland ab.</p><h3>Folgen in Deutschland</h3><ul><li>Massenarbeitslosigkeit: 1929: 1,4 Mio. → 1932: <strong>6 Mio.</strong></li><li>Banken-Krise 1931</li><li>Politische Radikalisierung</li></ul><h3>Brüning + Sparpolitik</h3><p>Brüning (Zentrum) regiert ab 1930 per Notverordnung (Art. 48). Sparpolitik macht Krise schlimmer (Deflation). Bevoelkerung leidet.</p><h3>NSDAP-Aufstieg</h3><table class=\"lf-table\"><thead><tr><th>Wahl</th><th>NSDAP-Stimmen</th></tr></thead><tbody><tr><td>Mai 1928</td><td>2,6%</td></tr><tr><td>Sep 1930</td><td>18,3%</td></tr><tr><td>Juli 1932</td><td>37,3%</td></tr></tbody></table><h3>Ende</h3><p>30. Januar 1933: Hindenburg ernennt Hitler zum Reichskanzler. Die Republik wird in 7 Wochen zur Diktatur (Reichstagsbrandverordnung, Ermächtigungsgesetz).</p><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Weimar zeigt: Demokratie schlägt nicht von selbst Wurzeln. Sie braucht Verteidiger, robuste Institutionen und das Vertrauen der Bevölkerung. Wirtschaftliche Krisen + radikale Gegner + schwache Institutionen = das Ende.</div></div>"
     }
   ]
 }

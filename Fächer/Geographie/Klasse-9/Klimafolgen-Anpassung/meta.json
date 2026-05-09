@@ -1,40 +1,40 @@
 {
   "name": "Klimafolgen-Anpassung",
-  "description": "Was die Erw&auml;rmung konkret anrichtet &mdash; und wie Gesellschaften reagieren k&ouml;nnen.",
+  "description": "Was die Erwärmung konkret anrichtet — und wie Gesellschaften reagieren können.",
   "subtopics": [
     {
       "name": "Globale Folgen (Meeresspiegel, Eis, Hitze)",
-      "description": "Was die Erw&auml;rmung weltweit ausl&ouml;st.",
-      "content": "<h3>Meeresspiegel-Anstieg</h3><ul><li>Bisher: ~20 cm seit 1900</li><li>Bis 2100: 30&ndash;100 cm prognostiziert</li><li>Gr&uuml;nde: thermische Ausdehnung, Eisschmelze in Gr&ouml;nland und Antarktis.</li></ul><h3>Eisschmelze</h3><ul><li>Arktis: Sommerlich eisfrei m&ouml;glich um 2050.</li><li>Gletscher: 1/3 bis 2050 verloren.</li><li>Permafrost-Auftauen: setzt CH<sub>4</sub> frei (Verst&auml;rkung).</li></ul><h3>Hitze und Extremwetter</h3><ul><li>Hitzewellen h&auml;ufiger und l&auml;nger.</li><li>St&auml;rkere Tropenst&uuml;rme.</li><li>Mehr D&uuml;rren, mehr Starkregen-Ereignisse.</li></ul>"
+      "description": "Was die Erwärmung weltweit auslöst.",
+      "content": "<h3>Meeresspiegel-Anstieg</h3><ul><li>Bisher: ~20 cm seit 1900</li><li>Bis 2100: 30–100 cm prognostiziert</li><li>Gründe: thermische Ausdehnung, Eisschmelze in Grönland und Antarktis.</li></ul><h3>Eisschmelze</h3><ul><li>Arktis: Sommerlich eisfrei möglich um 2050.</li><li>Gletscher: 1/3 bis 2050 verloren.</li><li>Permafrost-Auftauen: setzt CH<sub>4</sub> frei (Verstärkung).</li></ul><h3>Hitze und Extremwetter</h3><ul><li>Hitzewellen häufiger und länger.</li><li>Stärkere Tropenstürme.</li><li>Mehr Dürren, mehr Starkregen-Ereignisse.</li></ul>"
     },
     {
       "name": "Regionale Folgen (Deutschland, tropische Regionen, Inseln)",
-      "description": "Was vor unserer Haust&uuml;r passiert &mdash; und anderswo.",
+      "description": "Was vor unserer Haustür passiert — und anderswo.",
       "blocks": [
-        {"type": "text", "content": "<h3>Deutschland</h3><ul><li>+1,7&deg;C seit 1881 (mehr als globaler Schnitt).</li><li>Hitzesommer h&auml;ufiger (2003, 2018, 2022, 2023).</li><li>Starkregen: Ahrtalflut 2021 &mdash; 134 Tote.</li><li>Waldsterben durch Borkenk&auml;fer und D&uuml;rre.</li></ul><h3>Tropische Regionen</h3><ul><li>Sahel: Verst&auml;rkte D&uuml;rre, Verlust von Anbaufl&auml;chen.</li><li>S&uuml;dasien: H&auml;ufigere Monsun-Schwankungen, &Uuml;berschwemmungen.</li><li>Korallenriffe: Bleaching durch warmes Wasser, 50% bereits zerst&ouml;rt.</li></ul><h3>Inselstaaten</h3><ul><li>Tuvalu, Malediven: existenzielle Bedrohung durch Meeresspiegel.</li><li>Bangladesch: 17 Mio. Menschen leben unter 1m &uuml;ber NN.</li></ul>"},
+        {"type": "text", "content": "<h3>Deutschland</h3><ul><li>+1,7°C seit 1881 (mehr als globaler Schnitt).</li><li>Hitzesommer häufiger (2003, 2018, 2022, 2023).</li><li>Starkregen: Ahrtalflut 2021 — 134 Tote.</li><li>Waldsterben durch Borkenkäfer und Dürre.</li></ul><h3>Tropische Regionen</h3><ul><li>Sahel: Verstärkte Dürre, Verlust von Anbauflächen.</li><li>Südasien: Häufigere Monsun-Schwankungen, Überschwemmungen.</li><li>Korallenriffe: Bleaching durch warmes Wasser, 50% bereits zerstört.</li></ul><h3>Inselstaaten</h3><ul><li>Tuvalu, Malediven: existenzielle Bedrohung durch Meeresspiegel.</li><li>Bangladesch: 17 Mio. Menschen leben unter 1m über NN.</li></ul>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
           "setup": "Verschiedene Regionen sind unterschiedlich vom Klimawandel betroffen.",
           "question": "Verbinde Region mit der Hauptbedrohung.",
           "pairs": [
             {"id": "de", "left": "Deutschland", "right": "Hitzesommer + Starkregen-Fluten"},
-            {"id": "sah", "left": "Sahel-Zone", "right": "Verst&auml;rkte D&uuml;rre, Wassermangel"},
-            {"id": "ins", "left": "Inselstaaten (Tuvalu, Malediven)", "right": "Meeresspiegel &mdash; existenzielle Bedrohung"},
+            {"id": "sah", "left": "Sahel-Zone", "right": "Verstärkte Dürre, Wassermangel"},
+            {"id": "ins", "left": "Inselstaaten (Tuvalu, Malediven)", "right": "Meeresspiegel — existenzielle Bedrohung"},
             {"id": "ark", "left": "Arktis", "right": "Eisschmelze, Verlust von Lebensraum"},
             {"id": "kor", "left": "Korallenriffe", "right": "Bleaching durch warmes Wasser"}
           ],
-          "reveal": "Klimawandel wirkt regional unterschiedlich. Deutschland: gem&auml;&szlig;igt. Tropen und Polargebiete: extrem. Reichere L&auml;nder k&ouml;nnen sich besser anpassen &mdash; das ist die Klimagerechtigkeitsfrage."
+          "reveal": "Klimawandel wirkt regional unterschiedlich. Deutschland: gemäßigt. Tropen und Polargebiete: extrem. Reichere Länder können sich besser anpassen — das ist die Klimagerechtigkeitsfrage."
         }}
       ]
     },
     {
       "name": "Klimamigration + Konflikte",
-      "description": "Menschen flie&szlig;en, wo sie nicht mehr leben k&ouml;nnen.",
-      "content": "<h3>Klimamigration</h3><p>Sch&auml;tzungen: bis 2050 bis zu 200 Mio. Klimafl&uuml;chtlinge weltweit.</p><h3>Ursachen</h3><ul><li>D&uuml;rre &rarr; Hunger &rarr; Wegzug.</li><li>Meeresspiegel-Anstieg &rarr; Inseln und K&uuml;sten unbewohnbar.</li><li>Hitze &rarr; Arbeitsausfall, Tod.</li></ul><h3>Konflikte</h3><p>Konkurrenz um knappe Ressourcen (Wasser, Land) f&uuml;hrt zu Konflikten. Beispiel: Syrien-Krieg 2011 begann nach mehrj&auml;hriger D&uuml;rre.</p>"
+      "description": "Menschen fließen, wo sie nicht mehr leben können.",
+      "content": "<h3>Klimamigration</h3><p>Schätzungen: bis 2050 bis zu 200 Mio. Klimaflüchtlinge weltweit.</p><h3>Ursachen</h3><ul><li>Dürre → Hunger → Wegzug.</li><li>Meeresspiegel-Anstieg → Inseln und Küsten unbewohnbar.</li><li>Hitze → Arbeitsausfall, Tod.</li></ul><h3>Konflikte</h3><p>Konkurrenz um knappe Ressourcen (Wasser, Land) führt zu Konflikten. Beispiel: Syrien-Krieg 2011 begann nach mehrjähriger Dürre.</p>"
     },
     {
       "name": "Anpassungsstrategien (Mitigation vs. Adaptation)",
       "description": "Zwei Strategien gegen die Krise.",
-      "content": "<dl class=\"lf-def\"><dt>Mitigation (Vermeidung)</dt><dd>Treibhausgas-Emissionen senken, um den Klimawandel zu begrenzen. Erneuerbare Energien, E-Mobilit&auml;t, weniger Fleisch.</dd><dt>Adaptation (Anpassung)</dt><dd>Sich an die unausweichlichen Folgen anpassen. D&auml;mme bauen, hitzeresistente Pflanzen z&uuml;chten, K&auml;ltesch&uuml;tze in St&auml;dten.</dd></dl><div class=\"lf-box lf-info\"><strong>Beide n&ouml;tig:</strong> Mitigation, um das Schlimmste zu verhindern. Adaptation, um mit dem zu leben, was nicht mehr verhindert werden kann.</div><h3>Beispiele Adaptation</h3><ul><li>Niederlande: D&auml;mme und schwimmende H&auml;user.</li><li>Singapur: K&uuml;hlung durch Stadtbegr&uuml;nung.</li><li>Spanien: D&uuml;rrebew&auml;sserung, neue Wassergewinnung.</li></ul><h3>1,5&deg;C-Ziel</h3><p>Pariser Abkommen 2015: Erw&auml;rmung deutlich unter 2&deg;C, m&ouml;glichst 1,5&deg;C. Aktuell auf Kurs zu &uuml;ber +2,7&deg;C.</p>"
+      "content": "<dl class=\"lf-def\"><dt>Mitigation (Vermeidung)</dt><dd>Treibhausgas-Emissionen senken, um den Klimawandel zu begrenzen. Erneuerbare Energien, E-Mobilität, weniger Fleisch.</dd><dt>Adaptation (Anpassung)</dt><dd>Sich an die unausweichlichen Folgen anpassen. Dämme bauen, hitzeresistente Pflanzen züchten, Kälteschütze in Städten.</dd></dl><div class=\"lf-box lf-info\"><strong>Beide nötig:</strong> Mitigation, um das Schlimmste zu verhindern. Adaptation, um mit dem zu leben, was nicht mehr verhindert werden kann.</div><h3>Beispiele Adaptation</h3><ul><li>Niederlande: Dämme und schwimmende Häuser.</li><li>Singapur: Kühlung durch Stadtbegrünung.</li><li>Spanien: Dürrebewässerung, neue Wassergewinnung.</li></ul><h3>1,5°C-Ziel</h3><p>Pariser Abkommen 2015: Erwärmung deutlich unter 2°C, möglichst 1,5°C. Aktuell auf Kurs zu über +2,7°C.</p>"
     }
   ]
 }

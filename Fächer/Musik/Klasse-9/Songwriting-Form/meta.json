@@ -1,39 +1,39 @@
 {
   "name": "Songwriting &amp; Form",
-  "description": "Wie aus 3 Minuten Musik ein Song wird, der h&auml;ngenbleibt.",
+  "description": "Wie aus 3 Minuten Musik ein Song wird, der hängenbleibt.",
   "subtopics": [
     {
       "name": "Was ist eine Songform? Strophe-Refrain",
       "description": "Die einfachste Songform.",
       "blocks": [
-        {"type": "text", "content": "<p>Eine <strong>Songform</strong> ist die Anordnung verschiedener Teile in einem Song. Die einfachste: <strong>Strophe-Refrain</strong>.</p><h3>Bauteile</h3><dl class=\"lf-def\"><dt>Strophe (Verse)</dt><dd>Erz&auml;hlt die Geschichte, mit unterschiedlichem Text in jeder Strophe.</dd><dt>Refrain (Chorus)</dt><dd>Wiederholt sich, mit gleichem Text und Melodie. Der Ohrwurm-Teil.</dd></dl>"},
+        {"type": "text", "content": "<p>Eine <strong>Songform</strong> ist die Anordnung verschiedener Teile in einem Song. Die einfachste: <strong>Strophe-Refrain</strong>.</p><h3>Bauteile</h3><dl class=\"lf-def\"><dt>Strophe (Verse)</dt><dd>Erzählt die Geschichte, mit unterschiedlichem Text in jeder Strophe.</dd><dt>Refrain (Chorus)</dt><dd>Wiederholt sich, mit gleichem Text und Melodie. Der Ohrwurm-Teil.</dd></dl>"},
         {"type": "widget", "widgetType": "drag-sort", "config": {
           "setup": "Ein Pop-Song hat oft eine ganz bestimmte Standard-Reihenfolge.",
           "question": "Bring die Bauteile in eine typische Pop-Song-Reihenfolge.",
           "items": [
-            {"id": "intro", "label": "Intro &mdash; instrumentaler Anfang"},
-            {"id": "v1", "label": "Strophe 1 &mdash; Geschichte beginnt"},
-            {"id": "c1", "label": "Refrain &mdash; Hauptmelodie und Botschaft"},
-            {"id": "v2", "label": "Strophe 2 &mdash; Geschichte geht weiter"},
+            {"id": "intro", "label": "Intro — instrumentaler Anfang"},
+            {"id": "v1", "label": "Strophe 1 — Geschichte beginnt"},
+            {"id": "c1", "label": "Refrain — Hauptmelodie und Botschaft"},
+            {"id": "v2", "label": "Strophe 2 — Geschichte geht weiter"},
             {"id": "c2", "label": "Refrain (Wiederholung)"},
-            {"id": "br", "label": "Bridge &mdash; etwas Neues, Kontrast"},
+            {"id": "br", "label": "Bridge — etwas Neues, Kontrast"},
             {"id": "c3", "label": "Refrain (oft modifiziert oder doppelt)"},
-            {"id": "out", "label": "Outro &mdash; Ende"}
+            {"id": "out", "label": "Outro — Ende"}
           ],
           "correctOrder": ["intro", "v1", "c1", "v2", "c2", "br", "c3", "out"],
-          "reveal": "Standard-Pop-Song: Intro &rarr; Strophe 1 &rarr; Refrain &rarr; Strophe 2 &rarr; Refrain &rarr; Bridge &rarr; Refrain &rarr; Outro. Die Bridge bricht die Wiederholung auf und gibt dem Song neuen Schwung. Der finale Refrain ist oft die Steigerung &mdash; lauter, h&ouml;her, voller."
+          "reveal": "Standard-Pop-Song: Intro → Strophe 1 → Refrain → Strophe 2 → Refrain → Bridge → Refrain → Outro. Die Bridge bricht die Wiederholung auf und gibt dem Song neuen Schwung. Der finale Refrain ist oft die Steigerung — lauter, höher, voller."
         }}
       ]
     },
     {
-      "name": "Andere Formen &mdash; AABA, Verse-Pre-Chorus-Chorus, 12-Bar-Blues",
-      "description": "Variationen f&uuml;r verschiedene Genres.",
-      "content": "<h3>AABA (klassische Popform)</h3><p>A = Hauptteil. B = Bridge (Kontrast). Beispiel: viele Beatles-Songs.</p><h3>Verse-Pre-Chorus-Chorus</h3><p>Pre-Chorus baut Spannung auf, Chorus l&ouml;st sie. Standardform im modernen Pop.</p><h3>12-Bar-Blues</h3><p>12 Takte mit fester Akkordfolge: I-I-I-I-IV-IV-I-I-V-IV-I-V. Grundlage von Blues, Rock, R&amp;B.</p>"
+      "name": "Andere Formen — AABA, Verse-Pre-Chorus-Chorus, 12-Bar-Blues",
+      "description": "Variationen für verschiedene Genres.",
+      "content": "<h3>AABA (klassische Popform)</h3><p>A = Hauptteil. B = Bridge (Kontrast). Beispiel: viele Beatles-Songs.</p><h3>Verse-Pre-Chorus-Chorus</h3><p>Pre-Chorus baut Spannung auf, Chorus löst sie. Standardform im modernen Pop.</p><h3>12-Bar-Blues</h3><p>12 Takte mit fester Akkordfolge: I-I-I-I-IV-IV-I-I-V-IV-I-V. Grundlage von Blues, Rock, R&amp;B.</p>"
     },
     {
-      "name": "Hook und Bridge &mdash; was macht einen Song memorabel?",
-      "description": "Der Trick der Ohrw&uuml;rmer.",
-      "content": "<dl class=\"lf-def\"><dt>Hook</dt><dd>Die einpr&auml;gsame Phrase &mdash; meist im Refrain. Die zwei Sekunden, die du nach einem Tag noch im Kopf hast.</dd><dt>Bridge</dt><dd>Br&uuml;ckenteil zwischen zwei Refrains. Bricht das Schema, schafft Kontrast.</dd></dl><h3>Was macht eine Hook gut?</h3><ul><li>Wiederholt sich</li><li>Einfache, sangbare Melodie</li><li>Eingang&auml;ngiger Text</li><li>Rhythmische Pr&auml;gnanz</li></ul><h3>Beispiele</h3><ul><li>&bdquo;na na na na na na&ldquo; &mdash; Hey Jude (Beatles)</li><li>&bdquo;rolling in the deep&ldquo; &mdash; Adele</li><li>&bdquo;I want to break free&ldquo; &mdash; Queen</li></ul>"
+      "name": "Hook und Bridge — was macht einen Song memorabel?",
+      "description": "Der Trick der Ohrwürmer.",
+      "content": "<dl class=\"lf-def\"><dt>Hook</dt><dd>Die einprägsame Phrase — meist im Refrain. Die zwei Sekunden, die du nach einem Tag noch im Kopf hast.</dd><dt>Bridge</dt><dd>Brückenteil zwischen zwei Refrains. Bricht das Schema, schafft Kontrast.</dd></dl><h3>Was macht eine Hook gut?</h3><ul><li>Wiederholt sich</li><li>Einfache, sangbare Melodie</li><li>Eingangängiger Text</li><li>Rhythmische Prägnanz</li></ul><h3>Beispiele</h3><ul><li>„na na na na na na“ — Hey Jude (Beatles)</li><li>„rolling in the deep“ — Adele</li><li>„I want to break free“ — Queen</li></ul>"
     }
   ]
 }

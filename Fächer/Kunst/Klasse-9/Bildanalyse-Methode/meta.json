@@ -1,6 +1,6 @@
 {
   "name": "Bildanalyse-Methode (BAI)",
-  "description": "Drei Schritte, mit denen du jedes Bild der Welt knacken kannst &mdash; Beschreiben, Analysieren, Interpretieren.",
+  "description": "Drei Schritte, mit denen du jedes Bild der Welt knacken kannst — Beschreiben, Analysieren, Interpretieren.",
   "subtopics": [
     {
       "name": "Was ist BAI? Drei-Schritte-Methode",
@@ -11,24 +11,24 @@
           "setup": "Die BAI-Methode hat eine klare Reihenfolge.",
           "question": "Bring die drei Schritte in die richtige Reihenfolge.",
           "items": [
-            {"id": "b", "label": "Beschreiben &mdash; Was sehe ich? (Objektiv, ohne Wertung)"},
-            {"id": "a", "label": "Analysieren &mdash; Wie ist es gemacht? (Form, Farbe, Komposition)"},
-            {"id": "i", "label": "Interpretieren &mdash; Was bedeutet es?"}
+            {"id": "b", "label": "Beschreiben — Was sehe ich? (Objektiv, ohne Wertung)"},
+            {"id": "a", "label": "Analysieren — Wie ist es gemacht? (Form, Farbe, Komposition)"},
+            {"id": "i", "label": "Interpretieren — Was bedeutet es?"}
           ],
           "correctOrder": ["b", "a", "i"],
-          "reveal": "Beschreiben &rarr; Analysieren &rarr; Interpretieren. Erst beobachten, dann untersuchen, dann deuten. Wer direkt interpretiert (&bdquo;Das Bild ist traurig&ldquo;), ohne vorher zu beschreiben (&bdquo;dunkle Farben, gesenkter Blick&ldquo;), hat keine Belege."
+          "reveal": "Beschreiben → Analysieren → Interpretieren. Erst beobachten, dann untersuchen, dann deuten. Wer direkt interpretiert („Das Bild ist traurig“), ohne vorher zu beschreiben („dunkle Farben, gesenkter Blick“), hat keine Belege."
         }}
       ]
     },
     {
-      "name": "Beschreiben &mdash; was sehe ich?",
+      "name": "Beschreiben — was sehe ich?",
       "description": "Objektiv, ohne Wertung.",
-      "content": "<h3>Was beschreibst du?</h3><ul><li><strong>Bildgegenstand:</strong> Was ist zu sehen? Personen, Objekte, Landschaft, abstrakt?</li><li><strong>Position:</strong> Wo befinden sich die Elemente?</li><li><strong>Format:</strong> Hoch- oder Querformat? Gr&ouml;&szlig;e?</li><li><strong>Bildausschnitt:</strong> Nahaufnahme, Totale, Halbtotale?</li></ul><h3>Wichtig: Keine Wertungen!</h3><div class=\"lf-box lf-warn\">Falsch: &bdquo;Das Bild ist traurig.&ldquo; Richtig: &bdquo;Das Bild zeigt eine Frau mit gesenktem Blick und herabh&auml;ngenden Schultern.&ldquo;</div>"
+      "content": "<h3>Was beschreibst du?</h3><ul><li><strong>Bildgegenstand:</strong> Was ist zu sehen? Personen, Objekte, Landschaft, abstrakt?</li><li><strong>Position:</strong> Wo befinden sich die Elemente?</li><li><strong>Format:</strong> Hoch- oder Querformat? Größe?</li><li><strong>Bildausschnitt:</strong> Nahaufnahme, Totale, Halbtotale?</li></ul><h3>Wichtig: Keine Wertungen!</h3><div class=\"lf-box lf-warn\">Falsch: „Das Bild ist traurig.“ Richtig: „Das Bild zeigt eine Frau mit gesenktem Blick und herabhängenden Schultern.“</div>"
     },
     {
-      "name": "Analysieren + Interpretieren &mdash; was bedeutet es?",
+      "name": "Analysieren + Interpretieren — was bedeutet es?",
       "description": "Wie ist es gemacht? Was sagt es aus?",
-      "content": "<h3>Analyse &mdash; Bildmittel</h3><dl class=\"lf-def\"><dt>Komposition</dt><dd>Aufbau: zentral, asymmetrisch, diagonal, horizontal?</dd><dt>Farbe</dt><dd>Warm/kalt, hell/dunkel, Kontrast, Harmonie?</dd><dt>Licht</dt><dd>Woher kommt es? Welche Stimmung erzeugt es?</dd><dt>Linien &amp; Formen</dt><dd>Gerade, kurvig, scharf, weich?</dd><dt>Perspektive</dt><dd>Zentralperspektive, Vogelperspektive, Froschperspektive?</dd></dl><h3>Interpretation</h3><p>Hier deutest du: Was will das Bild aussagen? Welche Botschaft?</p><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Jede Interpretation muss aus Beschreibung + Analyse hergeleitet sein. &bdquo;Das Bild dr&uuml;ckt Trauer aus &mdash; das zeigt sich an den dunklen Farben und der gesenkten K&ouml;rperhaltung der Figur.&ldquo;</div><h3>Reihenfolge im Aufsatz</h3><ol class=\"lf-steps\"><li>Einleitung (K&uuml;nstler, Titel, Jahr, Technik)</li><li>Beschreibung</li><li>Analyse</li><li>Interpretation</li><li>Eigene Bewertung</li></ol>"
+      "content": "<h3>Analyse — Bildmittel</h3><dl class=\"lf-def\"><dt>Komposition</dt><dd>Aufbau: zentral, asymmetrisch, diagonal, horizontal?</dd><dt>Farbe</dt><dd>Warm/kalt, hell/dunkel, Kontrast, Harmonie?</dd><dt>Licht</dt><dd>Woher kommt es? Welche Stimmung erzeugt es?</dd><dt>Linien &amp; Formen</dt><dd>Gerade, kurvig, scharf, weich?</dd><dt>Perspektive</dt><dd>Zentralperspektive, Vogelperspektive, Froschperspektive?</dd></dl><h3>Interpretation</h3><p>Hier deutest du: Was will das Bild aussagen? Welche Botschaft?</p><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> Jede Interpretation muss aus Beschreibung + Analyse hergeleitet sein. „Das Bild drückt Trauer aus — das zeigt sich an den dunklen Farben und der gesenkten Körperhaltung der Figur.“</div><h3>Reihenfolge im Aufsatz</h3><ol class=\"lf-steps\"><li>Einleitung (Künstler, Titel, Jahr, Technik)</li><li>Beschreibung</li><li>Analyse</li><li>Interpretation</li><li>Eigene Bewertung</li></ol>"
     }
   ]
 }

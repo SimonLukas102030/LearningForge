@@ -1,40 +1,40 @@
 {
   "name": "Was ist ein Computer?",
-  "description": "Was steckt eigentlich in dem Ding auf deinem Schreibtisch &mdash; und wie spielen CPU, RAM, Storage und IO zusammen?",
+  "description": "Was steckt eigentlich in dem Ding auf deinem Schreibtisch — und wie spielen CPU, RAM, Storage und IO zusammen?",
   "subtopics": [
     {
       "name": "Was ist ein Computer? Mini-Geschichte",
       "description": "Vom mechanischen Rechner zum Smartphone.",
-      "content": "<h3>Definition</h3><p>Ein Computer ist eine Maschine, die Daten empf&auml;ngt, verarbeitet und ausgibt &mdash; alles nach festen Anweisungen (Programmen).</p><h3>Mini-Geschichte</h3><table class=\"lf-table\"><thead><tr><th>Jahr</th><th>Meilenstein</th></tr></thead><tbody><tr><td>1822</td><td>Babbage entwirft Analytical Engine (mechanisch)</td></tr><tr><td>1936</td><td>Turing-Maschine (theoretisches Modell)</td></tr><tr><td>1941</td><td>Konrad Zuse Z3 &mdash; erster funktionierender Rechner</td></tr><tr><td>1971</td><td>Erster Mikroprozessor (Intel 4004)</td></tr><tr><td>1981</td><td>IBM PC</td></tr><tr><td>2007</td><td>iPhone &mdash; Computer in jeder Tasche</td></tr></tbody></table>"
+      "content": "<h3>Definition</h3><p>Ein Computer ist eine Maschine, die Daten empfängt, verarbeitet und ausgibt — alles nach festen Anweisungen (Programmen).</p><h3>Mini-Geschichte</h3><table class=\"lf-table\"><thead><tr><th>Jahr</th><th>Meilenstein</th></tr></thead><tbody><tr><td>1822</td><td>Babbage entwirft Analytical Engine (mechanisch)</td></tr><tr><td>1936</td><td>Turing-Maschine (theoretisches Modell)</td></tr><tr><td>1941</td><td>Konrad Zuse Z3 — erster funktionierender Rechner</td></tr><tr><td>1971</td><td>Erster Mikroprozessor (Intel 4004)</td></tr><tr><td>1981</td><td>IBM PC</td></tr><tr><td>2007</td><td>iPhone — Computer in jeder Tasche</td></tr></tbody></table>"
     },
     {
-      "name": "CPU + RAM &mdash; Hirn und Kurzzeitged&auml;chtnis",
+      "name": "CPU + RAM — Hirn und Kurzzeitgedächtnis",
       "description": "Die zwei wichtigsten Bauteile.",
       "blocks": [
-        {"type": "text", "content": "<dl class=\"lf-def\"><dt>CPU (Central Processing Unit)</dt><dd>Das &bdquo;Gehirn&ldquo; des Computers. F&uuml;hrt Befehle aus, rechnet. Taktrate in GHz (Milliarden Operationen/s).</dd><dt>RAM (Random Access Memory)</dt><dd>Kurzzeitged&auml;chtnis. Daten f&uuml;r aktuell laufende Programme. Schnell, aber fl&uuml;chtig (weg bei Stromausfall).</dd></dl>"},
+        {"type": "text", "content": "<dl class=\"lf-def\"><dt>CPU (Central Processing Unit)</dt><dd>Das „Gehirn“ des Computers. Führt Befehle aus, rechnet. Taktrate in GHz (Milliarden Operationen/s).</dd><dt>RAM (Random Access Memory)</dt><dd>Kurzzeitgedächtnis. Daten für aktuell laufende Programme. Schnell, aber flüchtig (weg bei Stromausfall).</dd></dl>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
           "setup": "Verschiedene Computer-Komponenten haben verschiedene Aufgaben.",
           "question": "Verbinde Komponente mit Aufgabe.",
           "pairs": [
-            {"id": "cpu", "left": "CPU", "right": "Befehle ausf&uuml;hren, rechnen"},
-            {"id": "ram", "left": "RAM", "right": "Kurzzeitged&auml;chtnis f&uuml;r laufende Programme"},
+            {"id": "cpu", "left": "CPU", "right": "Befehle ausführen, rechnen"},
+            {"id": "ram", "left": "RAM", "right": "Kurzzeitgedächtnis für laufende Programme"},
             {"id": "ssd", "left": "SSD/HDD", "right": "Langzeitspeicher (Dateien, Programme)"},
             {"id": "gpu", "left": "GPU", "right": "Grafikberechnung, Spiele, KI"},
-            {"id": "io", "left": "IO-Ger&auml;te", "right": "Tastatur, Maus, Monitor &mdash; Schnittstellen zum Mensch"}
+            {"id": "io", "left": "IO-Geräte", "right": "Tastatur, Maus, Monitor — Schnittstellen zum Mensch"}
           ],
-          "reveal": "Architektur: CPU rechnet, RAM h&auml;lt aktuelle Daten, SSD speichert dauerhaft, GPU spezialisiert auf Bilder, IO verbindet zum Menschen. Die Komponenten kommunizieren &uuml;ber das Bus-System."
+          "reveal": "Architektur: CPU rechnet, RAM hält aktuelle Daten, SSD speichert dauerhaft, GPU spezialisiert auf Bilder, IO verbindet zum Menschen. Die Komponenten kommunizieren über das Bus-System."
         }}
       ]
     },
     {
       "name": "Storage (HDD/SSD) + IO (Tastatur, Bildschirm)",
       "description": "Wo Dateien wirklich liegen, und wie du mit dem PC sprichst.",
-      "content": "<h3>Storage-Typen</h3><dl class=\"lf-def\"><dt>HDD (Hard Disk Drive)</dt><dd>Magnetische Festplatte mit rotierenden Scheiben. Billig, langsamer.</dd><dt>SSD (Solid State Drive)</dt><dd>Flash-Speicher (wie USB-Stick, nur gr&ouml;&szlig;er). Schnell, teurer.</dd><dt>USB-Stick / SD-Karte</dt><dd>Tragbarer Flash-Speicher.</dd></dl><h3>IO-Ger&auml;te</h3><ul><li><strong>Eingabe:</strong> Tastatur, Maus, Mikrofon, Touchscreen.</li><li><strong>Ausgabe:</strong> Monitor, Lautsprecher, Drucker.</li><li><strong>Beides:</strong> Touchscreen, Netzwerk.</li></ul>"
+      "content": "<h3>Storage-Typen</h3><dl class=\"lf-def\"><dt>HDD (Hard Disk Drive)</dt><dd>Magnetische Festplatte mit rotierenden Scheiben. Billig, langsamer.</dd><dt>SSD (Solid State Drive)</dt><dd>Flash-Speicher (wie USB-Stick, nur größer). Schnell, teurer.</dd><dt>USB-Stick / SD-Karte</dt><dd>Tragbarer Flash-Speicher.</dd></dl><h3>IO-Geräte</h3><ul><li><strong>Eingabe:</strong> Tastatur, Maus, Mikrofon, Touchscreen.</li><li><strong>Ausgabe:</strong> Monitor, Lautsprecher, Drucker.</li><li><strong>Beides:</strong> Touchscreen, Netzwerk.</li></ul>"
     },
     {
       "name": "Wie spielen die Komponenten zusammen? Bus-System",
-      "description": "Die Stra&szlig;en innerhalb des PCs.",
-      "content": "<dl class=\"lf-def\"><dt>Bus-System</dt><dd>Datenleitungen, &uuml;ber die alle Komponenten kommunizieren.</dd></dl><h3>Vereinfachter Ablauf bei Programmstart</h3><ol class=\"lf-steps\"><li>Programm liegt auf SSD.</li><li>Beim Start wird es in RAM kopiert (laden).</li><li>CPU liest Befehle aus RAM und f&uuml;hrt sie aus.</li><li>Ergebnisse zeigt der Monitor (Ausgabe).</li><li>Bei &Auml;nderungen: zur&uuml;ck auf SSD speichern.</li></ol><h3>Von Neumann-Architektur</h3><p>Standardarchitektur seit 1945: CPU, Memory (RAM), IO &mdash; verbunden &uuml;ber Bus. Programme und Daten liegen im selben Speicher (RAM).</p><div class=\"lf-box lf-info\"><strong>Engpass:</strong> Wenn RAM voll ist, muss der PC Daten auf SSD &bdquo;auslagern&ldquo; (Swapping). Wird langsam.</div>"
+      "description": "Die Straßen innerhalb des PCs.",
+      "content": "<dl class=\"lf-def\"><dt>Bus-System</dt><dd>Datenleitungen, über die alle Komponenten kommunizieren.</dd></dl><h3>Vereinfachter Ablauf bei Programmstart</h3><ol class=\"lf-steps\"><li>Programm liegt auf SSD.</li><li>Beim Start wird es in RAM kopiert (laden).</li><li>CPU liest Befehle aus RAM und führt sie aus.</li><li>Ergebnisse zeigt der Monitor (Ausgabe).</li><li>Bei Änderungen: zurück auf SSD speichern.</li></ol><h3>Von Neumann-Architektur</h3><p>Standardarchitektur seit 1945: CPU, Memory (RAM), IO — verbunden über Bus. Programme und Daten liegen im selben Speicher (RAM).</p><div class=\"lf-box lf-info\"><strong>Engpass:</strong> Wenn RAM voll ist, muss der PC Daten auf SSD „auslagern“ (Swapping). Wird langsam.</div>"
     }
   ]
 }

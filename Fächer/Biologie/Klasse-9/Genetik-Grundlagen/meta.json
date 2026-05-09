@@ -1,38 +1,38 @@
 {
   "name": "Genetik-Grundlagen",
-  "description": "DNA, Chromosomen, Mitose und Meiose &mdash; wie biologische Information gespeichert, kopiert und weitergegeben wird.",
+  "description": "DNA, Chromosomen, Mitose und Meiose — wie biologische Information gespeichert, kopiert und weitergegeben wird.",
   "subtopics": [
     {
-      "name": "Was ist DNA? &mdash; Aufbau",
-      "description": "Die Molek&uuml;l-Struktur, die alle Lebewesen verbindet.",
+      "name": "Was ist DNA? — Aufbau",
+      "description": "Die Molekül-Struktur, die alle Lebewesen verbindet.",
       "blocks": [
-        {"type": "text", "content": "<p>DNA (Desoxyribonukleins&auml;ure) speichert die genetische Information aller Lebewesen.</p><h3>Aufbau</h3><dl class=\"lf-def\"><dt>Doppelhelix</dt><dd>Zwei Str&auml;nge, die umeinander gewunden sind &mdash; entdeckt 1953 von Watson und Crick.</dd><dt>Bausteine: Nukleotide</dt><dd>Jedes besteht aus: Zucker (Desoxyribose) + Phosphat + Base.</dd><dt>Vier Basen</dt><dd>Adenin (A), Thymin (T), Guanin (G), Cytosin (C).</dd></dl>"},
+        {"type": "text", "content": "<p>DNA (Desoxyribonukleinsäure) speichert die genetische Information aller Lebewesen.</p><h3>Aufbau</h3><dl class=\"lf-def\"><dt>Doppelhelix</dt><dd>Zwei Stränge, die umeinander gewunden sind — entdeckt 1953 von Watson und Crick.</dd><dt>Bausteine: Nukleotide</dt><dd>Jedes besteht aus: Zucker (Desoxyribose) + Phosphat + Base.</dd><dt>Vier Basen</dt><dd>Adenin (A), Thymin (T), Guanin (G), Cytosin (C).</dd></dl>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
-          "setup": "Die DNA-Basen paaren immer fest mit ihrem komplement&auml;ren Partner.",
+          "setup": "Die DNA-Basen paaren immer fest mit ihrem komplementären Partner.",
           "question": "Verbinde jede Base mit ihrer Partner-Base.",
           "pairs": [
             {"id": "at", "left": "Adenin (A)", "right": "Thymin (T)"},
             {"id": "gc", "left": "Guanin (G)", "right": "Cytosin (C)"}
           ],
-          "reveal": "A-T und G-C sind die Komplement&auml;rpaare. Eselsbr&uuml;cke: A-T (Anton-Tina) und G-C (Gerda-Carla). A und G sind Purine (gro&szlig;), T und C sind Pyrimidine (klein) &mdash; ein gro&szlig; + ein klein passt genau in die DNA-Spirale."
+          "reveal": "A-T und G-C sind die Komplementärpaare. Eselsbrücke: A-T (Anton-Tina) und G-C (Gerda-Carla). A und G sind Purine (groß), T und C sind Pyrimidine (klein) — ein groß + ein klein passt genau in die DNA-Spirale."
         }},
-        {"type": "text", "content": "<h3>Speicherung der Information</h3><p>Die Reihenfolge der Basen (Sequenz) codiert genetische Informationen. 3 Basen hintereinander = ein <em>Codon</em> = eine Aminos&auml;ure im Protein.</p><h3>L&auml;nge der menschlichen DNA</h3><p>Im Zellkern: ~3 Milliarden Basenpaare, ausgestreckt ~2 m lang &mdash; in einem Zellkern von 6 &micro;m Durchmesser!</p>"}
+        {"type": "text", "content": "<h3>Speicherung der Information</h3><p>Die Reihenfolge der Basen (Sequenz) codiert genetische Informationen. 3 Basen hintereinander = ein <em>Codon</em> = eine Aminosäure im Protein.</p><h3>Länge der menschlichen DNA</h3><p>Im Zellkern: ~3 Milliarden Basenpaare, ausgestreckt ~2 m lang — in einem Zellkern von 6 µm Durchmesser!</p>"}
       ]
     },
     {
       "name": "Chromosomen &amp; Chromatin",
       "description": "Wie die lange DNA in den kleinen Zellkern passt.",
-      "content": "<p>DNA wird in Zellen verpackt:</p><dl class=\"lf-def\"><dt>Chromatin</dt><dd>DNA + Proteine (Histone), als Kn&auml;uel im Zellkern.</dd><dt>Chromosom</dt><dd>Stark verdichtetes Chromatin, sichtbar nur w&auml;hrend der Zellteilung.</dd></dl><h3>Anzahl beim Menschen</h3><div class=\"lf-formula\">46 Chromosomen = 23 Paare<br>22 Autosomen-Paare + 1 Geschlechtschromosomen-Paar (XX = weiblich, XY = m&auml;nnlich)</div><h3>Diploid vs. haploid</h3><dl class=\"lf-def\"><dt>Diploid (2n)</dt><dd>Doppelter Chromosomensatz &mdash; alle K&ouml;rperzellen.</dd><dt>Haploid (n)</dt><dd>Einfacher Chromosomensatz &mdash; nur Keimzellen (Eizellen, Spermien).</dd></dl>"
+      "content": "<p>DNA wird in Zellen verpackt:</p><dl class=\"lf-def\"><dt>Chromatin</dt><dd>DNA + Proteine (Histone), als Knäuel im Zellkern.</dd><dt>Chromosom</dt><dd>Stark verdichtetes Chromatin, sichtbar nur während der Zellteilung.</dd></dl><h3>Anzahl beim Menschen</h3><div class=\"lf-formula\">46 Chromosomen = 23 Paare<br>22 Autosomen-Paare + 1 Geschlechtschromosomen-Paar (XX = weiblich, XY = männlich)</div><h3>Diploid vs. haploid</h3><dl class=\"lf-def\"><dt>Diploid (2n)</dt><dd>Doppelter Chromosomensatz — alle Körperzellen.</dd><dt>Haploid (n)</dt><dd>Einfacher Chromosomensatz — nur Keimzellen (Eizellen, Spermien).</dd></dl>"
     },
     {
-      "name": "Mitose &mdash; K&ouml;rperzellen-Teilung",
+      "name": "Mitose — Körperzellen-Teilung",
       "description": "Eine Zelle wird zu zwei identischen Kopien.",
-      "content": "<p>Mitose erzeugt aus einer Mutterzelle <strong>zwei genetisch identische Tochterzellen</strong>. F&uuml;r Wachstum, Wundheilung, Zellersatz.</p><h3>Phasen</h3><ol class=\"lf-steps\"><li><strong>Prophase:</strong> Chromosomen verdichten sich, Spindel wird gebildet.</li><li><strong>Metaphase:</strong> Chromosomen ordnen sich in der Zellmitte.</li><li><strong>Anaphase:</strong> Schwesterchromatiden werden zu den Polen gezogen.</li><li><strong>Telophase:</strong> Zwei neue Zellkerne bilden sich.</li><li><strong>Cytokinese:</strong> Zelle teilt sich endg&uuml;ltig.</li></ol><div class=\"lf-formula\">2n &rarr; 2n + 2n (gleicher Chromosomensatz)</div>"
+      "content": "<p>Mitose erzeugt aus einer Mutterzelle <strong>zwei genetisch identische Tochterzellen</strong>. Für Wachstum, Wundheilung, Zellersatz.</p><h3>Phasen</h3><ol class=\"lf-steps\"><li><strong>Prophase:</strong> Chromosomen verdichten sich, Spindel wird gebildet.</li><li><strong>Metaphase:</strong> Chromosomen ordnen sich in der Zellmitte.</li><li><strong>Anaphase:</strong> Schwesterchromatiden werden zu den Polen gezogen.</li><li><strong>Telophase:</strong> Zwei neue Zellkerne bilden sich.</li><li><strong>Cytokinese:</strong> Zelle teilt sich endgültig.</li></ol><div class=\"lf-formula\">2n → 2n + 2n (gleicher Chromosomensatz)</div>"
     },
     {
-      "name": "Meiose &mdash; Keimzellen-Teilung",
+      "name": "Meiose — Keimzellen-Teilung",
       "description": "Eine Zelle wird zu vier verschiedenen Keimzellen.",
-      "content": "<p>Meiose erzeugt aus einer diploiden K&ouml;rperzelle <strong>vier haploide Keimzellen</strong> (Eizellen, Spermien) &mdash; jede mit einem einzigartigen Erbgut.</p><h3>Zwei Teilungen</h3><dl class=\"lf-def\"><dt>1. Reifeteilung</dt><dd>Homologe Chromosomenpaare werden getrennt. Vorher: <em>Crossing-over</em> &mdash; Chromosomen tauschen St&uuml;cke aus (Rekombination).</dd><dt>2. Reifeteilung</dt><dd>&Auml;hnlich wie Mitose &mdash; Schwesterchromatiden werden getrennt.</dd></dl><div class=\"lf-formula\">2n &rarr; n + n + n + n (halbierter Chromosomensatz, 4 Zellen)</div><div class=\"lf-box lf-info\"><strong>Warum so kompliziert?</strong> Ohne Halbierung w&uuml;rde jede Generation den Chromosomensatz verdoppeln. Mit Halbierung: Eizelle (n) + Spermium (n) = Zygote (2n) = normale K&ouml;rperzelle.</div><h3>Mitose vs. Meiose</h3><table class=\"lf-table\"><thead><tr><th></th><th>Mitose</th><th>Meiose</th></tr></thead><tbody><tr><td>Zweck</td><td>Wachstum</td><td>Fortpflanzung</td></tr><tr><td>Tochterzellen</td><td>2 identische</td><td>4 verschiedene</td></tr><tr><td>Chromosomensatz</td><td>2n &rarr; 2n</td><td>2n &rarr; n</td></tr></tbody></table>"
+      "content": "<p>Meiose erzeugt aus einer diploiden Körperzelle <strong>vier haploide Keimzellen</strong> (Eizellen, Spermien) — jede mit einem einzigartigen Erbgut.</p><h3>Zwei Teilungen</h3><dl class=\"lf-def\"><dt>1. Reifeteilung</dt><dd>Homologe Chromosomenpaare werden getrennt. Vorher: <em>Crossing-over</em> — Chromosomen tauschen Stücke aus (Rekombination).</dd><dt>2. Reifeteilung</dt><dd>Ähnlich wie Mitose — Schwesterchromatiden werden getrennt.</dd></dl><div class=\"lf-formula\">2n → n + n + n + n (halbierter Chromosomensatz, 4 Zellen)</div><div class=\"lf-box lf-info\"><strong>Warum so kompliziert?</strong> Ohne Halbierung würde jede Generation den Chromosomensatz verdoppeln. Mit Halbierung: Eizelle (n) + Spermium (n) = Zygote (2n) = normale Körperzelle.</div><h3>Mitose vs. Meiose</h3><table class=\"lf-table\"><thead><tr><th></th><th>Mitose</th><th>Meiose</th></tr></thead><tbody><tr><td>Zweck</td><td>Wachstum</td><td>Fortpflanzung</td></tr><tr><td>Tochterzellen</td><td>2 identische</td><td>4 verschiedene</td></tr><tr><td>Chromosomensatz</td><td>2n → 2n</td><td>2n → n</td></tr></tbody></table>"
     }
   ]
 }

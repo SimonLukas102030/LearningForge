@@ -3,38 +3,38 @@
   "description": "Wie viel Geld habe ich, wie viel gebe ich aus, wo lauern Schuldenfallen, welche Rechte habe ich?",
   "subtopics": [
     {
-      "name": "Mein Budget &mdash; Einnahmen + Ausgaben",
-      "description": "Geld im &Uuml;berblick.",
+      "name": "Mein Budget — Einnahmen + Ausgaben",
+      "description": "Geld im Überblick.",
       "blocks": [
-        {"type": "text", "content": "<h3>Budget-Grundlagen</h3><div class=\"lf-formula\">Einnahmen &minus; Ausgaben = &Uuml;berschuss (oder Defizit)</div><h3>Typische Einnahmen-Posten (mit 15)</h3><ul><li>Taschengeld</li><li>Geld zum Geburtstag</li><li>Nebenjob (Zeitung austragen, Babysitten)</li></ul><h3>Typische Ausgaben-Posten</h3><ul><li>Snacks und Getr&auml;nke</li><li>Mode, Schuhe</li><li>Kino, Konzerte</li><li>Handy/Internet</li><li>Sparen!</li></ul>"},
+        {"type": "text", "content": "<h3>Budget-Grundlagen</h3><div class=\"lf-formula\">Einnahmen − Ausgaben = Überschuss (oder Defizit)</div><h3>Typische Einnahmen-Posten (mit 15)</h3><ul><li>Taschengeld</li><li>Geld zum Geburtstag</li><li>Nebenjob (Zeitung austragen, Babysitten)</li></ul><h3>Typische Ausgaben-Posten</h3><ul><li>Snacks und Getränke</li><li>Mode, Schuhe</li><li>Kino, Konzerte</li><li>Handy/Internet</li><li>Sparen!</li></ul>"},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
-          "setup": "Du hast 50&euro; Taschengeld pro Monat. Du gibst durchschnittlich aus: 15&euro; Snacks, 20&euro; Mode, 10&euro; Streaming/Spotify, 8&euro; Kino mit Freunden.",
+          "setup": "Du hast 50€ Taschengeld pro Monat. Du gibst durchschnittlich aus: 15€ Snacks, 20€ Mode, 10€ Streaming/Spotify, 8€ Kino mit Freunden.",
           "question": "Wie sieht deine Bilanz aus?",
           "options": [
-            {"label": "+3&euro; &Uuml;berschuss", "correct": false, "explanation": "Rechne nochmal: 15+20+10+8 = 53&euro;. Mehr als 50&euro; Einnahmen."},
-            {"label": "&minus;3&euro; Defizit (mehr ausgegeben als eingenommen)", "correct": true, "explanation": "Richtig! 50 Einnahmen &minus; 53 Ausgaben = &minus;3&euro;. Du gibst mehr aus, als du hast. Wenn das jeden Monat passiert, w&auml;chst der Berg. L&ouml;sung: Ausgaben senken oder Nebenjob."},
-            {"label": "0&euro;, ausgeglichen", "correct": false, "explanation": "Falsch. Bei 53 Ausgaben und 50 Einnahmen ist ein Defizit von 3&euro;."},
-            {"label": "+50&euro;", "correct": false, "explanation": "Wenn du nichts ausgeben w&uuml;rdest, h&auml;ttest du +50&euro;. Aber alle Posten oben sind Ausgaben."}
+            {"label": "+3€ Überschuss", "correct": false, "explanation": "Rechne nochmal: 15+20+10+8 = 53€. Mehr als 50€ Einnahmen."},
+            {"label": "−3€ Defizit (mehr ausgegeben als eingenommen)", "correct": true, "explanation": "Richtig! 50 Einnahmen − 53 Ausgaben = −3€. Du gibst mehr aus, als du hast. Wenn das jeden Monat passiert, wächst der Berg. Lösung: Ausgaben senken oder Nebenjob."},
+            {"label": "0€, ausgeglichen", "correct": false, "explanation": "Falsch. Bei 53 Ausgaben und 50 Einnahmen ist ein Defizit von 3€."},
+            {"label": "+50€", "correct": false, "explanation": "Wenn du nichts ausgeben würdest, hättest du +50€. Aber alle Posten oben sind Ausgaben."}
           ],
-          "reveal": "Faustregel: F&uuml;hre ein Haushaltsbuch (App: Money Manager, MoneyControl). Wer seine Ausgaben aufschreibt, gibt automatisch weniger aus &mdash; weil man die Realit&auml;t sieht."
+          "reveal": "Faustregel: Führe ein Haushaltsbuch (App: Money Manager, MoneyControl). Wer seine Ausgaben aufschreibt, gibt automatisch weniger aus — weil man die Realität sieht."
         }},
-        {"type": "text", "content": "<h3>50-30-20-Regel (f&uuml;r Erwachsene)</h3><ul><li>50% des Einkommens f&uuml;r Pflicht-Ausgaben (Miete, Essen)</li><li>30% f&uuml;r W&uuml;nsche (Hobby, Kino, Mode)</li><li>20% sparen</li></ul>"}
+        {"type": "text", "content": "<h3>50-30-20-Regel (für Erwachsene)</h3><ul><li>50% des Einkommens für Pflicht-Ausgaben (Miete, Essen)</li><li>30% für Wünsche (Hobby, Kino, Mode)</li><li>20% sparen</li></ul>"}
       ]
     },
     {
       "name": "Schulden + Schuldenfalle (Kredit, Ratenkauf, Dispo)",
-      "description": "Wie aus 100&euro; schnell 200&euro; werden.",
-      "content": "<dl class=\"lf-def\"><dt>Kredit</dt><dd>Geld leihen + Zinsen zahlen.</dd><dt>Ratenkauf</dt><dd>Etwas kaufen, in Raten zahlen + meist Zinsen.</dd><dt>Dispokredit</dt><dd>Konto-&Uuml;berziehung, sehr hohe Zinsen (10-15%).</dd></dl><div class=\"lf-box lf-warn\"><strong>Falle:</strong> &bdquo;Null Prozent Finanzierung&ldquo; klingt gut &mdash; aber wenn du eine Rate verpasst, schlagen sofort hohe Zinsen zu (15-20%). Das Kleingedruckte!</div><h3>Schuldenfalle</h3><p>Wenn man Schulden mit neuen Schulden tilgt, w&auml;chst der Berg. Zinseszins arbeitet gegen dich.</p><h3>Was tun bei Schulden?</h3><ul><li>Schuldnerberatung (kostenlos!)</li><li>Pl&auml;ne machen, einsparen</li><li>Privatinsolvenz im &auml;u&szlig;ersten Fall</li></ul>"
+      "description": "Wie aus 100€ schnell 200€ werden.",
+      "content": "<dl class=\"lf-def\"><dt>Kredit</dt><dd>Geld leihen + Zinsen zahlen.</dd><dt>Ratenkauf</dt><dd>Etwas kaufen, in Raten zahlen + meist Zinsen.</dd><dt>Dispokredit</dt><dd>Konto-Überziehung, sehr hohe Zinsen (10-15%).</dd></dl><div class=\"lf-box lf-warn\"><strong>Falle:</strong> „Null Prozent Finanzierung“ klingt gut — aber wenn du eine Rate verpasst, schlagen sofort hohe Zinsen zu (15-20%). Das Kleingedruckte!</div><h3>Schuldenfalle</h3><p>Wenn man Schulden mit neuen Schulden tilgt, wächst der Berg. Zinseszins arbeitet gegen dich.</p><h3>Was tun bei Schulden?</h3><ul><li>Schuldnerberatung (kostenlos!)</li><li>Pläne machen, einsparen</li><li>Privatinsolvenz im äußersten Fall</li></ul>"
     },
     {
-      "name": "Verbraucherrechte (Garantie, Gew&auml;hrleistung, Widerruf)",
-      "description": "Du bist nicht ungesch&uuml;tzt.",
-      "content": "<dl class=\"lf-def\"><dt>Gew&auml;hrleistung (gesetzlich, 2 Jahre)</dt><dd>Pflicht des Verk&auml;ufers: 2 Jahre lang muss er fehlerhafte Ware reparieren oder ersetzen.</dd><dt>Garantie (freiwillig)</dt><dd>Zus&auml;tzliche Zusage des Herstellers. L&auml;nger oder umfassender als Gew&auml;hrleistung.</dd><dt>Widerruf (14 Tage)</dt><dd>Bei Online-K&auml;ufen kannst du innerhalb 14 Tagen ohne Grund widerrufen.</dd></dl><h3>Wichtig</h3><div class=\"lf-box lf-info\">Im Laden gekauft = kein 14-Tage-Widerruf! Das gilt nur f&uuml;r Fernabsatz (Online, Telefon, Katalog).</div>"
+      "name": "Verbraucherrechte (Garantie, Gewährleistung, Widerruf)",
+      "description": "Du bist nicht ungeschützt.",
+      "content": "<dl class=\"lf-def\"><dt>Gewährleistung (gesetzlich, 2 Jahre)</dt><dd>Pflicht des Verkäufers: 2 Jahre lang muss er fehlerhafte Ware reparieren oder ersetzen.</dd><dt>Garantie (freiwillig)</dt><dd>Zusätzliche Zusage des Herstellers. Länger oder umfassender als Gewährleistung.</dd><dt>Widerruf (14 Tage)</dt><dd>Bei Online-Käufen kannst du innerhalb 14 Tagen ohne Grund widerrufen.</dd></dl><h3>Wichtig</h3><div class=\"lf-box lf-info\">Im Laden gekauft = kein 14-Tage-Widerruf! Das gilt nur für Fernabsatz (Online, Telefon, Katalog).</div>"
     },
     {
-      "name": "Vertr&auml;ge richtig lesen (AGB, Klauseln)",
+      "name": "Verträge richtig lesen (AGB, Klauseln)",
       "description": "Das Kleingedruckte.",
-      "content": "<h3>Vor Vertragsabschluss</h3><ul><li><strong>Vertragsdauer:</strong> Wie lange? Welche K&uuml;ndigungsfrist?</li><li><strong>Kosten:</strong> Total, monatlich, versteckte Geb&uuml;hren?</li><li><strong>Leistung:</strong> Was bekomme ich genau?</li><li><strong>Stornierung:</strong> Was passiert, wenn ich aussteige?</li></ul><div class=\"lf-box lf-warn\"><strong>Vorsicht:</strong> &bdquo;Bitte unterschreiben Sie hier&ldquo; ohne Lesen ist gef&auml;hrlich. Auch Online-Klick ist eine Unterschrift.</div><h3>Minderj&auml;hrige (unter 18)</h3><p>Du darfst <strong>kleine Vertr&auml;ge</strong> mit deinem Taschengeld eingehen (Eis, Heft, Kino). Gro&szlig;e Vertr&auml;ge (Handy-Vertrag, Abo) brauchen Eltern-Unterschrift &mdash; sonst ung&uuml;ltig.</p>"
+      "content": "<h3>Vor Vertragsabschluss</h3><ul><li><strong>Vertragsdauer:</strong> Wie lange? Welche Kündigungsfrist?</li><li><strong>Kosten:</strong> Total, monatlich, versteckte Gebühren?</li><li><strong>Leistung:</strong> Was bekomme ich genau?</li><li><strong>Stornierung:</strong> Was passiert, wenn ich aussteige?</li></ul><div class=\"lf-box lf-warn\"><strong>Vorsicht:</strong> „Bitte unterschreiben Sie hier“ ohne Lesen ist gefährlich. Auch Online-Klick ist eine Unterschrift.</div><h3>Minderjährige (unter 18)</h3><p>Du darfst <strong>kleine Verträge</strong> mit deinem Taschengeld eingehen (Eis, Heft, Kino). Große Verträge (Handy-Vertrag, Abo) brauchen Eltern-Unterschrift — sonst ungültig.</p>"
     }
   ]
 }

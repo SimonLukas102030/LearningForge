@@ -1,40 +1,40 @@
 {
   "name": "Newton-Gesetze",
-  "description": "Die drei Gesetze, die alle Bewegungen erkl&auml;ren &mdash; Tr&auml;gheit, F = m&middot;a, Actio = Reactio.",
+  "description": "Die drei Gesetze, die alle Bewegungen erklären — Trägheit, F = m·a, Actio = Reactio.",
   "subtopics": [
     {
-      "name": "1. Newton &mdash; Tr&auml;gheitsprinzip",
-      "description": "K&ouml;rper bleiben in ihrem Bewegungszustand, solange keine Kraft wirkt.",
-      "content": "<p>Ein K&ouml;rper, auf den keine resultierende Kraft wirkt, bleibt entweder in Ruhe ODER bewegt sich gleichf&ouml;rmig geradlinig weiter.</p><div class=\"lf-formula\">Wenn F<sub>res</sub> = 0, dann v = konstant (auch v = 0 m/s).</div><h3>Was bedeutet das?</h3><p>Tr&auml;gheit ist die Eigenschaft jedes K&ouml;rpers, sich gegen &Auml;nderung seines Bewegungszustands zu str&auml;uben. Schwerere K&ouml;rper sind tr&auml;ger.</p><h3>Beispiele</h3><ul><li>Im Auto bei pl&ouml;tzlichem Bremsen wird der K&ouml;rper nach vorne geschleudert &mdash; deine Tr&auml;gheit will geradeaus weiter.</li><li>Ein Hockey-Puck gleitet auf glattem Eis fast ohne Geschwindigkeitsverlust &mdash; nur die geringe Reibung bremst ihn.</li></ul><div class=\"lf-box lf-info\"><strong>Sch&uuml;lerfrage:</strong> &bdquo;Aber alles wird doch irgendwann langsamer?&ldquo; &mdash; Ja, im Alltag durch <em>Reibung</em>. Im Vakuum (Weltraum) bewegt sich ein Stein, einmal angesto&szlig;en, ewig weiter.</div>"
+      "name": "1. Newton — Trägheitsprinzip",
+      "description": "Körper bleiben in ihrem Bewegungszustand, solange keine Kraft wirkt.",
+      "content": "<p>Ein Körper, auf den keine resultierende Kraft wirkt, bleibt entweder in Ruhe ODER bewegt sich gleichförmig geradlinig weiter.</p><div class=\"lf-formula\">Wenn F<sub>res</sub> = 0, dann v = konstant (auch v = 0 m/s).</div><h3>Was bedeutet das?</h3><p>Trägheit ist die Eigenschaft jedes Körpers, sich gegen Änderung seines Bewegungszustands zu sträuben. Schwerere Körper sind träger.</p><h3>Beispiele</h3><ul><li>Im Auto bei plötzlichem Bremsen wird der Körper nach vorne geschleudert — deine Trägheit will geradeaus weiter.</li><li>Ein Hockey-Puck gleitet auf glattem Eis fast ohne Geschwindigkeitsverlust — nur die geringe Reibung bremst ihn.</li></ul><div class=\"lf-box lf-info\"><strong>Schülerfrage:</strong> „Aber alles wird doch irgendwann langsamer?“ — Ja, im Alltag durch <em>Reibung</em>. Im Vakuum (Weltraum) bewegt sich ein Stein, einmal angestoßen, ewig weiter.</div>"
     },
     {
-      "name": "2. Newton &mdash; F = m&middot;a",
+      "name": "2. Newton — F = m·a",
       "description": "Die wichtigste Gleichung der Mechanik.",
       "blocks": [
-        {"type": "text", "content": "<p>Die resultierende Kraft auf einen K&ouml;rper ist gleich Masse mal Beschleunigung.</p><div class=\"lf-formula\">F = m &middot; a</div><dl class=\"lf-def\"><dt>F (Kraft, Newton)</dt><dd>Was den K&ouml;rper beschleunigt. 1 N = 1 kg&middot;m/s&sup2;.</dd><dt>m (Masse, kg)</dt><dd>Wie tr&auml;ge der K&ouml;rper ist.</dd><dt>a (Beschleunigung, m/s&sup2;)</dt><dd>Wie schnell sich die Geschwindigkeit &auml;ndert.</dd></dl>"},
+        {"type": "text", "content": "<p>Die resultierende Kraft auf einen Körper ist gleich Masse mal Beschleunigung.</p><div class=\"lf-formula\">F = m · a</div><dl class=\"lf-def\"><dt>F (Kraft, Newton)</dt><dd>Was den Körper beschleunigt. 1 N = 1 kg·m/s².</dd><dt>m (Masse, kg)</dt><dd>Wie träge der Körper ist.</dd><dt>a (Beschleunigung, m/s²)</dt><dd>Wie schnell sich die Geschwindigkeit ändert.</dd></dl>"},
         {"type": "widget", "widgetType": "number-slider", "config": {
           "setup": "Auf einen Einkaufswagen mit Masse 5 kg wirkt eine Kraft von 20 N.",
-          "question": "Wie gro&szlig; ist die Beschleunigung in m/s&sup2;?",
+          "question": "Wie groß ist die Beschleunigung in m/s²?",
           "min": 0,
           "max": 20,
           "step": 0.1,
           "correct": 4,
           "tolerance": 0.2,
-          "unit": "m/s&sup2;",
-          "reveal": "F = m&middot;a, also a = F/m = 20 N / 5 kg = 4 m/s&sup2;. Verdoppelst du die Kraft, verdoppelt sich a. Verdoppelst du die Masse, halbiert sich a (bei gleicher Kraft)."
+          "unit": "m/s²",
+          "reveal": "F = m·a, also a = F/m = 20 N / 5 kg = 4 m/s². Verdoppelst du die Kraft, verdoppelt sich a. Verdoppelst du die Masse, halbiert sich a (bei gleicher Kraft)."
         }},
-        {"type": "text", "content": "<h3>Umstellungen</h3><div class=\"lf-formula\">F = m&middot;a &nbsp;|&nbsp; m = F/a &nbsp;|&nbsp; a = F/m</div><h3>Worked Example</h3><p>Ein Auto (1000 kg) beschleunigt von 0 auf 20 m/s in 5 s. Welche Kraft wirkt?</p><ol class=\"lf-steps\"><li>a = &Delta;v/&Delta;t = 20/5 = 4 m/s&sup2;</li><li>F = m&middot;a = 1000 &middot; 4 = <strong>4000 N</strong></li></ol>"}
+        {"type": "text", "content": "<h3>Umstellungen</h3><div class=\"lf-formula\">F = m·a  |  m = F/a  |  a = F/m</div><h3>Worked Example</h3><p>Ein Auto (1000 kg) beschleunigt von 0 auf 20 m/s in 5 s. Welche Kraft wirkt?</p><ol class=\"lf-steps\"><li>a = Δv/Δt = 20/5 = 4 m/s²</li><li>F = m·a = 1000 · 4 = <strong>4000 N</strong></li></ol>"}
       ]
     },
     {
-      "name": "3. Newton &mdash; Actio = Reactio",
-      "description": "Jede Kraft hat eine gleich gro&szlig;e Gegenkraft.",
-      "content": "<p>Wenn K&ouml;rper A eine Kraft auf K&ouml;rper B aus&uuml;bt, &uuml;bt B eine gleich gro&szlig;e, entgegengesetzte Kraft auf A aus.</p><div class=\"lf-formula\">F<sub>A&rarr;B</sub> = &minus;F<sub>B&rarr;A</sub></div><h3>Beispiele</h3><ul><li>Du dr&uuml;ckst gegen eine Wand &mdash; die Wand dr&uuml;ckt mit gleicher Kraft zur&uuml;ck.</li><li>Eine Rakete sto&szlig;t Gas nach unten aus &mdash; das Gas dr&uuml;ckt die Rakete nach oben.</li><li>Beim Gehen dr&uuml;ckt dein Fu&szlig; den Boden nach hinten &mdash; der Boden dr&uuml;ckt dich nach vorne.</li></ul><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Action und Reaction wirken auf <em>zwei verschiedene K&ouml;rper</em> &mdash; deshalb heben sie sich nicht gegenseitig auf!</div>"
+      "name": "3. Newton — Actio = Reactio",
+      "description": "Jede Kraft hat eine gleich große Gegenkraft.",
+      "content": "<p>Wenn Körper A eine Kraft auf Körper B ausübt, übt B eine gleich große, entgegengesetzte Kraft auf A aus.</p><div class=\"lf-formula\">F<sub>A→B</sub> = −F<sub>B→A</sub></div><h3>Beispiele</h3><ul><li>Du drückst gegen eine Wand — die Wand drückt mit gleicher Kraft zurück.</li><li>Eine Rakete stoßt Gas nach unten aus — das Gas drückt die Rakete nach oben.</li><li>Beim Gehen drückt dein Fuß den Boden nach hinten — der Boden drückt dich nach vorne.</li></ul><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Action und Reaction wirken auf <em>zwei verschiedene Körper</em> — deshalb heben sie sich nicht gegenseitig auf!</div>"
     },
     {
-      "name": "Anwendungen + H&auml;ufige Missverst&auml;ndnisse",
+      "name": "Anwendungen + Häufige Missverständnisse",
       "description": "Die typischen Fallen.",
-      "content": "<h3>Missverst&auml;ndnis 1: &bdquo;Bewegung braucht Kraft&ldquo;</h3><p>Falsch! Aristoteles dachte das. Newton zeigt: <em>&Auml;nderung</em> der Bewegung braucht Kraft, nicht die Bewegung selbst.</p><h3>Missverst&auml;ndnis 2: Actio &amp; Reactio heben sich auf</h3><p>Falsch! Sie wirken auf verschiedene K&ouml;rper. Die Erde zieht dich nach unten (G), du ziehst die Erde nach oben (gleich gro&szlig;) &mdash; aber die Erde ist so schwer, dass sich nichts merklich bewegt.</p><h3>Missverst&auml;ndnis 3: Schwere K&ouml;rper fallen schneller</h3><p>Falsch! Im Vakuum fallen alle K&ouml;rper gleich schnell (g = 9,81 m/s&sup2;). Nur Luftwiderstand macht Unterschiede.</p><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">1. Newton: ohne Kraft keine &Auml;nderung. 2. Newton: F = m&middot;a. 3. Newton: Kraft = Gegenkraft (auf zwei K&ouml;rpern).</div></div>"
+      "content": "<h3>Missverständnis 1: „Bewegung braucht Kraft“</h3><p>Falsch! Aristoteles dachte das. Newton zeigt: <em>Änderung</em> der Bewegung braucht Kraft, nicht die Bewegung selbst.</p><h3>Missverständnis 2: Actio &amp; Reactio heben sich auf</h3><p>Falsch! Sie wirken auf verschiedene Körper. Die Erde zieht dich nach unten (G), du ziehst die Erde nach oben (gleich groß) — aber die Erde ist so schwer, dass sich nichts merklich bewegt.</p><h3>Missverständnis 3: Schwere Körper fallen schneller</h3><p>Falsch! Im Vakuum fallen alle Körper gleich schnell (g = 9,81 m/s²). Nur Luftwiderstand macht Unterschiede.</p><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">1. Newton: ohne Kraft keine Änderung. 2. Newton: F = m·a. 3. Newton: Kraft = Gegenkraft (auf zwei Körpern).</div></div>"
     }
   ]
 }

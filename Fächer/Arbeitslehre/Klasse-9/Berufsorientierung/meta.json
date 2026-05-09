@@ -3,37 +3,37 @@
   "description": "Wer bin ich, was kann ich, was passt zu mir?",
   "subtopics": [
     {
-      "name": "Wer bin ich? &mdash; Interessen + St&auml;rken finden",
+      "name": "Wer bin ich? — Interessen + Stärken finden",
       "description": "Sich selbst kennenlernen ist der erste Schritt.",
-      "content": "<h3>Drei Fragen</h3><ol class=\"lf-steps\"><li><strong>Was kann ich?</strong> St&auml;rken (Mathe, Sprachen, handwerklich, sozial?)</li><li><strong>Was mag ich?</strong> Interessen (drinnen/drau&szlig;en, mit Menschen/Dingen?)</li><li><strong>Was ist mir wichtig?</strong> Werte (Sinn, Geld, Freiheit, Sicherheit?)</li></ol><h3>RIASEC-Modell (Holland)</h3><dl class=\"lf-def\"><dt>R - Realistic</dt><dd>Praktisch, handwerklich, drau&szlig;en (Mechaniker, F&ouml;rster).</dd><dt>I - Investigative</dt><dd>Analysieren, forschen (Wissenschaftler, Programmierer).</dd><dt>A - Artistic</dt><dd>Kreativ, k&uuml;nstlerisch (Designer, Musiker).</dd><dt>S - Social</dt><dd>Mit Menschen arbeiten (Lehrer, Pflege, Sozialarbeit).</dd><dt>E - Enterprising</dt><dd>F&uuml;hren, &uuml;berzeugen (Manager, Verkauf).</dd><dt>C - Conventional</dt><dd>Strukturiert, organisiert (Buchhaltung, Verwaltung).</dd></dl>"
+      "content": "<h3>Drei Fragen</h3><ol class=\"lf-steps\"><li><strong>Was kann ich?</strong> Stärken (Mathe, Sprachen, handwerklich, sozial?)</li><li><strong>Was mag ich?</strong> Interessen (drinnen/draußen, mit Menschen/Dingen?)</li><li><strong>Was ist mir wichtig?</strong> Werte (Sinn, Geld, Freiheit, Sicherheit?)</li></ol><h3>RIASEC-Modell (Holland)</h3><dl class=\"lf-def\"><dt>R - Realistic</dt><dd>Praktisch, handwerklich, draußen (Mechaniker, Förster).</dd><dt>I - Investigative</dt><dd>Analysieren, forschen (Wissenschaftler, Programmierer).</dd><dt>A - Artistic</dt><dd>Kreativ, künstlerisch (Designer, Musiker).</dd><dt>S - Social</dt><dd>Mit Menschen arbeiten (Lehrer, Pflege, Sozialarbeit).</dd><dt>E - Enterprising</dt><dd>Führen, überzeugen (Manager, Verkauf).</dd><dt>C - Conventional</dt><dd>Strukturiert, organisiert (Buchhaltung, Verwaltung).</dd></dl>"
     },
     {
       "name": "Berufsfelder + Ausbildungsberufe in Brandenburg",
       "description": "Was geht in der Region?",
-      "content": "<h3>Wichtige Branchen in Brandenburg</h3><ul><li><strong>Industrie:</strong> Tesla (Gr&uuml;nheide), Stahlindustrie (Eisenh&uuml;ttenstadt)</li><li><strong>Energie:</strong> Braunkohle (Lausitz), Erneuerbare</li><li><strong>Tourismus:</strong> Spreewald, Potsdam</li><li><strong>Landwirtschaft</strong></li><li><strong>Logistik:</strong> N&auml;he Berlin</li></ul><h3>Top Ausbildungsberufe (Deutschland)</h3><ol class=\"lf-steps\"><li>Kaufmann/-frau im B&uuml;romanagement</li><li>Verk&auml;ufer/in</li><li>KFZ-Mechatroniker/in</li><li>Industriekaufmann/-frau</li><li>Fachinformatiker/in</li><li>Pflegefachfrau/-mann</li></ol>"
+      "content": "<h3>Wichtige Branchen in Brandenburg</h3><ul><li><strong>Industrie:</strong> Tesla (Grünheide), Stahlindustrie (Eisenhüttenstadt)</li><li><strong>Energie:</strong> Braunkohle (Lausitz), Erneuerbare</li><li><strong>Tourismus:</strong> Spreewald, Potsdam</li><li><strong>Landwirtschaft</strong></li><li><strong>Logistik:</strong> Nähe Berlin</li></ul><h3>Top Ausbildungsberufe (Deutschland)</h3><ol class=\"lf-steps\"><li>Kaufmann/-frau im Büromanagement</li><li>Verkäufer/in</li><li>KFZ-Mechatroniker/in</li><li>Industriekaufmann/-frau</li><li>Fachinformatiker/in</li><li>Pflegefachfrau/-mann</li></ol>"
     },
     {
-      "name": "Ausbildung vs. Studium &mdash; was passt?",
+      "name": "Ausbildung vs. Studium — was passt?",
       "description": "Zwei Wege, ein Ziel.",
       "blocks": [
-        {"type": "text", "content": "<table class=\"lf-table\"><thead><tr><th>Aspekt</th><th>Ausbildung</th><th>Studium</th></tr></thead><tbody><tr><td>Dauer</td><td>2-3,5 Jahre</td><td>3-6 Jahre</td></tr><tr><td>Lernort</td><td>Betrieb + Berufsschule</td><td>Universit&auml;t/FH</td></tr><tr><td>Bezahlung</td><td>Ja, Ausbildungsverg&uuml;tung</td><td>Nein (BAf&ouml;G m&ouml;glich)</td></tr><tr><td>Voraussetzung</td><td>Hauptschulabschluss bis Abi</td><td>Abitur (oder Fachabitur)</td></tr><tr><td>Struktur</td><td>Praxisorientiert</td><td>Theorieorientiert</td></tr></tbody></table>"},
+        {"type": "text", "content": "<table class=\"lf-table\"><thead><tr><th>Aspekt</th><th>Ausbildung</th><th>Studium</th></tr></thead><tbody><tr><td>Dauer</td><td>2-3,5 Jahre</td><td>3-6 Jahre</td></tr><tr><td>Lernort</td><td>Betrieb + Berufsschule</td><td>Universität/FH</td></tr><tr><td>Bezahlung</td><td>Ja, Ausbildungsvergütung</td><td>Nein (BAföG möglich)</td></tr><tr><td>Voraussetzung</td><td>Hauptschulabschluss bis Abi</td><td>Abitur (oder Fachabitur)</td></tr><tr><td>Struktur</td><td>Praxisorientiert</td><td>Theorieorientiert</td></tr></tbody></table>"},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
-          "setup": "Eine Sch&uuml;lerin macht ihr Abi mit 1,8 und ist sehr handwerklich begabt. Sie m&ouml;chte sp&auml;ter Werkst&uuml;cke selbst herstellen, nicht nur planen. Sie liebt es, wenn sie nach einem Tag Arbeit etwas physisch Gemachtes in den H&auml;nden h&auml;lt.",
-          "question": "Welche Empfehlung w&auml;re tendenziell besser f&uuml;r sie?",
+          "setup": "Eine Schülerin macht ihr Abi mit 1,8 und ist sehr handwerklich begabt. Sie möchte später Werkstücke selbst herstellen, nicht nur planen. Sie liebt es, wenn sie nach einem Tag Arbeit etwas physisch Gemachtes in den Händen hält.",
+          "question": "Welche Empfehlung wäre tendenziell besser für sie?",
           "options": [
-            {"label": "Studium &mdash; weil sie das Abi hat, ist es die logische Wahl", "correct": false, "explanation": "Falsch. Abi ist Voraussetzung f&uuml;r&apos;s Studium &mdash; aber nicht jeder Abiturient muss studieren. Wenn die Praxis-Lust stark ist, kann eine Ausbildung deutlich passender sein."},
-            {"label": "Ausbildung &mdash; ihre Pr&auml;ferenz f&uuml;r praktische Arbeit ist klar", "correct": true, "explanation": "Gut! Ausbildung passt besser. Z.B. Tischlerin oder Goldschmiedin &mdash; beides Berufe, in denen sie konkret etwas baut. Studium kann sp&auml;ter immer noch erg&auml;nzt werden (z.B. Holztechnik-Studium nach Tischler-Ausbildung)."},
-            {"label": "Studium ist besser bezahlt, also Studium", "correct": false, "explanation": "Nicht zwangsl&auml;ufig. Handwerksmeister verdienen oft &uuml;ber 60k/Jahr. Bezahlung allein ist kein Kriterium."},
-            {"label": "Egal, beide Wege sind gleich", "correct": false, "explanation": "Nein &mdash; die Wege sind sehr unterschiedlich. Theorie vs. Praxis ist ein realer Unterschied."}
+            {"label": "Studium — weil sie das Abi hat, ist es die logische Wahl", "correct": false, "explanation": "Falsch. Abi ist Voraussetzung für&apos;s Studium — aber nicht jeder Abiturient muss studieren. Wenn die Praxis-Lust stark ist, kann eine Ausbildung deutlich passender sein."},
+            {"label": "Ausbildung — ihre Präferenz für praktische Arbeit ist klar", "correct": true, "explanation": "Gut! Ausbildung passt besser. Z.B. Tischlerin oder Goldschmiedin — beides Berufe, in denen sie konkret etwas baut. Studium kann später immer noch ergänzt werden (z.B. Holztechnik-Studium nach Tischler-Ausbildung)."},
+            {"label": "Studium ist besser bezahlt, also Studium", "correct": false, "explanation": "Nicht zwangsläufig. Handwerksmeister verdienen oft über 60k/Jahr. Bezahlung allein ist kein Kriterium."},
+            {"label": "Egal, beide Wege sind gleich", "correct": false, "explanation": "Nein — die Wege sind sehr unterschiedlich. Theorie vs. Praxis ist ein realer Unterschied."}
           ],
-          "reveal": "Faustregel: Wer praktisch arbeiten will, w&auml;hlt Ausbildung. Wer abstrakt denken und forschen will, w&auml;hlt Studium. Abitur erlaubt beides &mdash; aber zwingt zu nichts. Eine Ausbildung schlie&szlig;t ein sp&auml;teres Studium nicht aus (duale Wege)."
+          "reveal": "Faustregel: Wer praktisch arbeiten will, wählt Ausbildung. Wer abstrakt denken und forschen will, wählt Studium. Abitur erlaubt beides — aber zwingt zu nichts. Eine Ausbildung schließt ein späteres Studium nicht aus (duale Wege)."
         }}
       ]
     },
     {
       "name": "Praktikum richtig vorbereiten",
-      "description": "Die zwei Wochen, die deinen Berufsweg pr&auml;gen k&ouml;nnen.",
-      "content": "<h3>Vor dem Praktikum</h3><ol class=\"lf-steps\"><li><strong>Berufe recherchieren</strong> (Berufenet, Praktika.de)</li><li><strong>Bewerbung schreiben</strong> &mdash; Anschreiben + Lebenslauf + Zeugnis</li><li><strong>Vorstellungsgespr&auml;ch &uuml;ben</strong></li><li><strong>Klare Ziele setzen:</strong> Was willst du lernen?</li></ol><h3>W&auml;hrend des Praktikums</h3><ul><li>P&uuml;nktlich, h&ouml;flich, freundlich</li><li>Fragen stellen</li><li>Praktikumsbericht t&auml;glich f&uuml;hren</li><li>Beobachten: Mag ich das Arbeitsklima? Die Aufgaben?</li></ul><h3>Nach dem Praktikum</h3><ul><li>Bedankungsschreiben</li><li>Praktikumsbericht abgeben</li><li>Reflektieren: Hat es gepasst? Was hat &uuml;berrascht?</li><li>Eventuell: Bewerbung um Ausbildungsplatz!</li></ul>"
+      "description": "Die zwei Wochen, die deinen Berufsweg prägen können.",
+      "content": "<h3>Vor dem Praktikum</h3><ol class=\"lf-steps\"><li><strong>Berufe recherchieren</strong> (Berufenet, Praktika.de)</li><li><strong>Bewerbung schreiben</strong> — Anschreiben + Lebenslauf + Zeugnis</li><li><strong>Vorstellungsgespräch üben</strong></li><li><strong>Klare Ziele setzen:</strong> Was willst du lernen?</li></ol><h3>Während des Praktikums</h3><ul><li>Pünktlich, höflich, freundlich</li><li>Fragen stellen</li><li>Praktikumsbericht täglich führen</li><li>Beobachten: Mag ich das Arbeitsklima? Die Aufgaben?</li></ul><h3>Nach dem Praktikum</h3><ul><li>Bedankungsschreiben</li><li>Praktikumsbericht abgeben</li><li>Reflektieren: Hat es gepasst? Was hat überrascht?</li><li>Eventuell: Bewerbung um Ausbildungsplatz!</li></ul>"
     }
   ]
 }

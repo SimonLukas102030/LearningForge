@@ -1,12 +1,12 @@
 {
   "name": "Religionen im Vergleich",
-  "description": "Christentum, Judentum, Islam, Buddhismus &mdash; und was atheistisch-humanistische Weltbilder dazu sagen.",
+  "description": "Christentum, Judentum, Islam, Buddhismus — und was atheistisch-humanistische Weltbilder dazu sagen.",
   "subtopics": [
     {
-      "name": "Christentum &mdash; Glauben &amp; Geschichte",
-      "description": "Die gr&ouml;&szlig;te Religion der Welt.",
+      "name": "Christentum — Glauben &amp; Geschichte",
+      "description": "Die größte Religion der Welt.",
       "blocks": [
-        {"type": "text", "content": "<dl class=\"lf-def\"><dt>Christentum</dt><dd>Monotheistische Religion. ~2,4 Milliarden Anh&auml;nger weltweit. Gegr&uuml;ndet ~30 n.Chr. durch Jesus von Nazareth.</dd></dl><h3>Kerngedanken</h3><ul><li>Ein Gott in drei Personen (Trinit&auml;t)</li><li>Jesus Christus = Sohn Gottes, Erl&ouml;ser</li><li>Liebe Gott und deinen N&auml;chsten</li><li>Erbs&uuml;nde und Erl&ouml;sung</li></ul>"},
+        {"type": "text", "content": "<dl class=\"lf-def\"><dt>Christentum</dt><dd>Monotheistische Religion. ~2,4 Milliarden Anhänger weltweit. Gegründet ~30 n.Chr. durch Jesus von Nazareth.</dd></dl><h3>Kerngedanken</h3><ul><li>Ein Gott in drei Personen (Trinität)</li><li>Jesus Christus = Sohn Gottes, Erlöser</li><li>Liebe Gott und deinen Nächsten</li><li>Erbsünde und Erlösung</li></ul>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
           "setup": "Verschiedene christliche Konfessionen unterscheiden sich in einigen Punkten.",
           "question": "Verbinde Konfession mit charakteristischem Merkmal.",
@@ -15,29 +15,29 @@
             {"id": "evg", "left": "Evangelisch", "right": "Luther 1517, sola scriptura, kein Papst"},
             {"id": "ort", "left": "Orthodox", "right": "Patriarchen, Ikonen, Trennung 1054"}
           ],
-          "reveal": "Drei gro&szlig;e Konfessionen: Katholisch (Papst, 1,3 Mrd.), Evangelisch (nach Luther 1517, ~600 Mio.), Orthodox (Trennung 1054, ~250 Mio.). Die Reformation war die gr&ouml;&szlig;te Spaltung der westlichen Christenheit."
+          "reveal": "Drei große Konfessionen: Katholisch (Papst, 1,3 Mrd.), Evangelisch (nach Luther 1517, ~600 Mio.), Orthodox (Trennung 1054, ~250 Mio.). Die Reformation war die größte Spaltung der westlichen Christenheit."
         }}
       ]
     },
     {
       "name": "Judentum",
-      "description": "&Auml;lteste monotheistische Religion.",
-      "content": "<dl class=\"lf-def\"><dt>Judentum</dt><dd>~14 Millionen Anh&auml;nger. Glaube an den einen Gott (JHWH). Stammtafel auf Abraham (~2000 v.Chr.).</dd></dl><h3>Heilige Schriften</h3><ul><li><strong>Tora</strong> &mdash; die 5 B&uuml;cher Moses</li><li><strong>Tanach</strong> &mdash; Hebr&auml;ische Bibel (Tora + Propheten + Schriften)</li><li><strong>Talmud</strong> &mdash; Auslegungen, j&uuml;dische Lebenspraxis</li></ul><h3>Wichtige Praxis</h3><ul><li><strong>Schabbat</strong> &mdash; wartet von Freitagabend bis Samstagabend, Ruhetag</li><li><strong>Speisegesetze</strong> &mdash; koscher (rein/erlaubt)</li><li><strong>Beschneidung</strong> &mdash; Bund mit Gott</li></ul><h3>Feste</h3><p>Pessach (Auszug aus &Auml;gypten), Jom Kippur (Vers&ouml;hnungstag), Chanukka (Lichterfest), Rosch ha-Schana (Neujahr).</p>"
+      "description": "Älteste monotheistische Religion.",
+      "content": "<dl class=\"lf-def\"><dt>Judentum</dt><dd>~14 Millionen Anhänger. Glaube an den einen Gott (JHWH). Stammtafel auf Abraham (~2000 v.Chr.).</dd></dl><h3>Heilige Schriften</h3><ul><li><strong>Tora</strong> — die 5 Bücher Moses</li><li><strong>Tanach</strong> — Hebräische Bibel (Tora + Propheten + Schriften)</li><li><strong>Talmud</strong> — Auslegungen, jüdische Lebenspraxis</li></ul><h3>Wichtige Praxis</h3><ul><li><strong>Schabbat</strong> — wartet von Freitagabend bis Samstagabend, Ruhetag</li><li><strong>Speisegesetze</strong> — koscher (rein/erlaubt)</li><li><strong>Beschneidung</strong> — Bund mit Gott</li></ul><h3>Feste</h3><p>Pessach (Auszug aus Ägypten), Jom Kippur (Versöhnungstag), Chanukka (Lichterfest), Rosch ha-Schana (Neujahr).</p>"
     },
     {
       "name": "Islam",
       "description": "Die schnellst wachsende Religion.",
-      "content": "<dl class=\"lf-def\"><dt>Islam</dt><dd>~1,9 Milliarden Anh&auml;nger. Gegr&uuml;ndet 610 n.Chr. durch Mohammed in Mekka.</dd></dl><h3>F&uuml;nf S&auml;ulen</h3><ol class=\"lf-steps\"><li><strong>Schahada</strong> &mdash; Glaubensbekenntnis (es gibt keinen Gott au&szlig;er Allah)</li><li><strong>Salat</strong> &mdash; 5 Gebete pro Tag</li><li><strong>Saum</strong> &mdash; Fasten im Ramadan</li><li><strong>Zakat</strong> &mdash; Almosen f&uuml;r die Armen</li><li><strong>Haddsch</strong> &mdash; Pilgerfahrt nach Mekka</li></ol><h3>Sunniten vs. Schiiten</h3><dl class=\"lf-def\"><dt>Sunniten</dt><dd>~85% der Muslime. Mehrheit weltweit.</dd><dt>Schiiten</dt><dd>~15%. Mehrheit im Iran, Irak. Spaltung um Nachfolge Mohammeds.</dd></dl><h3>Heilige Schrift</h3><p>Der Koran &mdash; in 23 Jahren Mohammed offenbart, in 114 Suren.</p>"
+      "content": "<dl class=\"lf-def\"><dt>Islam</dt><dd>~1,9 Milliarden Anhänger. Gegründet 610 n.Chr. durch Mohammed in Mekka.</dd></dl><h3>Fünf Säulen</h3><ol class=\"lf-steps\"><li><strong>Schahada</strong> — Glaubensbekenntnis (es gibt keinen Gott außer Allah)</li><li><strong>Salat</strong> — 5 Gebete pro Tag</li><li><strong>Saum</strong> — Fasten im Ramadan</li><li><strong>Zakat</strong> — Almosen für die Armen</li><li><strong>Haddsch</strong> — Pilgerfahrt nach Mekka</li></ol><h3>Sunniten vs. Schiiten</h3><dl class=\"lf-def\"><dt>Sunniten</dt><dd>~85% der Muslime. Mehrheit weltweit.</dd><dt>Schiiten</dt><dd>~15%. Mehrheit im Iran, Irak. Spaltung um Nachfolge Mohammeds.</dd></dl><h3>Heilige Schrift</h3><p>Der Koran — in 23 Jahren Mohammed offenbart, in 114 Suren.</p>"
     },
     {
-      "name": "Buddhismus &amp; &ouml;stliche Weltbilder",
+      "name": "Buddhismus &amp; östliche Weltbilder",
       "description": "Religion oder Lebensphilosophie?",
-      "content": "<dl class=\"lf-def\"><dt>Buddhismus</dt><dd>~520 Millionen Anh&auml;nger. Gegr&uuml;ndet ~500 v.Chr. durch Siddharta Gautama (Buddha) in Indien.</dd></dl><h3>Vier Edle Wahrheiten</h3><ol class=\"lf-steps\"><li>Das Leben ist Leiden.</li><li>Das Leiden hat eine Ursache (Verlangen).</li><li>Das Leiden kann beendet werden.</li><li>Der Achtfache Pfad f&uuml;hrt zum Ende des Leidens.</li></ol><h3>Wichtige Begriffe</h3><dl class=\"lf-def\"><dt>Karma</dt><dd>Jede Tat hat Folgen, &uuml;ber Leben hinweg.</dd><dt>Wiedergeburt (Samsara)</dt><dd>Kreislauf von Geburt und Tod.</dd><dt>Nirvana</dt><dd>Endg&uuml;ltige Befreiung vom Leiden.</dd></dl><div class=\"lf-box lf-info\"><strong>Besonderheit:</strong> Buddhismus hat keinen Sch&ouml;pfergott. Manche sehen ihn als Religion, andere als Philosophie.</div>"
+      "content": "<dl class=\"lf-def\"><dt>Buddhismus</dt><dd>~520 Millionen Anhänger. Gegründet ~500 v.Chr. durch Siddharta Gautama (Buddha) in Indien.</dd></dl><h3>Vier Edle Wahrheiten</h3><ol class=\"lf-steps\"><li>Das Leben ist Leiden.</li><li>Das Leiden hat eine Ursache (Verlangen).</li><li>Das Leiden kann beendet werden.</li><li>Der Achtfache Pfad führt zum Ende des Leidens.</li></ol><h3>Wichtige Begriffe</h3><dl class=\"lf-def\"><dt>Karma</dt><dd>Jede Tat hat Folgen, über Leben hinweg.</dd><dt>Wiedergeburt (Samsara)</dt><dd>Kreislauf von Geburt und Tod.</dd><dt>Nirvana</dt><dd>Endgültige Befreiung vom Leiden.</dd></dl><div class=\"lf-box lf-info\"><strong>Besonderheit:</strong> Buddhismus hat keinen Schöpfergott. Manche sehen ihn als Religion, andere als Philosophie.</div>"
     },
     {
       "name": "Atheismus &amp; Humanismus",
-      "description": "Leben ohne G&ouml;tter.",
-      "content": "<dl class=\"lf-def\"><dt>Atheismus</dt><dd>Glaube, dass es keine G&ouml;tter gibt. Etwa 7% der Weltbev&ouml;lkerung.</dd><dt>Agnostizismus</dt><dd>Position: Es ist nicht (zwingend) wissbar, ob G&ouml;tter existieren.</dd><dt>Humanismus</dt><dd>Weltbild, das den Menschen, seine Vernunft und W&uuml;rde ins Zentrum stellt.</dd></dl><h3>Argumente Atheismus</h3><ul><li>Keine wissenschaftlichen Beweise f&uuml;r G&ouml;tter.</li><li>Religi&ouml;se Erkl&auml;rungen erkl&auml;ren auch Naturgesetze nicht.</li><li>Religion als kulturelles Ph&auml;nomen, nicht als Wahrheit.</li></ul><h3>Werte ohne Religion?</h3><p>Humanisten begr&uuml;nden Moral &uuml;ber Vernunft und Empathie &mdash; nicht &uuml;ber g&ouml;ttliche Gebote. Goldene Regel: &bdquo;Was du nicht willst, dass man dir tut, das f&uuml;g auch keinem andern zu.&ldquo;</p>"
+      "description": "Leben ohne Götter.",
+      "content": "<dl class=\"lf-def\"><dt>Atheismus</dt><dd>Glaube, dass es keine Götter gibt. Etwa 7% der Weltbevölkerung.</dd><dt>Agnostizismus</dt><dd>Position: Es ist nicht (zwingend) wissbar, ob Götter existieren.</dd><dt>Humanismus</dt><dd>Weltbild, das den Menschen, seine Vernunft und Würde ins Zentrum stellt.</dd></dl><h3>Argumente Atheismus</h3><ul><li>Keine wissenschaftlichen Beweise für Götter.</li><li>Religiöse Erklärungen erklären auch Naturgesetze nicht.</li><li>Religion als kulturelles Phänomen, nicht als Wahrheit.</li></ul><h3>Werte ohne Religion?</h3><p>Humanisten begründen Moral über Vernunft und Empathie — nicht über göttliche Gebote. Goldene Regel: „Was du nicht willst, dass man dir tut, das füg auch keinem andern zu.“</p>"
     }
   ]
 }

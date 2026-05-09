@@ -4912,7 +4912,7 @@ input.lf-fb-blank.lf-fb-pulse {
 }
 .tw-panel {
   width: 380px; max-height: 420px; overflow: hidden;
-  display: flex; flex-direction: column; padding: 0;
+  display: none; flex-direction: column; padding: 0;
 }
 .tw-tabs {
   display: flex; gap: 0; border-bottom: 1px solid var(--border);
@@ -5112,6 +5112,17 @@ input.lf-fb-blank.lf-fb-pulse {
 .pomo-widget {
   position: fixed; bottom: 24px; right: 24px; z-index: 800;
   display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+}
+@media (max-width: 768px) {
+  /* V2-02 re-apply (Bob, 2026-05-09): muss nach der Base-.pomo-widget-Rule
+     stehen, sonst killt Source-Order die mobile Position und der FAB
+     ueberlappt den Taschenrechner unten rechts. */
+  .pomo-widget {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    left: 16px;
+    right: auto;
+    align-items: flex-start;
+  }
 }
 .pomo-toggle-btn {
   width: 52px; height: 52px; border-radius: 50%;

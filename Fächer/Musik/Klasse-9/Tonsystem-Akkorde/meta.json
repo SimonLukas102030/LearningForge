@@ -1,16 +1,16 @@
 {
   "name": "Tonsystem &amp; Akkorde",
-  "description": "Wie aus 12 T&ouml;nen Tonleitern werden, wie aus Tonleitern Dreikl&auml;nge entstehen.",
+  "description": "Wie aus 12 Tönen Tonleitern werden, wie aus Tonleitern Dreiklänge entstehen.",
   "subtopics": [
     {
-      "name": "T&ouml;ne &amp; Tonsystem (chromatisch)",
-      "description": "Die 12 T&ouml;ne, aus denen alle Musik besteht.",
-      "content": "<h3>Die 12 T&ouml;ne</h3><p>In der westlichen Musik gibt es <strong>12 T&ouml;ne</strong> pro Oktave: C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B/H</p><div class=\"lf-formula\">Halbtonschritt = kleinster Schritt | Ganztonschritt = 2 Halbt&ouml;ne</div><h3>Klaviertastatur</h3><p>Wei&szlig;e Tasten: C, D, E, F, G, A, H. Schwarze Tasten: die F&uuml;nf dazwischen (Cis, Dis, Fis, Gis, Ais).</p><div class=\"lf-box lf-info\"><strong>Achtung:</strong> Zwischen E&rarr;F und H&rarr;C ist nur ein Halbtonschritt (keine schwarze Taste). Sonst zwei Halbtonschritte.</div>"
+      "name": "Töne &amp; Tonsystem (chromatisch)",
+      "description": "Die 12 Töne, aus denen alle Musik besteht.",
+      "content": "<h3>Die 12 Töne</h3><p>In der westlichen Musik gibt es <strong>12 Töne</strong> pro Oktave: C, C#/Db, D, D#/Eb, E, F, F#/Gb, G, G#/Ab, A, A#/Bb, B/H</p><div class=\"lf-formula\">Halbtonschritt = kleinster Schritt | Ganztonschritt = 2 Halbtöne</div><h3>Klaviertastatur</h3><p>Weiße Tasten: C, D, E, F, G, A, H. Schwarze Tasten: die Fünf dazwischen (Cis, Dis, Fis, Gis, Ais).</p><div class=\"lf-box lf-info\"><strong>Achtung:</strong> Zwischen E→F und H→C ist nur ein Halbtonschritt (keine schwarze Taste). Sonst zwei Halbtonschritte.</div>"
     },
     {
-      "name": "Intervalle &mdash; der Abstand zwischen zwei T&ouml;nen",
-      "description": "Sekunde, Terz, Quinte &mdash; was bedeuten diese Namen?",
-      "content": "<table class=\"lf-table\"><thead><tr><th>Intervall</th><th>Halbt&ouml;ne</th><th>Beispiel</th></tr></thead><tbody><tr><td>Prime</td><td>0</td><td>C-C</td></tr><tr><td>kleine Sekunde</td><td>1</td><td>C-Cis</td></tr><tr><td>gro&szlig;e Sekunde</td><td>2</td><td>C-D</td></tr><tr><td>kleine Terz</td><td>3</td><td>C-Es (Moll)</td></tr><tr><td>gro&szlig;e Terz</td><td>4</td><td>C-E (Dur)</td></tr><tr><td>Quarte</td><td>5</td><td>C-F</td></tr><tr><td>Quinte</td><td>7</td><td>C-G</td></tr><tr><td>Oktave</td><td>12</td><td>C-c</td></tr></tbody></table><div class=\"lf-box lf-info\"><strong>Klangcharakter:</strong> Prime, Oktave, Quinte = sehr konsonant (wohlklingend). Kleine Sekunde, Tritonus = dissonant (spannungsvoll).</div>"
+      "name": "Intervalle — der Abstand zwischen zwei Tönen",
+      "description": "Sekunde, Terz, Quinte — was bedeuten diese Namen?",
+      "content": "<table class=\"lf-table\"><thead><tr><th>Intervall</th><th>Halbtöne</th><th>Beispiel</th></tr></thead><tbody><tr><td>Prime</td><td>0</td><td>C-C</td></tr><tr><td>kleine Sekunde</td><td>1</td><td>C-Cis</td></tr><tr><td>große Sekunde</td><td>2</td><td>C-D</td></tr><tr><td>kleine Terz</td><td>3</td><td>C-Es (Moll)</td></tr><tr><td>große Terz</td><td>4</td><td>C-E (Dur)</td></tr><tr><td>Quarte</td><td>5</td><td>C-F</td></tr><tr><td>Quinte</td><td>7</td><td>C-G</td></tr><tr><td>Oktave</td><td>12</td><td>C-c</td></tr></tbody></table><div class=\"lf-box lf-info\"><strong>Klangcharakter:</strong> Prime, Oktave, Quinte = sehr konsonant (wohlklingend). Kleine Sekunde, Tritonus = dissonant (spannungsvoll).</div>"
     },
     {
       "name": "Dur- und Moll-Tonleiter",
@@ -18,22 +18,22 @@
       "blocks": [
         {"type": "text", "content": "<h3>Dur-Tonleiter (z.B. C-Dur)</h3><div class=\"lf-formula\">C - D - E - F - G - A - H - c<br>Schrittfolge: Ganz - Ganz - Halb - Ganz - Ganz - Ganz - Halb</div><h3>Moll-Tonleiter (z.B. a-Moll)</h3><div class=\"lf-formula\">a - h - c - d - e - f - g - a<br>Schrittfolge: Ganz - Halb - Ganz - Ganz - Halb - Ganz - Ganz</div>"},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
-          "setup": "Spielst du C-Dur (C-E-G) und a-Moll (a-c-e) hintereinander, klingen sie verschieden &mdash; obwohl die T&ouml;ne der C-Dur-Tonleiter und a-Moll-Tonleiter gleich sind!",
+          "setup": "Spielst du C-Dur (C-E-G) und a-Moll (a-c-e) hintereinander, klingen sie verschieden — obwohl die Töne der C-Dur-Tonleiter und a-Moll-Tonleiter gleich sind!",
           "question": "Was macht den Klang-Unterschied?",
           "options": [
-            {"label": "Die Anzahl der T&ouml;ne", "correct": false, "explanation": "Beide haben 7 verschiedene T&ouml;ne. Anzahl ist gleich."},
-            {"label": "Die Reihenfolge der Halbtonschritte", "correct": true, "explanation": "Richtig! Dur und Moll bestehen aus denselben T&ouml;nen, aber verschieden geordnet. Bei Dur kommen die Halbtonschritte zwischen 3-4 und 7-8 Stufe. Bei Moll zwischen 2-3 und 5-6. Diese Position der Halbt&ouml;ne pr&auml;gt den Charakter."},
-            {"label": "Die Lautst&auml;rke", "correct": false, "explanation": "Lautst&auml;rke ist unabh&auml;ngig von Dur/Moll. Auch leise gespielt klingt Moll trauriger."},
-            {"label": "Dur ist h&ouml;her als Moll", "correct": false, "explanation": "Falsch &mdash; man kann Dur und Moll auf jeder H&ouml;he spielen."}
+            {"label": "Die Anzahl der Töne", "correct": false, "explanation": "Beide haben 7 verschiedene Töne. Anzahl ist gleich."},
+            {"label": "Die Reihenfolge der Halbtonschritte", "correct": true, "explanation": "Richtig! Dur und Moll bestehen aus denselben Tönen, aber verschieden geordnet. Bei Dur kommen die Halbtonschritte zwischen 3-4 und 7-8 Stufe. Bei Moll zwischen 2-3 und 5-6. Diese Position der Halbtöne prägt den Charakter."},
+            {"label": "Die Lautstärke", "correct": false, "explanation": "Lautstärke ist unabhängig von Dur/Moll. Auch leise gespielt klingt Moll trauriger."},
+            {"label": "Dur ist höher als Moll", "correct": false, "explanation": "Falsch — man kann Dur und Moll auf jeder Höhe spielen."}
           ],
-          "reveal": "Dur und Moll = unterschiedliche Schrittfolgen. Dur klingt freudig (gro&szlig;e Terz). Moll klingt traurig (kleine Terz). Es ist die Position der Halbtonschritte in der Tonleiter, die den Charakter pr&auml;gt &mdash; nicht die T&ouml;ne selbst."
+          "reveal": "Dur und Moll = unterschiedliche Schrittfolgen. Dur klingt freudig (große Terz). Moll klingt traurig (kleine Terz). Es ist die Position der Halbtonschritte in der Tonleiter, die den Charakter prägt — nicht die Töne selbst."
         }}
       ]
     },
     {
-      "name": "Dreikl&auml;nge &mdash; Dur, Moll, vermindert, &uuml;berm&auml;&szlig;ig",
-      "description": "Drei T&ouml;ne ergeben einen Akkord.",
-      "content": "<p>Ein <strong>Dreiklang</strong> besteht aus 3 T&ouml;nen im Terzabstand.</p><table class=\"lf-table\"><thead><tr><th>Akkord</th><th>Aufbau</th><th>Beispiel</th></tr></thead><tbody><tr><td>Dur</td><td>Gro&szlig;e + kleine Terz</td><td>C-E-G</td></tr><tr><td>Moll</td><td>Kleine + gro&szlig;e Terz</td><td>C-Es-G</td></tr><tr><td>Vermindert</td><td>Kleine + kleine Terz</td><td>C-Es-Ges</td></tr><tr><td>&Uuml;berm&auml;&szlig;ig</td><td>Gro&szlig;e + gro&szlig;e Terz</td><td>C-E-Gis</td></tr></tbody></table><h3>Klangcharakter</h3><dl class=\"lf-def\"><dt>Dur</dt><dd>Hell, fr&ouml;hlich, stabil.</dd><dt>Moll</dt><dd>Dunkel, traurig, stabil.</dd><dt>Vermindert</dt><dd>Spannung, m&ouml;chte sich aufl&ouml;sen.</dd><dt>&Uuml;berm&auml;&szlig;ig</dt><dd>Schwebend, unaufgel&ouml;st, modern (Jazz).</dd></dl>"
+      "name": "Dreiklänge — Dur, Moll, vermindert, übermäßig",
+      "description": "Drei Töne ergeben einen Akkord.",
+      "content": "<p>Ein <strong>Dreiklang</strong> besteht aus 3 Tönen im Terzabstand.</p><table class=\"lf-table\"><thead><tr><th>Akkord</th><th>Aufbau</th><th>Beispiel</th></tr></thead><tbody><tr><td>Dur</td><td>Große + kleine Terz</td><td>C-E-G</td></tr><tr><td>Moll</td><td>Kleine + große Terz</td><td>C-Es-G</td></tr><tr><td>Vermindert</td><td>Kleine + kleine Terz</td><td>C-Es-Ges</td></tr><tr><td>Übermäßig</td><td>Große + große Terz</td><td>C-E-Gis</td></tr></tbody></table><h3>Klangcharakter</h3><dl class=\"lf-def\"><dt>Dur</dt><dd>Hell, fröhlich, stabil.</dd><dt>Moll</dt><dd>Dunkel, traurig, stabil.</dd><dt>Vermindert</dt><dd>Spannung, möchte sich auflösen.</dd><dt>Übermäßig</dt><dd>Schwebend, unaufgelöst, modern (Jazz).</dd></dl>"
     }
   ]
 }

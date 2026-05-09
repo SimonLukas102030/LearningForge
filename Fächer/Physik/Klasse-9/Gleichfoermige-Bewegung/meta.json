@@ -1,22 +1,22 @@
 {
-  "name": "Gleichf&ouml;rmige Bewegung",
-  "description": "Konstante Geschwindigkeit &mdash; v = s/t und was die Diagramme dazu sagen.",
+  "name": "Gleichförmige Bewegung",
+  "description": "Konstante Geschwindigkeit — v = s/t und was die Diagramme dazu sagen.",
   "subtopics": [
     {
-      "name": "Was ist gleichf&ouml;rmige Bewegung? v = s/t",
+      "name": "Was ist gleichförmige Bewegung? v = s/t",
       "description": "Die einfachste Bewegung: konstante Geschwindigkeit.",
       "blocks": [
-        {"type": "text", "content": "<p>Eine <strong>gleichf&ouml;rmige Bewegung</strong> ist eine Bewegung mit <strong>konstanter Geschwindigkeit</strong> auf gerader Bahn.</p><div class=\"lf-formula\">v = s / t</div><dl class=\"lf-def\"><dt>v &mdash; Geschwindigkeit (m/s)</dt><dd>Wie schnell sich etwas bewegt.</dd><dt>s &mdash; Strecke (m)</dt><dd>Zur&uuml;ckgelegter Weg.</dd><dt>t &mdash; Zeit (s)</dt><dd>Wie lange.</dd></dl><h3>Umstellungen</h3><div class=\"lf-formula\">v = s/t &nbsp;|&nbsp; s = v&middot;t &nbsp;|&nbsp; t = s/v</div>"},
+        {"type": "text", "content": "<p>Eine <strong>gleichförmige Bewegung</strong> ist eine Bewegung mit <strong>konstanter Geschwindigkeit</strong> auf gerader Bahn.</p><div class=\"lf-formula\">v = s / t</div><dl class=\"lf-def\"><dt>v — Geschwindigkeit (m/s)</dt><dd>Wie schnell sich etwas bewegt.</dd><dt>s — Strecke (m)</dt><dd>Zurückgelegter Weg.</dd><dt>t — Zeit (s)</dt><dd>Wie lange.</dd></dl><h3>Umstellungen</h3><div class=\"lf-formula\">v = s/t  |  s = v·t  |  t = s/v</div>"},
         {"type": "widget", "widgetType": "number-slider", "config": {
-          "setup": "Ein Auto f&auml;hrt 100 km in 2 h.",
-          "question": "Wie gro&szlig; ist seine Durchschnittsgeschwindigkeit in km/h?",
+          "setup": "Ein Auto fährt 100 km in 2 h.",
+          "question": "Wie groß ist seine Durchschnittsgeschwindigkeit in km/h?",
           "min": 0,
           "max": 200,
           "step": 1,
           "correct": 50,
           "tolerance": 1,
           "unit": "km/h",
-          "reveal": "v = s/t = 100 km / 2 h = 50 km/h. Umgerechnet in m/s: 50 km/h &divide; 3,6 = 13,9 m/s. Faustregel: km/h durch 3,6 teilen ergibt m/s."
+          "reveal": "v = s/t = 100 km / 2 h = 50 km/h. Umgerechnet in m/s: 50 km/h ÷ 3,6 = 13,9 m/s. Faustregel: km/h durch 3,6 teilen ergibt m/s."
         }},
         {"type": "text", "content": "<h3>Einheiten umrechnen</h3><div class=\"lf-formula\">1 m/s = 3,6 km/h | 1 km/h = 1/3,6 m/s</div>"}
       ]
@@ -24,12 +24,12 @@
     {
       "name": "t-s-Diagramm + t-v-Diagramm lesen",
       "description": "Was die Linien bedeuten.",
-      "content": "<h3>Zeit-Strecke-Diagramm (t-s)</h3><p>Zeit auf x-Achse, Strecke auf y-Achse.</p><ul><li>Gleichf&ouml;rmige Bewegung &rarr; <strong>Gerade</strong>. Steigung = Geschwindigkeit.</li><li>Stillstand &rarr; <strong>waagerecht</strong>.</li><li>Schneller &rarr; steilere Gerade.</li></ul><h3>Zeit-Geschwindigkeit-Diagramm (t-v)</h3><p>Zeit auf x-Achse, Geschwindigkeit auf y-Achse.</p><ul><li>Gleichf&ouml;rmige Bewegung &rarr; <strong>waagerechte</strong> Linie.</li><li>Fl&auml;che unter der Kurve = zur&uuml;ckgelegte Strecke.</li></ul><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> In einem t-v-Diagramm sieht eine konstante Bewegung wie eine waagerechte Linie aus &mdash; nicht wie eine Diagonale (das w&auml;re Beschleunigung).</div>"
+      "content": "<h3>Zeit-Strecke-Diagramm (t-s)</h3><p>Zeit auf x-Achse, Strecke auf y-Achse.</p><ul><li>Gleichförmige Bewegung → <strong>Gerade</strong>. Steigung = Geschwindigkeit.</li><li>Stillstand → <strong>waagerecht</strong>.</li><li>Schneller → steilere Gerade.</li></ul><h3>Zeit-Geschwindigkeit-Diagramm (t-v)</h3><p>Zeit auf x-Achse, Geschwindigkeit auf y-Achse.</p><ul><li>Gleichförmige Bewegung → <strong>waagerechte</strong> Linie.</li><li>Fläche unter der Kurve = zurückgelegte Strecke.</li></ul><div class=\"lf-box lf-info\"><strong>Wichtig:</strong> In einem t-v-Diagramm sieht eine konstante Bewegung wie eine waagerechte Linie aus — nicht wie eine Diagonale (das wäre Beschleunigung).</div>"
     },
     {
       "name": "Worked Examples (Auto, Lichtgeschwindigkeit, Schall)",
       "description": "Drei Anwendungen.",
-      "content": "<h3>Beispiel 1: Auto auf Autobahn</h3><p>Auto f&auml;hrt 130 km/h. Wie weit in 30 min?</p><ol class=\"lf-steps\"><li>t = 0,5 h; v = 130 km/h</li><li>s = v&middot;t = 130 &middot; 0,5 = <strong>65 km</strong></li></ol><h3>Beispiel 2: Lichtgeschwindigkeit</h3><p>c &asymp; 300.000.000 m/s = 300.000 km/s. Sonne ist 150 Mio. km entfernt.</p><div class=\"lf-formula\">t = s/c = 150.000.000 / 300.000 = 500 s = 8,3 min</div><h3>Beispiel 3: Schallgeschwindigkeit</h3><p>v<sub>Schall</sub> &asymp; 343 m/s in Luft. Bei Gewitter: Blitz und Donner kommen scheinbar zusammen, der Schall braucht aber viel l&auml;nger.</p><p>3 s zwischen Blitz und Donner: s = 343 &middot; 3 &asymp; <strong>1 km</strong> entfernt.</p>"
+      "content": "<h3>Beispiel 1: Auto auf Autobahn</h3><p>Auto fährt 130 km/h. Wie weit in 30 min?</p><ol class=\"lf-steps\"><li>t = 0,5 h; v = 130 km/h</li><li>s = v·t = 130 · 0,5 = <strong>65 km</strong></li></ol><h3>Beispiel 2: Lichtgeschwindigkeit</h3><p>c ≈ 300.000.000 m/s = 300.000 km/s. Sonne ist 150 Mio. km entfernt.</p><div class=\"lf-formula\">t = s/c = 150.000.000 / 300.000 = 500 s = 8,3 min</div><h3>Beispiel 3: Schallgeschwindigkeit</h3><p>v<sub>Schall</sub> ≈ 343 m/s in Luft. Bei Gewitter: Blitz und Donner kommen scheinbar zusammen, der Schall braucht aber viel länger.</p><p>3 s zwischen Blitz und Donner: s = 343 · 3 ≈ <strong>1 km</strong> entfernt.</p>"
     }
   ]
 }

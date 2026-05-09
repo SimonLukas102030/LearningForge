@@ -1,34 +1,34 @@
 {
   "name": "Komposition &amp; Bildaufbau",
-  "description": "Drittel-Regel, Goldener Schnitt, Diagonalen &mdash; warum manche Bilder einfach &bdquo;sitzen&ldquo;.",
+  "description": "Drittel-Regel, Goldener Schnitt, Diagonalen — warum manche Bilder einfach „sitzen“.",
   "subtopics": [
     {
       "name": "Drittel-Regel + warum sie funktioniert",
       "description": "Bild in 3x3 teilen, wichtige Elemente auf die Linien.",
       "blocks": [
-        {"type": "text", "content": "<p>Die <strong>Drittel-Regel</strong> ist die einfachste Komposition-Regel der Welt: teile dein Bild gedanklich in 3x3 Teile. Die wichtigsten Elemente platzierst du auf die Linien oder Schnittpunkte.</p><h3>Warum funktioniert das?</h3><p>Das Auge wird nat&uuml;rlich zu den Schnittpunkten gezogen &mdash; nicht zur Bildmitte. Bilder mit zentriertem Hauptmotiv wirken oft langweilig oder steif.</p><h3>Anwendung</h3><ul><li>Foto: Person nicht in die Mitte, sondern auf eine Drittel-Linie.</li><li>Landschaft: Horizont auf einer Drittel-Linie (oben oder unten), nie in der Mitte.</li><li>Portrait: Auge auf einem oberen Schnittpunkt.</li></ul>"},
+        {"type": "text", "content": "<p>Die <strong>Drittel-Regel</strong> ist die einfachste Komposition-Regel der Welt: teile dein Bild gedanklich in 3x3 Teile. Die wichtigsten Elemente platzierst du auf die Linien oder Schnittpunkte.</p><h3>Warum funktioniert das?</h3><p>Das Auge wird natürlich zu den Schnittpunkten gezogen — nicht zur Bildmitte. Bilder mit zentriertem Hauptmotiv wirken oft langweilig oder steif.</p><h3>Anwendung</h3><ul><li>Foto: Person nicht in die Mitte, sondern auf eine Drittel-Linie.</li><li>Landschaft: Horizont auf einer Drittel-Linie (oben oder unten), nie in der Mitte.</li><li>Portrait: Auge auf einem oberen Schnittpunkt.</li></ul>"},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
           "setup": "Du fotografierst eine Landschaft mit dramatischem Wolkenhimmel.",
           "question": "Wo platzierst du den Horizont, damit das Bild am besten wirkt?",
           "options": [
-            {"label": "Genau in der Bildmitte", "correct": false, "explanation": "Falsch. Mittiger Horizont teilt das Bild in zwei gleiche H&auml;lften &mdash; das wirkt statisch und langweilig. Eine Drittel-Position ist immer dynamischer."},
-            {"label": "Auf der unteren Drittel-Linie", "correct": true, "explanation": "Richtig &mdash; bei dramatischem Himmel. Mit dem Horizont unten bekommt der Himmel 2/3 des Bildes und kommt voll zur Geltung."},
-            {"label": "Auf der oberen Drittel-Linie", "correct": false, "explanation": "Falsch f&uuml;r diesen Fall &mdash; das w&auml;re passend, wenn der <em>Boden</em> spannender w&auml;re als der Himmel (z.B. Bl&uuml;tenfeld unter blauem Himmel)."},
-            {"label": "Egal, Hauptsache scharf", "correct": false, "explanation": "Komposition entscheidet stark &uuml;ber die Bildwirkung. Sch&auml;rfe ist nur ein Aspekt."}
+            {"label": "Genau in der Bildmitte", "correct": false, "explanation": "Falsch. Mittiger Horizont teilt das Bild in zwei gleiche Hälften — das wirkt statisch und langweilig. Eine Drittel-Position ist immer dynamischer."},
+            {"label": "Auf der unteren Drittel-Linie", "correct": true, "explanation": "Richtig — bei dramatischem Himmel. Mit dem Horizont unten bekommt der Himmel 2/3 des Bildes und kommt voll zur Geltung."},
+            {"label": "Auf der oberen Drittel-Linie", "correct": false, "explanation": "Falsch für diesen Fall — das wäre passend, wenn der <em>Boden</em> spannender wäre als der Himmel (z.B. Blütenfeld unter blauem Himmel)."},
+            {"label": "Egal, Hauptsache scharf", "correct": false, "explanation": "Komposition entscheidet stark über die Bildwirkung. Schärfe ist nur ein Aspekt."}
           ],
-          "reveal": "Faustregel: Was wichtiger ist, bekommt mehr Bildanteil. Dramatischer Himmel &rarr; Horizont unten (2/3 Himmel). Sch&ouml;ner Vordergrund &rarr; Horizont oben (2/3 Boden). NIE Horizont in der Mitte &mdash; das schluckt jede Spannung."
+          "reveal": "Faustregel: Was wichtiger ist, bekommt mehr Bildanteil. Dramatischer Himmel → Horizont unten (2/3 Himmel). Schöner Vordergrund → Horizont oben (2/3 Boden). NIE Horizont in der Mitte — das schluckt jede Spannung."
         }}
       ]
     },
     {
       "name": "Goldener Schnitt",
       "description": "Die mathematische Schwester der Drittel-Regel.",
-      "content": "<dl class=\"lf-def\"><dt>Goldener Schnitt</dt><dd>Verh&auml;ltnis 1 : 1,618 (=&phi;, Phi). In der Natur (Schneckenh&auml;user, Sonnenblumen) und in der Kunst seit der Antike.</dd></dl><h3>Anwendung</h3><p>&Auml;hnlich wie Drittel-Regel, aber etwas weiter zur Mitte: bei einem Bild der Breite 100 liegt der Goldene Schnitt bei ca. 38 oder 62.</p><div class=\"lf-box lf-info\"><strong>Praktisch:</strong> Drittel-Regel und Goldener Schnitt geben &auml;hnliche Ergebnisse. Drittel-Regel ist einfacher zu merken und v&ouml;llig ausreichend.</div><h3>Beispiele</h3><ul><li>Mona Lisa: Augen auf Goldenem Schnitt.</li><li>Notre-Dame: Tor- und Turmh&ouml;hen.</li><li>Sonnenblumen-Spirale: Anordnung der Kerne.</li></ul>"
+      "content": "<dl class=\"lf-def\"><dt>Goldener Schnitt</dt><dd>Verhältnis 1 : 1,618 (=φ, Phi). In der Natur (Schneckenhäuser, Sonnenblumen) und in der Kunst seit der Antike.</dd></dl><h3>Anwendung</h3><p>Ähnlich wie Drittel-Regel, aber etwas weiter zur Mitte: bei einem Bild der Breite 100 liegt der Goldene Schnitt bei ca. 38 oder 62.</p><div class=\"lf-box lf-info\"><strong>Praktisch:</strong> Drittel-Regel und Goldener Schnitt geben ähnliche Ergebnisse. Drittel-Regel ist einfacher zu merken und völlig ausreichend.</div><h3>Beispiele</h3><ul><li>Mona Lisa: Augen auf Goldenem Schnitt.</li><li>Notre-Dame: Tor- und Turmhöhen.</li><li>Sonnenblumen-Spirale: Anordnung der Kerne.</li></ul>"
     },
     {
       "name": "Diagonalen + Bildbalance",
-      "description": "Wie Linien das Auge f&uuml;hren.",
-      "content": "<h3>Diagonalen</h3><p>Diagonalen erzeugen Bewegung und Spannung. Horizontale = Ruhe. Vertikale = St&auml;rke. Diagonale = Dynamik.</p><h3>F&uuml;hrungslinien</h3><ul><li>Stra&szlig;en, Z&auml;une, Fl&uuml;sse f&uuml;hren das Auge ins Bild.</li><li>Augen folgen Linien automatisch.</li><li>Linien zur Bildmitte &mdash; oder besser noch zu einem Drittel-Schnittpunkt.</li></ul><h3>Bildbalance</h3><dl class=\"lf-def\"><dt>Symmetrische Komposition</dt><dd>Ruhig, formell. F&uuml;r Architektur, Religion.</dd><dt>Asymmetrische Komposition</dt><dd>Dynamisch, modern. Erzeugt Spannung.</dd></dl><h3>Negativer Raum</h3><p>Leere Fl&auml;chen sind kein Versagen, sondern Werkzeug. Sie geben dem Hauptmotiv Atemraum.</p>"
+      "description": "Wie Linien das Auge führen.",
+      "content": "<h3>Diagonalen</h3><p>Diagonalen erzeugen Bewegung und Spannung. Horizontale = Ruhe. Vertikale = Stärke. Diagonale = Dynamik.</p><h3>Führungslinien</h3><ul><li>Straßen, Zäune, Flüsse führen das Auge ins Bild.</li><li>Augen folgen Linien automatisch.</li><li>Linien zur Bildmitte — oder besser noch zu einem Drittel-Schnittpunkt.</li></ul><h3>Bildbalance</h3><dl class=\"lf-def\"><dt>Symmetrische Komposition</dt><dd>Ruhig, formell. Für Architektur, Religion.</dd><dt>Asymmetrische Komposition</dt><dd>Dynamisch, modern. Erzeugt Spannung.</dd></dl><h3>Negativer Raum</h3><p>Leere Flächen sind kein Versagen, sondern Werkzeug. Sie geben dem Hauptmotiv Atemraum.</p>"
     }
   ]
 }

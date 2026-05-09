@@ -1,39 +1,39 @@
 {
   "name": "Klimawandel-Grundlagen",
-  "description": "Wie das Klima funktioniert, warum CO&#8322; ein Problem ist &mdash; und wie man &uuml;berhaupt wei&szlig;, dass es w&auml;rmer wird.",
+  "description": "Wie das Klima funktioniert, warum CO₂ ein Problem ist — und wie man überhaupt weiß, dass es wärmer wird.",
   "subtopics": [
     {
-      "name": "Wetter vs. Klima &mdash; Begriffskl&auml;rung",
+      "name": "Wetter vs. Klima — Begriffsklärung",
       "description": "Eine kalte Woche ist kein Argument gegen den Klimawandel.",
-      "content": "<dl class=\"lf-def\"><dt>Wetter</dt><dd>Zustand der Atmosph&auml;re an einem Ort, kurzer Zeitraum (Stunden, Tage).</dd><dt>Klima</dt><dd>Durchschnitt des Wetters &uuml;ber 30 Jahre. Langzeit-Muster.</dd></dl><div class=\"lf-box lf-info\"><strong>Faustregel:</strong> Wetter ist deine Stimmung heute, Klima ist dein Charakter.</div><p>Wenn ein Sommer k&uuml;hl ist, sagt das nichts &uuml;ber den Klimawandel. Erst wenn 30-Jahres-Mittel steigen, ist es Klimawandel.</p>"
+      "content": "<dl class=\"lf-def\"><dt>Wetter</dt><dd>Zustand der Atmosphäre an einem Ort, kurzer Zeitraum (Stunden, Tage).</dd><dt>Klima</dt><dd>Durchschnitt des Wetters über 30 Jahre. Langzeit-Muster.</dd></dl><div class=\"lf-box lf-info\"><strong>Faustregel:</strong> Wetter ist deine Stimmung heute, Klima ist dein Charakter.</div><p>Wenn ein Sommer kühl ist, sagt das nichts über den Klimawandel. Erst wenn 30-Jahres-Mittel steigen, ist es Klimawandel.</p>"
     },
     {
-      "name": "Nat&uuml;rlicher vs. anthropogener Treibhauseffekt",
+      "name": "Natürlicher vs. anthropogener Treibhauseffekt",
       "description": "Treibhauseffekt ist gut. Zu viel davon ist schlecht.",
       "blocks": [
-        {"type": "text", "content": "<h3>Nat&uuml;rlicher Treibhauseffekt</h3><p>Ohne Treibhausgase (CO<sub>2</sub>, H<sub>2</sub>O, CH<sub>4</sub>) w&auml;re die Erde im Schnitt &minus;18&deg;C kalt. Mit ihnen: +15&deg;C. Lebensgrundlage.</p><h3>Wie funktioniert er?</h3><ol class=\"lf-steps\"><li>Sonne strahlt kurzwelliges Licht auf die Erde.</li><li>Erde nimmt es auf und strahlt es als langwellige W&auml;rmestrahlung wieder ab.</li><li>Treibhausgase absorbieren diese W&auml;rme und strahlen sie zur&uuml;ck zur Erde.</li></ol><h3>Anthropogener Treibhauseffekt</h3><p>Durch Verbrennung fossiler Brennstoffe (Kohle, &Ouml;l, Gas) erh&ouml;ht der Mensch den CO<sub>2</sub>-Anteil. Mehr Treibhausgase &rarr; mehr W&auml;rme &rarr; w&auml;rmer auf der Erde.</p>"},
+        {"type": "text", "content": "<h3>Natürlicher Treibhauseffekt</h3><p>Ohne Treibhausgase (CO<sub>2</sub>, H<sub>2</sub>O, CH<sub>4</sub>) wäre die Erde im Schnitt −18°C kalt. Mit ihnen: +15°C. Lebensgrundlage.</p><h3>Wie funktioniert er?</h3><ol class=\"lf-steps\"><li>Sonne strahlt kurzwelliges Licht auf die Erde.</li><li>Erde nimmt es auf und strahlt es als langwellige Wärmestrahlung wieder ab.</li><li>Treibhausgase absorbieren diese Wärme und strahlen sie zurück zur Erde.</li></ol><h3>Anthropogener Treibhauseffekt</h3><p>Durch Verbrennung fossiler Brennstoffe (Kohle, Öl, Gas) erhöht der Mensch den CO<sub>2</sub>-Anteil. Mehr Treibhausgase → mehr Wärme → wärmer auf der Erde.</p>"},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
-          "setup": "Vor der Industrialisierung lag die CO<sub>2</sub>-Konzentration in der Atmosph&auml;re bei ca. 280 ppm (parts per million). Heute (2024) liegt sie bei...",
-          "question": "Was ist der ungef&auml;hre aktuelle CO<sub>2</sub>-Wert?",
+          "setup": "Vor der Industrialisierung lag die CO<sub>2</sub>-Konzentration in der Atmosphäre bei ca. 280 ppm (parts per million). Heute (2024) liegt sie bei...",
+          "question": "Was ist der ungefähre aktuelle CO<sub>2</sub>-Wert?",
           "options": [
-            {"label": "Etwa 300 ppm &mdash; kaum gestiegen", "correct": false, "explanation": "Falsch. Der Anstieg ist wesentlich gr&ouml;&szlig;er. 300 ppm w&auml;re nur ~7% mehr."},
+            {"label": "Etwa 300 ppm — kaum gestiegen", "correct": false, "explanation": "Falsch. Der Anstieg ist wesentlich größer. 300 ppm wäre nur ~7% mehr."},
             {"label": "Etwa 350 ppm", "correct": false, "explanation": "Diesen Wert hatten wir um 1988. Seitdem ist es weiter gestiegen."},
-            {"label": "Etwa 420 ppm", "correct": true, "explanation": "Richtig! Aktuell (2024) ~420 ppm &mdash; das ist 50% mehr als vor 1750. So hoch war die CO<sub>2</sub>-Konzentration zuletzt vor 3 Millionen Jahren."},
-            {"label": "Etwa 600 ppm", "correct": false, "explanation": "Diesen Wert k&ouml;nnten wir bei ungebremstem Anstieg um 2070 erreichen &mdash; aber noch nicht heute."}
+            {"label": "Etwa 420 ppm", "correct": true, "explanation": "Richtig! Aktuell (2024) ~420 ppm — das ist 50% mehr als vor 1750. So hoch war die CO<sub>2</sub>-Konzentration zuletzt vor 3 Millionen Jahren."},
+            {"label": "Etwa 600 ppm", "correct": false, "explanation": "Diesen Wert könnten wir bei ungebremstem Anstieg um 2070 erreichen — aber noch nicht heute."}
           ],
           "reveal": "1750: 280 ppm. 2024: ~420 ppm. Anstieg von 50% in 270 Jahren. Mauna-Loa-Messungen seit 1958 zeigen den klaren Anstieg ('Keeling-Kurve'). Die letzten Mal so hohe Werte: vor 3-5 Millionen Jahren."
         }}
       ]
     },
     {
-      "name": "CO&#8322;-Kreislauf + Konzentration historisch",
+      "name": "CO₂-Kreislauf + Konzentration historisch",
       "description": "Wo das CO<sub>2</sub> herkommt und hingeht.",
-      "content": "<h3>Nat&uuml;rlicher CO<sub>2</sub>-Kreislauf</h3><ul><li>Pflanzen nehmen CO<sub>2</sub> auf (Photosynthese).</li><li>Atmen, Verwesen, Verbrennen geben CO<sub>2</sub> ab.</li><li>Ozeane speichern und l&ouml;sen CO<sub>2</sub>.</li><li>Im Gleichgewicht: Aufnahme = Abgabe.</li></ul><h3>St&ouml;rung durch den Menschen</h3><p>Verbrennung fossiler Brennstoffe = Freisetzung von CO<sub>2</sub>, das vor Millionen Jahren aus der Atmosph&auml;re entzogen wurde. Mehr Quelle als Senke &rarr; CO<sub>2</sub> sammelt sich an.</p><h3>Historische Daten</h3><p>Eisbohrkerne zeigen CO<sub>2</sub>-Konzentration bis 800.000 Jahre zur&uuml;ck. Fluctuiert zwischen 180 ppm (Eiszeit) und 280 ppm (Warmzeit). Seit 1850 explosiver Anstieg auf 420 ppm.</p>"
+      "content": "<h3>Natürlicher CO<sub>2</sub>-Kreislauf</h3><ul><li>Pflanzen nehmen CO<sub>2</sub> auf (Photosynthese).</li><li>Atmen, Verwesen, Verbrennen geben CO<sub>2</sub> ab.</li><li>Ozeane speichern und lösen CO<sub>2</sub>.</li><li>Im Gleichgewicht: Aufnahme = Abgabe.</li></ul><h3>Störung durch den Menschen</h3><p>Verbrennung fossiler Brennstoffe = Freisetzung von CO<sub>2</sub>, das vor Millionen Jahren aus der Atmosphäre entzogen wurde. Mehr Quelle als Senke → CO<sub>2</sub> sammelt sich an.</p><h3>Historische Daten</h3><p>Eisbohrkerne zeigen CO<sub>2</sub>-Konzentration bis 800.000 Jahre zurück. Fluctuiert zwischen 180 ppm (Eiszeit) und 280 ppm (Warmzeit). Seit 1850 explosiver Anstieg auf 420 ppm.</p>"
     },
     {
       "name": "Klimamodelle + Vorhersagen",
       "description": "Wie sicher sind die Vorhersagen?",
-      "content": "<h3>Klimamodelle</h3><p>Computermodelle simulieren das Klimasystem (Atmosph&auml;re, Ozeane, Eis, Vegetation). Sie sind keine Vorhersage f&uuml;r ein bestimmtes Wetter, sondern f&uuml;r Trends.</p><h3>Validierung</h3><p>Gute Modelle k&ouml;nnen die Vergangenheit reproduzieren (R&uuml;ckwartsvalidierung). Wenn sie das schaffen, sind ihre Zukunftsvorhersagen vertrauensw&uuml;rdig.</p><h3>Szenarien (RCP / SSP)</h3><dl class=\"lf-def\"><dt>SSP1-2.6 (1,5&deg;C-Pfad)</dt><dd>Schnelle Emissionsminderung &mdash; +1,5&deg;C bis 2100.</dd><dt>SSP2-4.5</dt><dd>&bdquo;Weiter wie bisher&ldquo; mit Klimaschutz &mdash; +2,5&deg;C.</dd><dt>SSP5-8.5</dt><dd>Worst Case ohne Klimaschutz &mdash; +4&deg;C oder mehr.</dd></dl><div class=\"lf-box lf-warn\"><strong>Pariser Abkommen 2015:</strong> Erderw&auml;rmung deutlich unter 2&deg;C, m&ouml;glichst 1,5&deg;C. 2024 sind wir bei ca. +1,2&deg;C &mdash; und auf Kurs zu &uuml;ber +2,7&deg;C.</div>"
+      "content": "<h3>Klimamodelle</h3><p>Computermodelle simulieren das Klimasystem (Atmosphäre, Ozeane, Eis, Vegetation). Sie sind keine Vorhersage für ein bestimmtes Wetter, sondern für Trends.</p><h3>Validierung</h3><p>Gute Modelle können die Vergangenheit reproduzieren (Rückwartsvalidierung). Wenn sie das schaffen, sind ihre Zukunftsvorhersagen vertrauenswürdig.</p><h3>Szenarien (RCP / SSP)</h3><dl class=\"lf-def\"><dt>SSP1-2.6 (1,5°C-Pfad)</dt><dd>Schnelle Emissionsminderung — +1,5°C bis 2100.</dd><dt>SSP2-4.5</dt><dd>„Weiter wie bisher“ mit Klimaschutz — +2,5°C.</dd><dt>SSP5-8.5</dt><dd>Worst Case ohne Klimaschutz — +4°C oder mehr.</dd></dl><div class=\"lf-box lf-warn\"><strong>Pariser Abkommen 2015:</strong> Erderwärmung deutlich unter 2°C, möglichst 1,5°C. 2024 sind wir bei ca. +1,2°C — und auf Kurs zu über +2,7°C.</div>"
     }
   ]
 }

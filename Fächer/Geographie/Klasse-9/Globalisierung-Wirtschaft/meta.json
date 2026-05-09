@@ -1,37 +1,37 @@
 {
   "name": "Globalisierung-Wirtschaft",
-  "description": "Warum dein T-Shirt 4&euro; kostet, in 5 L&auml;ndern produziert wurde &mdash; und wer dabei verdient.",
+  "description": "Warum dein T-Shirt 4€ kostet, in 5 Ländern produziert wurde — und wer dabei verdient.",
   "subtopics": [
     {
       "name": "Was ist Globalisierung? Treiber + Geschichte",
       "description": "Vernetzung der Welt durch Handel, Verkehr, Information.",
-      "content": "<dl class=\"lf-def\"><dt>Globalisierung</dt><dd>Zunehmende weltweite Vernetzung von Wirtschaft, Politik, Kultur. Waren, Geld, Menschen und Informationen flie&szlig;en grenz&uuml;berschreitend.</dd></dl><h3>Treiber</h3><ul><li><strong>Verkehr:</strong> Containerschiffe, Flugzeuge &rarr; Transport billig + schnell.</li><li><strong>Kommunikation:</strong> Internet, Telekonferenzen.</li><li><strong>Politik:</strong> WTO, EU, Freihandelsabkommen senken Z&ouml;lle.</li><li><strong>Technologie:</strong> Automatisierung, Standardisierung.</li></ul><h3>Geschichte</h3><table class=\"lf-table\"><thead><tr><th>Phase</th><th>Beispiel</th></tr></thead><tbody><tr><td>Erste Globalisierung (1850-1914)</td><td>Telegraf, Dampfschiff, Eisenbahn</td></tr><tr><td>Bruch (1914-1945)</td><td>Weltkriege, R&uuml;ckzug</td></tr><tr><td>Wiederaufbau (1945-1990)</td><td>GATT, Bretton Woods</td></tr><tr><td>Hyperglobalisierung (1990-2010)</td><td>WTO 1995, China-Beitritt 2001</td></tr><tr><td>Heute (2010-heute)</td><td>Tendenz zur Regionalisierung, Handelskonflikte</td></tr></tbody></table>"
+      "content": "<dl class=\"lf-def\"><dt>Globalisierung</dt><dd>Zunehmende weltweite Vernetzung von Wirtschaft, Politik, Kultur. Waren, Geld, Menschen und Informationen fließen grenzüberschreitend.</dd></dl><h3>Treiber</h3><ul><li><strong>Verkehr:</strong> Containerschiffe, Flugzeuge → Transport billig + schnell.</li><li><strong>Kommunikation:</strong> Internet, Telekonferenzen.</li><li><strong>Politik:</strong> WTO, EU, Freihandelsabkommen senken Zölle.</li><li><strong>Technologie:</strong> Automatisierung, Standardisierung.</li></ul><h3>Geschichte</h3><table class=\"lf-table\"><thead><tr><th>Phase</th><th>Beispiel</th></tr></thead><tbody><tr><td>Erste Globalisierung (1850-1914)</td><td>Telegraf, Dampfschiff, Eisenbahn</td></tr><tr><td>Bruch (1914-1945)</td><td>Weltkriege, Rückzug</td></tr><tr><td>Wiederaufbau (1945-1990)</td><td>GATT, Bretton Woods</td></tr><tr><td>Hyperglobalisierung (1990-2010)</td><td>WTO 1995, China-Beitritt 2001</td></tr><tr><td>Heute (2010-heute)</td><td>Tendenz zur Regionalisierung, Handelskonflikte</td></tr></tbody></table>"
     },
     {
-      "name": "Wertsch&ouml;pfungsketten (Beispiel: T-Shirt von Bangladesh nach Berlin)",
-      "description": "Wer zu welchem Schritt was beitr&auml;gt &mdash; und wer wie viel verdient.",
+      "name": "Wertschöpfungsketten (Beispiel: T-Shirt von Bangladesh nach Berlin)",
+      "description": "Wer zu welchem Schritt was beiträgt — und wer wie viel verdient.",
       "blocks": [
-        {"type": "text", "content": "<p>Ein T-Shirt durchl&auml;uft viele Stationen, bevor es im Laden h&auml;ngt.</p><h3>Beispiel-Kette</h3>"},
+        {"type": "text", "content": "<p>Ein T-Shirt durchläuft viele Stationen, bevor es im Laden hängt.</p><h3>Beispiel-Kette</h3>"},
         {"type": "widget", "widgetType": "drag-sort", "config": {
-          "setup": "Ein T-Shirt f&uuml;r 5&euro; durchl&auml;uft mehrere L&auml;nder.",
+          "setup": "Ein T-Shirt für 5€ durchläuft mehrere Länder.",
           "question": "Bring die Stationen in die richtige Reihenfolge (vom Anfang bis zum Verkauf).",
           "items": [
             {"id": "us", "label": "Baumwolle wird in den USA / Indien angebaut"},
             {"id": "cn", "label": "China spinnt die Baumwolle zu Garn"},
-            {"id": "tr", "label": "T&uuml;rkei f&auml;rbt und webt das Garn zu Stoff"},
-            {"id": "bd", "label": "Bangladesch n&auml;ht die Stoffe zu T-Shirts zusammen"},
+            {"id": "tr", "label": "Türkei färbt und webt das Garn zu Stoff"},
+            {"id": "bd", "label": "Bangladesch näht die Stoffe zu T-Shirts zusammen"},
             {"id": "de", "label": "Verkauf in deutschen Modeketten"}
           ],
           "correctOrder": ["us", "cn", "tr", "bd", "de"],
-          "reveal": "Reihenfolge: Anbau &rarr; Spinnen &rarr; F&auml;rben/Weben &rarr; N&auml;hen &rarr; Verkauf. Bangladesch ganz unten in der Wertsch&ouml;pfung &mdash; N&auml;hen ist arbeitsintensiv und billig. Aus 5&euro; geht weniger als 1&euro; nach Bangladesch, der Rest verteilt sich auf Logistik, Marketing und Handelsmarge."
+          "reveal": "Reihenfolge: Anbau → Spinnen → Färben/Weben → Nähen → Verkauf. Bangladesch ganz unten in der Wertschöpfung — Nähen ist arbeitsintensiv und billig. Aus 5€ geht weniger als 1€ nach Bangladesch, der Rest verteilt sich auf Logistik, Marketing und Handelsmarge."
         }},
-        {"type": "text", "content": "<h3>Wo verdient wer?</h3><div class=\"lf-formula\">5&euro; T-Shirt: ~0,15&euro; an N&auml;herinnen | 0,50&euro; Stoff/Material | 1&euro; Logistik | 1,50&euro; Marke/Marketing | 1,85&euro; Einzelhandel + Profit</div><div class=\"lf-box lf-warn\"><strong>Tragisch:</strong> Die geringste Marge geht an die Menschen, die die meiste Arbeit machen.</div>"}
+        {"type": "text", "content": "<h3>Wo verdient wer?</h3><div class=\"lf-formula\">5€ T-Shirt: ~0,15€ an Näherinnen | 0,50€ Stoff/Material | 1€ Logistik | 1,50€ Marke/Marketing | 1,85€ Einzelhandel + Profit</div><div class=\"lf-box lf-warn\"><strong>Tragisch:</strong> Die geringste Marge geht an die Menschen, die die meiste Arbeit machen.</div>"}
       ]
     },
     {
-      "name": "Folgen f&uuml;r Arbeiter + Umwelt + Konsumenten",
+      "name": "Folgen für Arbeiter + Umwelt + Konsumenten",
       "description": "Gewinner und Verlierer der Globalisierung.",
-      "content": "<h3>Folgen f&uuml;r Arbeiter</h3><div class=\"lf-two-col\"><div><div class=\"lf-box lf-info\"><strong>Gewinner</strong><br>Hochqualifizierte in reichen L&auml;ndern. Wachsende Mittelschicht in Asien (China, Indien, Vietnam).</div></div><div><div class=\"lf-box lf-warn\"><strong>Verlierer</strong><br>Geringqualifizierte in alten Industriel&auml;ndern (USA Rust Belt). Niedrigl&ouml;hner in Schwellenl&auml;ndern (Sweat Shops, Rana-Plaza-Katastrophe 2013, 1100 Tote).</div></div></div><h3>Folgen f&uuml;r die Umwelt</h3><ul><li>Transport: 90% der Containerschifffahrt &mdash; massive CO<sub>2</sub>-Emissionen.</li><li>Standortverlagerung in L&auml;nder mit niedrigen Umweltstandards.</li><li>Monokulturen, Pestizide, Wasserverschmutzung in Produktionsl&auml;ndern.</li></ul><h3>Folgen f&uuml;r Konsumenten</h3><ul><li>+: Riesiges Angebot, niedrige Preise.</li><li>&minus;: Preisillusion (echte Kosten ausgelagert).</li><li>?: Fairtrade, Bio &mdash; Versuche, ethischer einzukaufen.</li></ul><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Globalisierung produziert Wohlstand, aber ungleich verteilt. Soziale, &ouml;kologische und politische Folgen sind die Schattenseite.</div></div>"
+      "content": "<h3>Folgen für Arbeiter</h3><div class=\"lf-two-col\"><div><div class=\"lf-box lf-info\"><strong>Gewinner</strong><br>Hochqualifizierte in reichen Ländern. Wachsende Mittelschicht in Asien (China, Indien, Vietnam).</div></div><div><div class=\"lf-box lf-warn\"><strong>Verlierer</strong><br>Geringqualifizierte in alten Industrieländern (USA Rust Belt). Niedriglöhner in Schwellenländern (Sweat Shops, Rana-Plaza-Katastrophe 2013, 1100 Tote).</div></div></div><h3>Folgen für die Umwelt</h3><ul><li>Transport: 90% der Containerschifffahrt — massive CO<sub>2</sub>-Emissionen.</li><li>Standortverlagerung in Länder mit niedrigen Umweltstandards.</li><li>Monokulturen, Pestizide, Wasserverschmutzung in Produktionsländern.</li></ul><h3>Folgen für Konsumenten</h3><ul><li>+: Riesiges Angebot, niedrige Preise.</li><li>−: Preisillusion (echte Kosten ausgelagert).</li><li>?: Fairtrade, Bio — Versuche, ethischer einzukaufen.</li></ul><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Globalisierung produziert Wohlstand, aber ungleich verteilt. Soziale, ökologische und politische Folgen sind die Schattenseite.</div></div>"
     }
   ]
 }

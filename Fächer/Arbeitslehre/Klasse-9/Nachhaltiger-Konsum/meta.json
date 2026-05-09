@@ -3,34 +3,34 @@
   "description": "Wie kommt mein T-Shirt in den Schrank? Was bedeuten die Siegel? Reparieren statt wegwerfen.",
   "subtopics": [
     {
-      "name": "Wie kommt mein T-Shirt in den Schrank? &mdash; Lieferkette",
-      "description": "F&uuml;nf L&auml;nder, eine Reise.",
-      "content": "<p>Ein durchschnittliches T-Shirt durchquert mehrere L&auml;nder bevor es in deinem Schrank landet.</p><h3>Etappen</h3><ol class=\"lf-steps\"><li><strong>Anbau:</strong> Baumwolle in USA, Indien, Pakistan, China.</li><li><strong>Spinnen:</strong> Garn meist in China oder Indien.</li><li><strong>Weben/F&auml;rben:</strong> Stoff in T&uuml;rkei oder Bangladesch.</li><li><strong>N&auml;hen:</strong> meist in Bangladesch, Vietnam (geringe L&ouml;hne).</li><li><strong>Transport:</strong> Container per Schiff nach Europa.</li><li><strong>Verkauf:</strong> Modeketten in Deutschland.</li></ol><h3>Probleme</h3><ul><li><strong>Soziale Probleme:</strong> Niedrigl&ouml;hne, lange Arbeitszeiten, Arbeitsunf&auml;lle.</li><li><strong>Umwelt:</strong> Wasserverbrauch (1 T-Shirt = 2700 L Wasser), Pestizide, Mikroplastik.</li><li><strong>Klima:</strong> Transport, fossile Kunstfasern.</li></ul>"
+      "name": "Wie kommt mein T-Shirt in den Schrank? — Lieferkette",
+      "description": "Fünf Länder, eine Reise.",
+      "content": "<p>Ein durchschnittliches T-Shirt durchquert mehrere Länder bevor es in deinem Schrank landet.</p><h3>Etappen</h3><ol class=\"lf-steps\"><li><strong>Anbau:</strong> Baumwolle in USA, Indien, Pakistan, China.</li><li><strong>Spinnen:</strong> Garn meist in China oder Indien.</li><li><strong>Weben/Färben:</strong> Stoff in Türkei oder Bangladesch.</li><li><strong>Nähen:</strong> meist in Bangladesch, Vietnam (geringe Löhne).</li><li><strong>Transport:</strong> Container per Schiff nach Europa.</li><li><strong>Verkauf:</strong> Modeketten in Deutschland.</li></ol><h3>Probleme</h3><ul><li><strong>Soziale Probleme:</strong> Niedriglöhne, lange Arbeitszeiten, Arbeitsunfälle.</li><li><strong>Umwelt:</strong> Wasserverbrauch (1 T-Shirt = 2700 L Wasser), Pestizide, Mikroplastik.</li><li><strong>Klima:</strong> Transport, fossile Kunstfasern.</li></ul>"
     },
     {
       "name": "Siegel-Lexikon (FairTrade, Bio, GOTS, EU-Energielabel)",
       "description": "Welches Logo bedeutet was?",
       "blocks": [
-        {"type": "text", "content": "<p>Siegel sollen Konsumenten zeigen, was &bdquo;gut&ldquo; ist. Aber nicht alle sind gleich vertrauensw&uuml;rdig.</p>"},
+        {"type": "text", "content": "<p>Siegel sollen Konsumenten zeigen, was „gut“ ist. Aber nicht alle sind gleich vertrauenswürdig.</p>"},
         {"type": "widget", "widgetType": "drag-match", "config": {
           "setup": "Verschiedene Siegel mit verschiedenen Schwerpunkten.",
           "question": "Verbinde Siegel mit Schwerpunkt.",
           "pairs": [
             {"id": "ft", "left": "FairTrade", "right": "Faire Bezahlung der Bauern und Arbeiter"},
-            {"id": "bio", "left": "EU-Bio-Siegel", "right": "&Ouml;kologische Landwirtschaft (keine Pestizide)"},
-            {"id": "gots", "left": "GOTS (Global Organic Textile Standard)", "right": "Bio + faire Arbeitsbedingungen f&uuml;r Textilien"},
-            {"id": "ene", "left": "EU-Energielabel A-G", "right": "Energieeffizienz von Ger&auml;ten"},
+            {"id": "bio", "left": "EU-Bio-Siegel", "right": "Ökologische Landwirtschaft (keine Pestizide)"},
+            {"id": "gots", "left": "GOTS (Global Organic Textile Standard)", "right": "Bio + faire Arbeitsbedingungen für Textilien"},
+            {"id": "ene", "left": "EU-Energielabel A-G", "right": "Energieeffizienz von Geräten"},
             {"id": "fsc", "left": "FSC", "right": "Nachhaltige Forstwirtschaft / Holz"}
           ],
-          "reveal": "Kein einziges Siegel deckt ALLES ab &mdash; jedes hat seinen Fokus. FairTrade fokussiert soziale Aspekte, Bio ist nur Umwelt, GOTS kombiniert beides f&uuml;r Textilien. F&uuml;r echte Nachhaltigkeit: mehrere Siegel beachten oder Marken pr&uuml;fen (z.B. Goodonyou-App f&uuml;r Mode)."
+          "reveal": "Kein einziges Siegel deckt ALLES ab — jedes hat seinen Fokus. FairTrade fokussiert soziale Aspekte, Bio ist nur Umwelt, GOTS kombiniert beides für Textilien. Für echte Nachhaltigkeit: mehrere Siegel beachten oder Marken prüfen (z.B. Goodonyou-App für Mode)."
         }},
-        {"type": "text", "content": "<div class=\"lf-box lf-warn\"><strong>Greenwashing:</strong> Manche Marken nutzen Pseudo-Siegel oder eigene gr&uuml;ne Logos. Pr&uuml;fe immer: Wer vergibt das Siegel? Welche Standards?</div>"}
+        {"type": "text", "content": "<div class=\"lf-box lf-warn\"><strong>Greenwashing:</strong> Manche Marken nutzen Pseudo-Siegel oder eigene grüne Logos. Prüfe immer: Wer vergibt das Siegel? Welche Standards?</div>"}
       ]
     },
     {
-      "name": "Reparieren statt wegwerfen &mdash; Right-to-Repair",
-      "description": "Warum ein neues Handy nicht immer die L&ouml;sung ist.",
-      "content": "<h3>Wegwerfgesellschaft</h3><p>Viele Produkte werden so gebaut, dass sie nach wenigen Jahren kaputt gehen oder nicht mehr unterst&uuml;tzt werden (geplante Obsoleszenz).</p><h3>Right-to-Repair (Recht auf Reparatur)</h3><p>EU-Initiative: Hersteller m&uuml;ssen Ersatzteile, Anleitungen und reparierbare Designs anbieten. Seit 2021 schrittweise Pflicht (z.B. f&uuml;r Wei&szlig;e Ware, ab 2026 auch Smartphones).</p><h3>Was kannst du tun?</h3><ul><li><strong>Reparieren statt ersetzen</strong> &mdash; Repair Caf&eacute;s, iFixit-Anleitungen.</li><li><strong>Second-Hand kaufen</strong> &mdash; eBay Kleinanzeigen, Vinted, Refurbished-Ware.</li><li><strong>Lange nutzen</strong> &mdash; Smartphone 5 Jahre statt 2.</li><li><strong>Modular kaufen</strong> &mdash; Fairphone, Framework Laptop.</li></ul><h3>3R-Regel</h3><div class=\"lf-formula\">Reduce - Reuse - Recycle</div><p>Vermeiden &gt; Wiederverwenden &gt; Recyceln. In dieser Reihenfolge.</p>"
+      "name": "Reparieren statt wegwerfen — Right-to-Repair",
+      "description": "Warum ein neues Handy nicht immer die Lösung ist.",
+      "content": "<h3>Wegwerfgesellschaft</h3><p>Viele Produkte werden so gebaut, dass sie nach wenigen Jahren kaputt gehen oder nicht mehr unterstützt werden (geplante Obsoleszenz).</p><h3>Right-to-Repair (Recht auf Reparatur)</h3><p>EU-Initiative: Hersteller müssen Ersatzteile, Anleitungen und reparierbare Designs anbieten. Seit 2021 schrittweise Pflicht (z.B. für Weiße Ware, ab 2026 auch Smartphones).</p><h3>Was kannst du tun?</h3><ul><li><strong>Reparieren statt ersetzen</strong> — Repair Cafés, iFixit-Anleitungen.</li><li><strong>Second-Hand kaufen</strong> — eBay Kleinanzeigen, Vinted, Refurbished-Ware.</li><li><strong>Lange nutzen</strong> — Smartphone 5 Jahre statt 2.</li><li><strong>Modular kaufen</strong> — Fairphone, Framework Laptop.</li></ul><h3>3R-Regel</h3><div class=\"lf-formula\">Reduce - Reuse - Recycle</div><p>Vermeiden &gt; Wiederverwenden &gt; Recyceln. In dieser Reihenfolge.</p>"
     }
   ]
 }

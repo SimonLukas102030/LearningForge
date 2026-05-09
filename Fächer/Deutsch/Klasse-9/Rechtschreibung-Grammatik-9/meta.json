@@ -1,40 +1,40 @@
 {
   "name": "Rechtschreibung &amp; Grammatik 9",
-  "description": "Komma, Zitieren, indirekte Rede, Konjunktiv &mdash; Klasse-9-Standard sicher beherrschen.",
+  "description": "Komma, Zitieren, indirekte Rede, Konjunktiv — Klasse-9-Standard sicher beherrschen.",
   "subtopics": [
     {
-      "name": "Komma-Komplex (Konjunktionen, Relativs&auml;tze)",
+      "name": "Komma-Komplex (Konjunktionen, Relativsätze)",
       "description": "Wann setzt man ein Komma, wann nicht? Drei Hauptregeln.",
       "blocks": [
-        {"type": "text", "content": "<p>Drei Regeln decken 90% der Klasse-9-Komma-F&auml;lle ab.</p><h3>Regel 1: Aufz&auml;hlungen</h3><p>Komma zwischen Aufz&auml;hlungs-Elementen, AU&szlig;ER vor <em>und</em>/<em>oder</em>:</p><ul><li>Ich kaufe Brot, Milch und K&auml;se.</li><li>Sie ist klug, sch&ouml;n, witzig und freundlich.</li></ul><h3>Regel 2: Nebens&auml;tze</h3><p>Vor jeder unterordnenden Konjunktion (dass, weil, obwohl, wenn, als, w&auml;hrend) kommt ein Komma.</p><ul><li>Ich gehe nach Hause, <em>weil</em> es regnet.</li></ul><h3>Regel 3: Relativs&auml;tze</h3><p>Vor und nach jedem Relativsatz (mit der/die/das, welcher) kommt ein Komma.</p><ul><li>Der Mann, <em>der</em> dort steht, ist mein Onkel.</li></ul>"},
+        {"type": "text", "content": "<p>Drei Regeln decken 90% der Klasse-9-Komma-Fälle ab.</p><h3>Regel 1: Aufzählungen</h3><p>Komma zwischen Aufzählungs-Elementen, AUßER vor <em>und</em>/<em>oder</em>:</p><ul><li>Ich kaufe Brot, Milch und Käse.</li><li>Sie ist klug, schön, witzig und freundlich.</li></ul><h3>Regel 2: Nebensätze</h3><p>Vor jeder unterordnenden Konjunktion (dass, weil, obwohl, wenn, als, während) kommt ein Komma.</p><ul><li>Ich gehe nach Hause, <em>weil</em> es regnet.</li></ul><h3>Regel 3: Relativsätze</h3><p>Vor und nach jedem Relativsatz (mit der/die/das, welcher) kommt ein Komma.</p><ul><li>Der Mann, <em>der</em> dort steht, ist mein Onkel.</li></ul>"},
         {"type": "widget", "widgetType": "fill-blanks", "config": {
           "setup": "Setze Kommata an die richtigen Stellen.",
-          "question": "F&uuml;lle die L&uuml;cken mit Komma oder Strich.",
-          "text": "Ich glaube{{a}} dass es regnet. Das Auto{{b}} das dort parkt{{c}} geh&ouml;rt mir.",
+          "question": "Fülle die Lücken mit Komma oder Strich.",
+          "text": "Ich glaube{{a}} dass es regnet. Das Auto{{b}} das dort parkt{{c}} gehört mir.",
           "blanks": {
             "a": {"answers": [","], "trim": true, "hint": "Vor 'dass' kommt was?"},
             "b": {"answers": [","], "trim": true, "hint": "Anfang Relativsatz"},
             "c": {"answers": [","], "trim": true, "hint": "Ende Relativsatz"}
           },
-          "reveal": "Ich glaube, dass es regnet. Das Auto, das dort parkt, geh&ouml;rt mir. Vor unterordnender Konjunktion (dass, weil, obwohl) und um Relativs&auml;tze immer Komma."
+          "reveal": "Ich glaube, dass es regnet. Das Auto, das dort parkt, gehört mir. Vor unterordnender Konjunktion (dass, weil, obwohl) und um Relativsätze immer Komma."
         }},
-        {"type": "text", "content": "<div class=\"lf-box lf-warn\"><strong>Falle:</strong> &bdquo;und&ldquo;/&bdquo;oder&ldquo; in Aufz&auml;hlungen kein Komma davor. Bei zwei Hauptst&auml;tzen mit &bdquo;und&ldquo; ist Komma fakultativ.</div>"}
+        {"type": "text", "content": "<div class=\"lf-box lf-warn\"><strong>Falle:</strong> „und“/„oder“ in Aufzählungen kein Komma davor. Bei zwei Hauptstätzen mit „und“ ist Komma fakultativ.</div>"}
       ]
     },
     {
       "name": "Zitieren richtig",
       "description": "Wie zitiert man, ohne dass es nach Plagiat aussieht?",
-      "content": "<p>Zitieren = fremde W&ouml;rter w&ouml;rtlich &uuml;bernehmen + kennzeichnen.</p><h3>Drei Regeln</h3><ol class=\"lf-steps\"><li><strong>Anf&uuml;hrungszeichen:</strong> &bdquo;...&ldquo; um das Zitat.</li><li><strong>Quelle:</strong> Mit Vers/Zeilen-Angabe: (V. 5) bei Lyrik, (Z. 12) bei Prosa.</li><li><strong>Einbettung:</strong> Grammatikalisch passend.</li></ol><div class=\"lf-box lf-info\"><strong>Beispiel:</strong> Das lyrische Ich beschreibt die Natur als &bdquo;sternklare Nacht&ldquo; (V. 8).</div><h3>Auslassen oder &Auml;ndern</h3><p>Auslassung: <em>[...]</em>. &Auml;nderungen: <em>[in eckigen Klammern]</em>.</p>"
+      "content": "<p>Zitieren = fremde Wörter wörtlich übernehmen + kennzeichnen.</p><h3>Drei Regeln</h3><ol class=\"lf-steps\"><li><strong>Anführungszeichen:</strong> „...“ um das Zitat.</li><li><strong>Quelle:</strong> Mit Vers/Zeilen-Angabe: (V. 5) bei Lyrik, (Z. 12) bei Prosa.</li><li><strong>Einbettung:</strong> Grammatikalisch passend.</li></ol><div class=\"lf-box lf-info\"><strong>Beispiel:</strong> Das lyrische Ich beschreibt die Natur als „sternklare Nacht“ (V. 8).</div><h3>Auslassen oder Ändern</h3><p>Auslassung: <em>[...]</em>. Änderungen: <em>[in eckigen Klammern]</em>.</p>"
     },
     {
       "name": "Indirekte Rede",
       "description": "Wie gibt man Gesagtes wieder?",
-      "content": "<p>Indirekte Rede = jemand anderes Aussage in eigenen Worten, mit Konjunktiv I.</p><div class=\"lf-formula\">Direkt: &bdquo;Ich bin m&uuml;de.&ldquo; &rarr; Indirekt: Sie sagte, sie sei m&uuml;de.</div><div class=\"lf-box lf-warn\">Wenn Konj. I gleich aussieht wie Indikativ, nimm <strong>Konjunktiv II</strong>: &bdquo;sie h&auml;tten&ldquo; statt &bdquo;sie haben&ldquo;.</div>"
+      "content": "<p>Indirekte Rede = jemand anderes Aussage in eigenen Worten, mit Konjunktiv I.</p><div class=\"lf-formula\">Direkt: „Ich bin müde.“ → Indirekt: Sie sagte, sie sei müde.</div><div class=\"lf-box lf-warn\">Wenn Konj. I gleich aussieht wie Indikativ, nimm <strong>Konjunktiv II</strong>: „sie hätten“ statt „sie haben“.</div>"
     },
     {
       "name": "Konjunktiv I &amp; II",
       "description": "Zwei Konjunktive, klare Aufgabenteilung.",
-      "content": "<h3>Konjunktiv I &mdash; indirekte Rede</h3><p>Pr&auml;sensstamm + e/est/e/en/et/en: ich gehe, du gehest, er gehe.</p><h3>Konjunktiv II &mdash; Wunsch, Bedingung</h3><p>Pr&auml;teritumstamm + Umlaut: ich w&auml;re, h&auml;tte, ginge.</p><table class=\"lf-table\"><thead><tr><th>Funktion</th><th>Konjunktiv</th><th>Beispiel</th></tr></thead><tbody><tr><td>Indirekte Rede</td><td>I</td><td>Sie sagte, sie sei krank.</td></tr><tr><td>Wunsch</td><td>II</td><td>W&auml;re ich doch reich!</td></tr><tr><td>Irrealer Bedingungssatz</td><td>II</td><td>Wenn ich Geld h&auml;tte, w&uuml;rde ich reisen.</td></tr></tbody></table>"
+      "content": "<h3>Konjunktiv I — indirekte Rede</h3><p>Präsensstamm + e/est/e/en/et/en: ich gehe, du gehest, er gehe.</p><h3>Konjunktiv II — Wunsch, Bedingung</h3><p>Präteritumstamm + Umlaut: ich wäre, hätte, ginge.</p><table class=\"lf-table\"><thead><tr><th>Funktion</th><th>Konjunktiv</th><th>Beispiel</th></tr></thead><tbody><tr><td>Indirekte Rede</td><td>I</td><td>Sie sagte, sie sei krank.</td></tr><tr><td>Wunsch</td><td>II</td><td>Wäre ich doch reich!</td></tr><tr><td>Irrealer Bedingungssatz</td><td>II</td><td>Wenn ich Geld hätte, würde ich reisen.</td></tr></tbody></table>"
     }
   ]
 }
