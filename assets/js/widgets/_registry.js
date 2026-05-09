@@ -35,6 +35,7 @@ export const WIDGET_REGISTRY = {
   'timeline-drop':    () => import('./timeline-drop.js?v=' + WIDGET_VERSION),
   'process-flow-anim': () => import('./process-flow-anim.js?v=' + WIDGET_VERSION),
   'phase-stepper':    () => import('./phase-stepper.js?v=' + WIDGET_VERSION),
+  'ph-titration':     () => import('./ph-titration.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.

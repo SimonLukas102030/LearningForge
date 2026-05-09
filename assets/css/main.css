@@ -222,6 +222,19 @@
   --lf-pn-text:      var(--sim-text);
   --lf-pn-text-muted: var(--sim-text-muted);
 
+  /* Welle 2.4 — ph-titration. pH-Kurve + Indikator-Farbquadrat.
+     Eigene Vars (--lf-ph-*) mit Fallback im JS auf --sim-* / --accent.
+     Indikator-Farben sind im JS hardgecodet (Phenolphthalein etc. = chemische
+     Identitaet, nicht theme-abhaengig). */
+  --lf-ph-bg:           var(--sim-ground);  /* Canvas-Hintergrund */
+  --lf-ph-grid:         var(--sim-grid);    /* Grid-Linien */
+  --lf-ph-axis:         var(--sim-text);    /* Haupt-Achsen */
+  --lf-ph-curve:        var(--accent);      /* Titrationskurve */
+  --lf-ph-point:        #ef4444;            /* Aktueller Punkt (red-500) */
+  --lf-ph-text:         var(--sim-text);
+  --lf-ph-text-muted:   var(--sim-text-muted);
+  --lf-ph-indicator-bg: var(--bg-input);    /* Farbquadrat-Border-BG */
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -365,6 +378,11 @@
   /* Welle 1.4 — pendulum-sim Dark. E_pot-Bar in 400-Shade,
      Bob/E_kin erbt --accent (per-Theme). */
   --lf-pn-bar-pot:   #fbbf24;          /* amber-400 */
+
+  /* Welle 2.4 — ph-titration Dark. Aufgehellter Punkt + dunklerer
+     Indikator-Frame fuer Kontrast. Kurve erbt --accent (per-Theme). */
+  --lf-ph-point:        #f87171;       /* red-400 */
+  --lf-ph-indicator-bg: var(--bg-input);
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -1647,6 +1665,98 @@ input, textarea, select { font-family: var(--font); }
 }
 .lf-pn-live .sim-readout-value {
   font-variant-numeric: tabular-nums;
+}
+
+/* Welle 2.4 — ph-titration widget-specific layout. */
+.lf-ph-host { /* erbt von .lf-widget-physics-throw */ }
+.lf-ph-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.lf-ph-select-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 540px) {
+  .lf-ph-select-row { grid-template-columns: 1fr; }
+}
+.lf-ph-select-cell {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.lf-ph-select-label {
+  font-size: 12px; font-weight: 500; color: var(--text-muted);
+}
+.lf-ph-select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 13px; cursor: pointer;
+}
+.lf-ph-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 12px;
+  margin-bottom: 8px;
+  align-items: start;
+}
+@media (max-width: 540px) {
+  .lf-ph-main { grid-template-columns: 1fr; }
+}
+.lf-ph-canvas-wrap {
+  min-width: 0;
+}
+.lf-ph-canvas {
+  background: var(--lf-ph-bg);
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+.lf-ph-panel {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.lf-ph-color {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 180px;
+  background: #cccccc;
+  border: 2px solid var(--lf-ph-indicator-bg);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  transition: background 220ms ease;
+}
+.lf-ph-live {
+  text-align: center;
+  padding: 8px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+}
+.lf-ph-live-label {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.lf-ph-live-value {
+  font-size: 22px; font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.lf-ph-info {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 11px;
+}
+.lf-ph-info-row {
+  display: flex; justify-content: space-between;
+  color: var(--text-muted);
+}
+.lf-ph-info-row b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.lf-ph-controls {
+  margin-top: 4px;
 }
 
 /* Collapsible details */
