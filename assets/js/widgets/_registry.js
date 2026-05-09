@@ -40,6 +40,7 @@ export const WIDGET_REGISTRY = {
   'tangent-visualizer': () => import('./tangent-visualizer.js?v=' + WIDGET_VERSION),
   'unit-circle-sync': () => import('./unit-circle-sync.js?v=' + WIDGET_VERSION),
   'vector-arrow':     () => import('./vector-arrow.js?v=' + WIDGET_VERSION),
+  'prob-tree-builder': () => import('./prob-tree-builder.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.
