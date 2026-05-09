@@ -3843,6 +3843,12 @@ if (typeof document !== 'undefined' && !document.__lfHotSpotBound) {
 }
 
 // ─── Mega-Update 2026-05-09 — Fill-Blanks-Widget ────────────────────────────
+// TODO(Phase-0-Commit-11): Bridge-Code — die kanonische Implementierung lebt
+// jetzt in assets/js/widgets/fill-blanks.js (Phase 0 Commit 9). Dieser Block
+// (_LF_FB_STATE, _lfFb*, _renderFillBlanks, document.__lfFillBlanksBound)
+// bleibt als Bridge fuer den synchronen renderBlock()-Pfad und wird in
+// Commit 11 entfernt, sobald der Widget-Loader auf Slot-Stubs umgestellt ist.
+//
 // Cloze-Text mit Inputs an Stelle der {{key}}-Placeholder. User tippt, druckt
 // "Pruefen", jeder Blank wird grun (correct, locked) oder rot (shake, mit
 // optionalem Hint-?-Icon). Wenn alles korrekt → reveal.
