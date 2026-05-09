@@ -2016,6 +2016,10 @@ if (typeof document !== 'undefined' && !document.__lfPredictRevealBound) {
 }
 
 // ─── Mega-Update 2026-05-09 — Drag-Sort-Widget (MVP-2) ──────────────────────
+// TODO: remove with drag-sort-Glue (Commit 11) — migrated to
+//       assets/js/widgets/drag-sort.js (Phase 0 Commit 5). Helpers
+//       below remain only as a bridge for renderBlock() case at L4318
+//       until Commit 11 swaps that to mountAllWidgets()/Slot-Stub.
 // Schueler bringt Items in die richtige Reihenfolge (z.B. Schlieffenplan,
 // Mitose-Phasen, Argumente nach Klimax). Mobile-first: Pfeil-Buttons sind
 // primaerer Interaktionspfad, Touch-Drag + HTML5-Drag sind Komfort-Layer.
