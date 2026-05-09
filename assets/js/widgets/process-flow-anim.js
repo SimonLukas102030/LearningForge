@@ -251,10 +251,25 @@ function _buildSvg(norm) {
       });
     }
     g.appendChild(shape);
+    // Optionales Bild: "image": "URL" überblendet den Node-Shape.
+    // Label erscheint dann als Caption darunter.
+    if (n.image) {
+      const iw = n.shape === 'rect' ? n.w - 10 : (n.shape === 'ellipse' ? n.rx * 1.6 : n.size * 0.85);
+      const ih = n.shape === 'rect' ? n.h - 10 : (n.shape === 'ellipse' ? n.ry * 1.6 : n.size * 0.85);
+      g.appendChild(_svg('image', {
+        href: n.image, x: -iw / 2, y: -ih / 2,
+        width: iw, height: ih,
+        preserveAspectRatio: 'xMidYMid meet',
+        'class': 'lf-pf-node-image'
+      }));
+    }
     if (n.label) {
+      const yOffset = n.image
+        ? (n.shape === 'rect' ? n.h / 2 + 12 : (n.shape === 'ellipse' ? n.ry + 12 : n.size / 2 + 12))
+        : 4;
       const t = _svg('text', {
-        x: 0, y: 4,
-        'class': 'lf-pf-node-label',
+        x: 0, y: yOffset,
+        'class': 'lf-pf-node-label' + (n.image ? ' lf-pf-node-label-caption' : ''),
         'text-anchor': 'middle'
       });
       t.textContent = n.label;

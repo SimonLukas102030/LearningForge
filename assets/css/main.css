@@ -9751,6 +9751,14 @@ input.lf-fb-blank.lf-fb-pulse {
   font: 600 12px sans-serif;
   pointer-events: none;
 }
+.lf-pf-node-image {
+  border-radius: 6px;
+  pointer-events: none;
+}
+.lf-pf-node-label-caption {
+  font: 500 11px sans-serif;
+  fill: var(--text-muted);
+}
 
 /* Highlight: Knoten — Akzentrand + Glow + Pulse. */
 .lf-pf-node.lf-pf-highlight .lf-pf-node-shape {
