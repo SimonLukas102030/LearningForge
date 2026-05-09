@@ -47,8 +47,18 @@
     },
     {
       "name": "Schiefer Wurf",
-      "description": "Wurf in beliebigem Winkel.",
-      "content": "<p>Beim schiefen Wurf wird mit Winkel α und Geschwindigkeit v<sub>0</sub> geworfen.</p><h3>Komponenten</h3><div class=\"lf-formula\">v<sub>x</sub> = v<sub>0</sub> · cos(α)<br>v<sub>y</sub> = v<sub>0</sub> · sin(α)</div><h3>Maximale Wurfweite</h3><p>Bei α = 45° ist die Wurfweite maximal:</p><div class=\"lf-formula\">x<sub>max</sub> = v<sub>0</sub>² / g (bei 45°)</div><div class=\"lf-box lf-tip\"><strong>Praxis:</strong> Kugelstoßer werfen unter ~42°, Speerwerfer ~35-40° — Abweichungen von 45° wegen Luftwiderstand und Abwurfhöhe.</div>"
+      "description": "Wurf in beliebigem Winkel — und wie man die Anfangsgeschwindigkeit in zwei Vektor-Komponenten zerlegt.",
+      "blocks": [
+        {"type": "text", "content": "<p>Beim schiefen Wurf wird mit Winkel α und Geschwindigkeit v<sub>0</sub> geworfen. Hier zeigt das Superpositionsprinzip seine ganze Schönheit: Die schräge Anfangsgeschwindigkeit ist eigentlich <strong>zwei Geschwindigkeiten gleichzeitig</strong> — eine waagerechte und eine senkrechte. Wir zerlegen sie und behandeln jede einzeln.</p><h3>Komponenten</h3><div class=\"lf-formula\">v<sub>x</sub> = v<sub>0</sub> · cos(α)<br>v<sub>y</sub> = v<sub>0</sub> · sin(α)</div><p>Geometrisch heißt das: Der Geschwindigkeitsvektor v<sub>0</sub> ist die <em>Diagonale</em> eines Rechtecks, dessen Seiten v<sub>x</sub> (waagerecht) und v<sub>y</sub> (senkrecht) sind. Genau die Vektoraddition aus Mathematik!</p><h3>Spiel mit der Zerlegung</h3><p>Stell unten v<sub>x</sub> (Pfeil a) und v<sub>y</sub> (Pfeil b) ein. Der dritte Pfeil ist der Anfangsgeschwindigkeitsvektor v<sub>0</sub> = v<sub>x</sub> + v<sub>y</sub>. Sein Betrag ist v<sub>0</sub> = √(v<sub>x</sub>² + v<sub>y</sub>²), sein Winkel zur Waagerechten ist α = tan⁻¹(v<sub>y</sub>/v<sub>x</sub>).</p>"},
+        {"type": "widget", "widgetType": "vector-arrow", "config": {
+          "label": "Schiefer Wurf: v_x + v_y = v_0",
+          "initialA": { "x": 4, "y": 0 },
+          "initialB": { "x": 0, "y": 3 },
+          "gridSize": 1,
+          "snapToGrid": true
+        }},
+        {"type": "text", "content": "<p>Probiere konkret aus:</p><ul><li>v<sub>x</sub>=4, v<sub>y</sub>=3: dann ist v<sub>0</sub> = √(16+9) = 5 m/s. Wurfwinkel α = tan⁻¹(3/4) ≈ 36,87°.</li><li>v<sub>x</sub>=v<sub>y</sub> (z.B. beide 3): das ist genau ein Wurfwinkel von 45° — der für die maximale Wurfweite.</li><li>v<sub>x</sub>=0: der Wurf ist senkrecht nach oben (zurück zum bekannten Senkrecht-Wurf).</li><li>v<sub>y</sub>=0: waagerechter Wurf (zurück zum waagerechten Wurf).</li></ul><h3>Warum dieser Trick funktioniert</h3><p>Genau hier wirkt das Superpositionsprinzip: die Schwerkraft greift nur an v<sub>y</sub> an — sie bremst die Senkrechtbewegung. v<sub>x</sub> bleibt während des ganzen Flugs konstant (im Vakuum). Wir können also die zwei Bewegungen separat ausrechnen und am Ende einfach an jedem Zeitpunkt die Position zusammensetzen:</p><div class=\"lf-formula\">x(t) = v<sub>x</sub> · t<br>y(t) = v<sub>y</sub> · t − ½ · g · t²</div><h3>Maximale Wurfweite</h3><p>Bei α = 45° ist die Wurfweite maximal:</p><div class=\"lf-formula\">x<sub>max</sub> = v<sub>0</sub>² / g (bei 45°)</div><div class=\"lf-box lf-tip\"><strong>Praxis:</strong> Kugelstoßer werfen unter ~42°, Speerwerfer ~35-40° — Abweichungen von 45° wegen Luftwiderstand und Abwurfhöhe.</div><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Eine schräge Geschwindigkeit ist nichts Neues — nur die Vektor-Summe einer waagerechten und einer senkrechten. Wenn du die zwei einzeln behandelst, wird der schiefe Wurf zu zwei einfachen Würfen, die du schon kennst. Das ist der ganze Witz von Superposition.</div></div>"}
+      ]
     }
   ]
 }

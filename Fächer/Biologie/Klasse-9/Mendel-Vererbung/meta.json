@@ -30,8 +30,54 @@
     },
     {
       "name": "Kreuzungs-Quadrate (Punnett-Squares)",
-      "description": "Das Werkzeug, um Vererbung vorherzusagen.",
-      "content": "<p>Ein Punnett-Square zeigt alle möglichen Genotypen einer Kreuzung.</p><h3>Beispiel: Rr × Rr</h3><table class=\"lf-table\"><thead><tr><th></th><th>R</th><th>r</th></tr></thead><tbody><tr><td><strong>R</strong></td><td>RR</td><td>Rr</td></tr><tr><td><strong>r</strong></td><td>Rr</td><td>rr</td></tr></tbody></table><p>Ergebnis: 1 RR : 2 Rr : 1 rr (= 3:1 phänotypisch).</p><h3>Schritte</h3><ol class=\"lf-steps\"><li><strong>Allele der Eltern aufschreiben</strong> (z.B. Rr und Rr).</li><li><strong>Mögliche Gameten:</strong> Jedes Elternteil gibt ein Allel ab. Aus Rr werden R und r.</li><li><strong>Quadrat zeichnen:</strong> Eltern-Gameten an die Ränder, Felder ausfüllen.</li><li><strong>Zählen:</strong> Verhältnis der Genotypen / Phänotypen.</li></ol>"
+      "description": "Das Werkzeug, um Vererbung vorherzusagen — und warum es eigentlich Wahrscheinlichkeitsrechnung ist.",
+      "blocks": [
+        {"type": "text", "content": "<p>Ein Punnett-Square zeigt alle möglichen Genotypen einer Kreuzung.</p><h3>Beispiel: Rr × Rr</h3><table class=\"lf-table\"><thead><tr><th></th><th>R</th><th>r</th></tr></thead><tbody><tr><td><strong>R</strong></td><td>RR</td><td>Rr</td></tr><tr><td><strong>r</strong></td><td>Rr</td><td>rr</td></tr></tbody></table><p>Ergebnis: 1 RR : 2 Rr : 1 rr (= 3:1 phänotypisch).</p><h3>Schritte</h3><ol class=\"lf-steps\"><li><strong>Allele der Eltern aufschreiben</strong> (z.B. Rr und Rr).</li><li><strong>Mögliche Gameten:</strong> Jedes Elternteil gibt ein Allel ab. Aus Rr werden R und r.</li><li><strong>Quadrat zeichnen:</strong> Eltern-Gameten an die Ränder, Felder ausfüllen.</li><li><strong>Zählen:</strong> Verhältnis der Genotypen / Phänotypen.</li></ol><h3>Punnett-Square ist Wahrscheinlichkeitsbaum in anderer Verkleidung</h3><p>Schau noch mal genau hin: Beim Punnett-Square steht in jedem Feld ein Genotyp mit Wahrscheinlichkeit ¼. Das gleiche Bild kannst du als Baum zeichnen:</p><ul><li><strong>Stufe 1:</strong> Welches Allel kommt vom Vater? Bei Rr-Vater zu 50% R, zu 50% r.</li><li><strong>Stufe 2:</strong> Welches Allel kommt von der Mutter? Bei Rr-Mutter zu 50% R, zu 50% r.</li></ul><p>Trag die Wahrscheinlichkeiten unten ein. Jeder Pfad gibt einen Genotyp — multipliziere die Zweige, um seine Wahrscheinlichkeit zu kriegen.</p>"},
+        {"type": "widget", "widgetType": "prob-tree-builder", "config": {
+          "label": "Mendel-Kreuzung Rr × Rr als Wahrscheinlichkeitsbaum",
+          "question": "Trage die Wahrscheinlichkeiten für jeden Allel-Zweig ein. (Hinweis: Bei einem heterozygoten Elternteil Rr sind R und r gleich wahrscheinlich.)",
+          "tree": {
+            "label": "Befruchtung",
+            "branches": [
+              { "label": "Vater gibt R", "expectedP": 0.5,
+                "branches": [
+                  { "label": "Mutter gibt R → RR", "expectedP": 0.5 },
+                  { "label": "Mutter gibt r → Rr", "expectedP": 0.5 }
+                ]},
+              { "label": "Vater gibt r", "expectedP": 0.5,
+                "branches": [
+                  { "label": "Mutter gibt R → Rr", "expectedP": 0.5 },
+                  { "label": "Mutter gibt r → rr", "expectedP": 0.5 }
+                ]}
+            ]
+          },
+          "tolerance": 0.01,
+          "reveal": "Multiplikationsregel für unabhängige Ereignisse: P(RR) = ½·½ = ¼. P(rr) = ½·½ = ¼. P(Rr) = ½·½ + ½·½ = ½ (zwei Pfade führen zu Rr!). Genau das ist die Spaltungsregel: 1 RR : 2 Rr : 1 rr — also 3 dominanter Phänotyp zu 1 rezessiv."
+        }},
+        {"type": "text", "content": "<p>Was du gerade gemacht hast, ist Mathematik und Biologie in einem: Du hast die <strong>Multiplikationsregel</strong> für unabhängige Ereignisse angewandt. Die Allel-Abgabe vom Vater hängt nicht von der Mutter ab — beide Gameten werden unabhängig gebildet. Deshalb darfst du die Wahrscheinlichkeiten entlang eines Pfades einfach multiplizieren.</p><div class=\"lf-key\"><div class=\"lf-key-title\">Wichtige Beobachtung</div><div class=\"lf-key-body\">Der Genotyp Rr kommt auf <em>zwei</em> Pfaden vor: „Vater R, Mutter r\" und „Vater r, Mutter R\". Die beiden Pfade werden <strong>addiert</strong>, weil entweder das eine ODER das andere zum Ziel führt. Das ist die Additionsregel — und genau der Grund, warum Rr doppelt so häufig auftritt wie RR oder rr.</div></div><h3>Bonus: Wahrscheinlichkeit ohne Zurücklegen — wenn die Stichprobe knapp ist</h3><p>Mendel-Kreuzungen sind „mit Zurücklegen\": jedes neue Kind wird unabhängig vom vorherigen gezeugt, das Eltern-Allelpaar bleibt vollständig erhalten. Manchmal hast du aber Situationen, wo eine endliche Population ohne Ersatz reduziert wird — z.B. eine Genbank mit 5 Samen, aus denen du 2 zufällig herausnimmst.</p><p>Beispiel: Eine Urne enthält <strong>3 rote</strong> (R) und <strong>2 weiße</strong> (W) Bohnen-Samen. Du ziehst zwei Samen nacheinander, ohne Zurücklegen. Was sind die Wahrscheinlichkeiten? Hier wird es spannend, weil sich die Verhältnisse beim zweiten Zug ändern.</p>"},
+        {"type": "widget", "widgetType": "prob-tree-builder", "config": {
+          "label": "Urne ohne Zurücklegen: 3 rote, 2 weiße Samen",
+          "question": "Ziehe 2 Samen nacheinander aus der Urne — ohne Zurücklegen. Trage die Wahrscheinlichkeiten ein. Tipp: Wenn du beim ersten Mal eine rote Bohne ziehst, sind danach noch 2 rote und 2 weiße in der Urne (4 insgesamt).",
+          "tree": {
+            "label": "1. Zug aus der Urne (3 rot + 2 weiß = 5)",
+            "branches": [
+              { "label": "1. Zug rot", "expectedP": 0.6,
+                "branches": [
+                  { "label": "2. Zug rot (jetzt 2/4)", "expectedP": 0.5 },
+                  { "label": "2. Zug weiß (jetzt 2/4)", "expectedP": 0.5 }
+                ]},
+              { "label": "1. Zug weiß", "expectedP": 0.4,
+                "branches": [
+                  { "label": "2. Zug rot (jetzt 3/4)", "expectedP": 0.75 },
+                  { "label": "2. Zug weiß (jetzt 1/4)", "expectedP": 0.25 }
+                ]}
+            ]
+          },
+          "tolerance": 0.01,
+          "reveal": "Erste Stufe: P(rot)=3/5=0,6 und P(weiß)=2/5=0,4. Zweite Stufe hängt vom ersten Zug ab! Wenn rot zuerst: nur noch 2 rot + 2 weiß = je 0,5. Wenn weiß zuerst: noch 3 rot + 1 weiß = 0,75 vs 0,25. Pfad-Wahrscheinlichkeiten: P(rot,rot)=0,6·0,5=0,3. P(rot,weiß)=0,6·0,5=0,3. P(weiß,rot)=0,4·0,75=0,3. P(weiß,weiß)=0,4·0,25=0,1. Summe=1.0 — Probe stimmt."
+        }},
+        {"type": "text", "content": "<p>Vergleiche die zwei Bäume:</p><table class=\"lf-table\"><thead><tr><th>Modell</th><th>2. Stufe</th><th>Beispiel</th></tr></thead><tbody><tr><td><strong>Mit Zurücklegen</strong></td><td>Hängt nicht vom 1. Zug ab</td><td>Mendel-Kreuzung — jede Gamete unabhängig</td></tr><tr><td><strong>Ohne Zurücklegen</strong></td><td>Ändert sich je nach 1. Zug</td><td>Urne, Lotto, Kartenstapel</td></tr></tbody></table><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">Ein Punnett-Square ist nichts anderes als ein Wahrscheinlichkeitsbaum mit gleichen ½-Wahrscheinlichkeiten auf jeder Stufe. Multiplikationsregel entlang Pfaden, Additionsregel zwischen Pfaden mit gleichem Ziel. Wer das einmal kapiert hat, kann jede Mendel-Aufgabe lösen — auch ohne Quadrat zu zeichnen.</div></div>"}
+      ]
     },
     {
       "name": "Stammbaum-Analyse",

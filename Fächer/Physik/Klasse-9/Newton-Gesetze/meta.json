@@ -32,7 +32,15 @@
           "unit": "m/s²",
           "reveal": "F = m·a, also a = F/m = 20 N / 5 kg = 4 m/s². Verdoppelst du die Kraft, verdoppelt sich a. Verdoppelst du die Masse, halbiert sich a (bei gleicher Kraft)."
         }},
-        {"type": "text", "content": "<h3>Umstellungen</h3><div class=\"lf-formula\">F = m·a  |  m = F/a  |  a = F/m</div><h3>Worked Example</h3><p>Ein Auto (1000 kg) beschleunigt von 0 auf 20 m/s in 5 s. Welche Kraft wirkt?</p><ol class=\"lf-steps\"><li>a = Δv/Δt = 20/5 = 4 m/s²</li><li>F = m·a = 1000 · 4 = <strong>4000 N</strong></li></ol>"}
+        {"type": "text", "content": "<h3>Umstellungen</h3><div class=\"lf-formula\">F = m·a  |  m = F/a  |  a = F/m</div><h3>Worked Example</h3><p>Ein Auto (1000 kg) beschleunigt von 0 auf 20 m/s in 5 s. Welche Kraft wirkt?</p><ol class=\"lf-steps\"><li>a = Δv/Δt = 20/5 = 4 m/s²</li><li>F = m·a = 1000 · 4 = <strong>4000 N</strong></li></ol><h3>Aber: Kräfte sind Vektoren — nicht nur Zahlen</h3><p>Bisher haben wir F einfach als Zahl behandelt. Das ist nur die halbe Wahrheit. Eine Kraft hat <em>Stärke und Richtung</em>. Zwei Kräfte 5 N und 5 N ergeben nicht automatisch 10 N — das hängt von ihren Richtungen ab.</p><ul><li>Beide in dieselbe Richtung: 5 + 5 = 10 N (verstärken sich).</li><li>Genau entgegengesetzt: 5 − 5 = 0 N (heben sich auf — der Körper bleibt in Ruhe).</li><li>Senkrecht zueinander: keine einfache Summe — der Pythagoras hilft: F<sub>res</sub> = √(5² + 5²) ≈ 7,07 N.</li></ul><p>Schieb die zwei Pfeile unten und beobachte den dritten Pfeil (die <strong>resultierende Kraft</strong>). Diese resultierende Kraft ist es, die in F = m·a tatsächlich wirkt.</p>"},
+        {"type": "widget", "widgetType": "vector-arrow", "config": {
+          "label": "Kräfte als Vektoren: F₁ + F₂ = F_res",
+          "initialA": { "x": 3, "y": 0 },
+          "initialB": { "x": 0, "y": 4 },
+          "gridSize": 1,
+          "snapToGrid": true
+        }},
+        {"type": "text", "content": "<p>Probiere konkret aus:</p><ul><li>Stell beide Vektoren parallel ein (z.B. a=(3,0) und b=(2,0)). Was ist der Betrag der Summe? Genau das Doppelte der Einzelsummen — beide Kräfte ziehen in dieselbe Richtung.</li><li>Stell sie entgegengesetzt ein (a=(3,0) und b=(−3,0)). Die Summe wird null — der Körper spürt keine resultierende Kraft, F=m·a sagt also a=0.</li><li>Stell sie senkrecht ein (a=(3,0) und b=(0,4)). Der Summenpfeil hat den Betrag √(9+16) = 5 — Pythagoras pur.</li></ul><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">F = m · a gilt vektoriell. Wenn mehrere Kräfte gleichzeitig wirken, musst du sie erst <strong>vektoriell addieren</strong> — und das Ergebnis ist die Kraft, die den Körper tatsächlich beschleunigt. Genau das ist der Grund, warum Tauziehen mit zwei gleich starken Mannschaften nirgends-hin geht: F<sub>res</sub> = 0.</div></div>"}
       ]
     },
     {
