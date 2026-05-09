@@ -157,6 +157,24 @@
   --lf-tt-wrong:     var(--danger-subtle);
   --lf-tt-missed:    var(--warning-subtle);
 
+  /* Welle 5.1 — tense-timeline. Englisch Tense-Zonen-Auswahl. Light.
+     Prefix --lf-tt2- (kein Konflikt mit --lf-tt- = text-token-tap). */
+  --lf-tt2-bg:          var(--bg-card);
+  --lf-tt2-text:        var(--text);
+  --lf-tt2-verb-bg:     var(--accent-subtle);
+  --lf-tt2-verb-text:   var(--accent);
+  --lf-tt2-past2:       #dbeafe;   /* blue-100 — weit vor jetzt */
+  --lf-tt2-past2-text:  #1d4ed8;   /* blue-700 */
+  --lf-tt2-past:        #ede9fe;   /* violet-100 — vor jetzt */
+  --lf-tt2-past-text:   #6d28d9;   /* violet-700 */
+  --lf-tt2-present:     #d1fae5;   /* emerald-100 — jetzt/zukunft */
+  --lf-tt2-present-text:#065f46;   /* emerald-800 */
+  --lf-tt2-zone-hover:  var(--bg-input);
+  --lf-tt2-correct-bg:  var(--success-subtle);
+  --lf-tt2-wrong-bg:    var(--danger-subtle);
+  --lf-tt2-fb-border-c: var(--success);
+  --lf-tt2-fb-border-w: var(--danger);
+
   /* Welle 4.3 — branch-story. Karten-basierte Verzweigungs-Story. Light. */
   --lf-bs-bg:      var(--bg-card);
   --lf-bs-card:    var(--bg-input);
@@ -171,6 +189,14 @@
   --lf-ml-border:     var(--border);
   --lf-ml-popup-bg:   var(--bg-card);
   --lf-ml-active-btn: var(--subject-accent, var(--subject-color, var(--accent)));
+
+  /* Welle 5.2 — conditional-builder. Englisch If-Satz-Typen-Builder. Light.
+     Vier Type-Farben als feste Hues — keine subject-Akzente,
+     weil die Farben direkt die Grammatik-Kategorien kodieren. */
+  --lf-cb-type0: #0891b2;   /* cyan-600   — General Truth (neutral/wissenschaftlich) */
+  --lf-cb-type1: #16a34a;   /* green-600  — Real Condition (real/positiv) */
+  --lf-cb-type2: #d97706;   /* amber-600  — Hypothetical (vorsichtig/warm) */
+  --lf-cb-type3: #dc2626;   /* red-600    — Impossible Past (unmoeglich/stark) */
 
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
@@ -407,6 +433,23 @@
   --lf-tt-correct:   var(--success-subtle);
   --lf-tt-wrong:     var(--danger-subtle);
   --lf-tt-missed:    var(--warning-subtle);
+
+  /* Welle 5.1 — tense-timeline Dark. Dunklere Zone-Tints. */
+  --lf-tt2-bg:          var(--bg-card);
+  --lf-tt2-text:        var(--text);
+  --lf-tt2-verb-bg:     var(--accent-subtle);
+  --lf-tt2-verb-text:   var(--accent);
+  --lf-tt2-past2:       #1e3a5f;   /* blue-900 */
+  --lf-tt2-past2-text:  #93c5fd;   /* blue-300 */
+  --lf-tt2-past:        #2e1065;   /* violet-950 */
+  --lf-tt2-past-text:   #c4b5fd;   /* violet-300 */
+  --lf-tt2-present:     #064e3b;   /* emerald-900 */
+  --lf-tt2-present-text:#6ee7b7;   /* emerald-300 */
+  --lf-tt2-zone-hover:  var(--bg-input);
+  --lf-tt2-correct-bg:  var(--success-subtle);
+  --lf-tt2-wrong-bg:    var(--danger-subtle);
+  --lf-tt2-fb-border-c: var(--success);
+  --lf-tt2-fb-border-w: var(--danger);
 
   /* Welle 4.3 — branch-story Dark. Restate gegen redefinierte Token. */
   --lf-bs-bg:      var(--bg-card);
@@ -10675,4 +10718,207 @@ input.lf-fb-blank.lf-fb-pulse {
   .lf-widget-map-layer-toggle { padding: 12px; }
   .lf-ml-popup { min-width: 150px; max-width: 220px; font-size: 13px; }
   .lf-ml-layer-btn { font-size: 12px; padding: 4px 10px; }
+}
+
+/* ══════════════════════════════════════════
+   Welle 5.1 — tense-timeline
+   Englisch Tense-Zonen-Auswahl
+   ══════════════════════════════════════════ */
+
+.lf-widget-tense-timeline {
+  background: var(--lf-tt2-bg);
+  color: var(--lf-tt2-text);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lf-tt2-empty {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+}
+
+.lf-tt2-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.lf-tt2-progress {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* ── Satz-Karte ─── */
+.lf-tt2-card {
+  min-height: 52px;
+}
+
+.lf-tt2-sentence {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--lf-tt2-text);
+  margin: 0;
+}
+
+.lf-tt2-verb {
+  display: inline-block;
+  background: var(--lf-tt2-verb-bg);
+  color: var(--lf-tt2-verb-text);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.lf-tt2-blank {
+  background: transparent;
+  color: var(--text-muted);
+  font-style: italic;
+  text-decoration: underline dotted;
+}
+
+.lf-tt2-done {
+  font-size: 15px;
+  color: var(--success);
+  margin: 0;
+  font-weight: 600;
+}
+
+/* ── Zone-Buttons ─── */
+.lf-tt2-zones {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.lf-tt2-zone {
+  background: var(--bg-input);
+  color: var(--lf-tt2-text);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background var(--transition), border-color var(--transition);
+  font-family: inherit;
+}
+.lf-tt2-zone:hover:not(:disabled) {
+  background: var(--lf-tt2-zone-hover);
+  border-color: var(--text-muted);
+}
+.lf-tt2-zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.lf-tt2-zone:disabled { cursor: default; opacity: 0.75; }
+
+/* Zone-spezifische Farben (Neutral-State) */
+.lf-tt2-zones .lf-tt2-zone:nth-child(1) {
+  background: var(--lf-tt2-past2);
+  color: var(--lf-tt2-past2-text);
+  border-color: var(--lf-tt2-past2);
+}
+.lf-tt2-zones .lf-tt2-zone:nth-child(2) {
+  background: var(--lf-tt2-past);
+  color: var(--lf-tt2-past-text);
+  border-color: var(--lf-tt2-past);
+}
+.lf-tt2-zones .lf-tt2-zone:nth-child(3) {
+  background: var(--lf-tt2-present);
+  color: var(--lf-tt2-present-text);
+  border-color: var(--lf-tt2-present);
+}
+
+/* Post-answer states */
+.lf-tt2-zone.lf-tt2-zone-correct {
+  outline: 3px solid var(--lf-tt2-fb-border-c);
+  outline-offset: 2px;
+}
+.lf-tt2-zone.lf-tt2-zone-wrong {
+  outline: 3px solid var(--lf-tt2-fb-border-w);
+  outline-offset: 2px;
+}
+
+/* ── Feedback-Box ─── */
+.lf-tt2-feedback {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.lf-tt2-fb-inner {
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  border-left: 4px solid transparent;
+}
+.lf-tt2-fb-correct {
+  background: var(--lf-tt2-correct-bg);
+  border-color: var(--lf-tt2-fb-border-c);
+  color: var(--lf-tt2-text);
+}
+.lf-tt2-fb-wrong {
+  background: var(--lf-tt2-wrong-bg);
+  border-color: var(--lf-tt2-fb-border-w);
+  color: var(--lf-tt2-text);
+}
+
+.lf-tt2-fb-icon {
+  font-size: 16px;
+  margin-right: 4px;
+}
+.lf-tt2-fb-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* ── Actions ─── */
+.lf-tt2-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.lf-tt2-next {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--transition);
+}
+.lf-tt2-next:hover { background: var(--accent-hover); }
+.lf-tt2-next:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ── Card-in animation ─── */
+@keyframes lf-tt2-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.lf-tt2-card-in {
+  animation: lf-tt2-slide-in 0.3s ease;
+}
+
+@media (max-width: 480px) {
+  .lf-widget-tense-timeline { padding: 14px; }
+  .lf-tt2-zones { grid-template-columns: 1fr; }
+  .lf-tt2-zone  { padding: 10px 12px; }
 }
