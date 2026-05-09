@@ -1794,6 +1794,10 @@ const _LF_WIDGET_WHITELIST = new Set([
 const _LF_WIDGET_TOAST_FIRED = new Set();
 
 // Cycle 8 — Predict-Reveal-Widget (MVP-1).
+// TODO: remove with predict-reveal-Glue (Commit 11) — migrated to
+//       assets/js/widgets/predict-reveal.js (Phase 0 Commit 4). Helpers
+//       below remain only as a bridge for renderBlock() case at L4311
+//       until Commit 11 swaps that to mountAllWidgets()/Slot-Stub.
 // Map: slotId -> { config, lockedWrong: Set<number>, revealed: boolean,
 //                  selectedIndex: number|null, wrapper: HTMLElement|null }
 // Scoped per Wrapper-DOM-Node, kein globaler Leak (Spec-Edge "mehrere Widgets").
