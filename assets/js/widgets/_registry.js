@@ -42,6 +42,7 @@ export const WIDGET_REGISTRY = {
   'vector-arrow':     () => import('./vector-arrow.js?v=' + WIDGET_VERSION),
   'prob-tree-builder': () => import('./prob-tree-builder.js?v=' + WIDGET_VERSION),
   'text-token-tap':   () => import('./text-token-tap.js?v=' + WIDGET_VERSION),
+  'branch-story':     () => import('./branch-story.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.
