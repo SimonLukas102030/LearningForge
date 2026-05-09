@@ -2534,6 +2534,10 @@ if (typeof document !== 'undefined' && !document.__lfDragSortBound) {
 }
 
 // ─── Mega-Update 2026-05-09 — Drag-Match-Widget (MVP-2) ──────────────────────
+// TODO: remove with drag-match-Glue (Commit 11) — migrated to
+//       assets/js/widgets/drag-match.js (Phase 0 Commit 6). Helpers
+//       below remain only as a bridge for renderBlock() case at L4326
+//       until Commit 11 swaps that to mountAllWidgets()/Slot-Stub.
 // Schueler verbindet Begriff mit Definition (oder Person↔Werk, Stilmittel↔
 // Beispiel, Symbol↔Bedeutung). Tap-Tap-Pattern statt echter Drag-Linien:
 //   1. Tap left  → Item highlightet als "selected" (lf-dm-selected).
