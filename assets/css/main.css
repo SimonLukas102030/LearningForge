@@ -155,6 +155,17 @@
   --lf-fa-arrow-friction: #f59e0b;        /* amber-500: Reibungs-Gegenkraft */
   --lf-fa-arrow-accel:    #10b981;        /* emerald-500: Beschleunigung */
 
+  /* Welle 1.2 — function-plotter. Live-Plot Widget. Eigene Vars,
+     fallback im JS auf --sim-* / --accent damit Cosmetics-Themes
+     keine Dupes brauchen. */
+  --lf-fp-bg:    var(--sim-ground);   /* Canvas-Hintergrund */
+  --lf-fp-grid:  var(--sim-grid);     /* Grid-Linien */
+  --lf-fp-axis:  var(--sim-text);     /* Haupt-Achsen (X, Y) */
+  --lf-fp-curve: var(--accent);       /* Funktions-Kurve */
+  --lf-fp-point: #ef4444;             /* Klickbare Punkte (red-500, sticht aus accent raus) */
+  --lf-fp-text:  var(--sim-text);
+  --lf-fp-text-muted: var(--sim-text-muted);
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -251,6 +262,10 @@
   --lf-fa-arrow-force:    #f87171;        /* red-400 */
   --lf-fa-arrow-friction: #fbbf24;        /* amber-400 */
   --lf-fa-arrow-accel:    #34d399;        /* emerald-400 */
+
+  /* Welle 1.2 — function-plotter Dark. Sichtbare Punkt-Farbe + Kurve
+     auf dunklem BG. Kurve erbt --accent (per-Theme), Punkt aufgehellt. */
+  --lf-fp-point: #f87171;             /* red-400 */
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -1361,6 +1376,124 @@ input, textarea, select { font-family: var(--font); }
 }
 .lf-fa-live .sim-readout-value {
   font-variant-numeric: tabular-nums;
+}
+
+/* Welle 1.2 — function-plotter widget-specific layout. */
+.lf-fp-host { /* erbt von .lf-widget-physics-throw */ }
+.lf-fp-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.lf-fp-type-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.lf-fp-type-label {
+  font-size: 13px; font-weight: 500; color: var(--text);
+}
+.lf-fp-type-select {
+  flex: 1; min-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 13px; cursor: pointer;
+}
+.lf-fp-formula {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+.lf-fp-canvas {
+  background: var(--lf-fp-bg);
+  cursor: crosshair;
+}
+.lf-fp-controls {
+  margin-top: 12px;
+}
+.lf-fp-sliders {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.lf-fp-xrange {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.lf-fp-kb-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.lf-fp-kb-label {
+  font-size: 13px; color: var(--text); font-weight: 500;
+}
+.lf-fp-kb-input {
+  width: 90px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.lf-fp-table-wrap {
+  margin-top: 12px;
+}
+.lf-fp-table-head {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.lf-fp-table {
+  width: 100%;
+  border-collapse: collapse;
+  max-height: 180px;
+  display: block;
+  overflow-y: auto;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+.lf-fp-table thead {
+  position: sticky; top: 0;
+  background: var(--bg-input);
+}
+.lf-fp-table th {
+  padding: 6px 10px;
+  text-align: left;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+.lf-fp-table td {
+  padding: 6px 10px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.lf-fp-table tbody tr:last-child td { border-bottom: 0; }
+.lf-fp-rm-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.lf-fp-rm-btn:hover {
+  background: var(--danger-subtle);
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 /* Collapsible details */
