@@ -11,7 +11,34 @@
       "name": "Natürlicher vs. anthropogener Treibhauseffekt",
       "description": "Treibhauseffekt ist gut. Zu viel davon ist schlecht.",
       "blocks": [
-        {"type": "text", "content": "<h3>Natürlicher Treibhauseffekt</h3><p>Ohne Treibhausgase (CO<sub>2</sub>, H<sub>2</sub>O, CH<sub>4</sub>) wäre die Erde im Schnitt −18°C kalt. Mit ihnen: +15°C. Lebensgrundlage.</p><h3>Wie funktioniert er?</h3><ol class=\"lf-steps\"><li>Sonne strahlt kurzwelliges Licht auf die Erde.</li><li>Erde nimmt es auf und strahlt es als langwellige Wärmestrahlung wieder ab.</li><li>Treibhausgase absorbieren diese Wärme und strahlen sie zurück zur Erde.</li></ol><h3>Anthropogener Treibhauseffekt</h3><p>Durch Verbrennung fossiler Brennstoffe (Kohle, Öl, Gas) erhöht der Mensch den CO<sub>2</sub>-Anteil. Mehr Treibhausgase → mehr Wärme → wärmer auf der Erde.</p>"},
+        {"type": "text", "content": "<h3>Natürlicher Treibhauseffekt</h3><p>Ohne Treibhausgase (CO<sub>2</sub>, H<sub>2</sub>O, CH<sub>4</sub>) wäre die Erde im Schnitt −18°C kalt. Mit ihnen: +15°C. Lebensgrundlage.</p><h3>Wie funktioniert er?</h3><ol class=\"lf-steps\"><li>Sonne strahlt kurzwelliges Licht auf die Erde.</li><li>Erde nimmt es auf und strahlt es als langwellige Wärmestrahlung wieder ab.</li><li>Treibhausgase absorbieren diese Wärme und strahlen sie zurück zur Erde.</li></ol><h3>Anthropogener Treibhauseffekt</h3><p>Durch Verbrennung fossiler Brennstoffe (Kohle, Öl, Gas) erhöht der Mensch den CO<sub>2</sub>-Anteil. Mehr Treibhausgase → mehr Wärme → wärmer auf der Erde.</p><p><strong>Beobachte den Energiefluss Schritt für Schritt:</strong></p>"},
+        {"type": "widget", "widgetType": "process-flow-anim", "config": {
+          "label": "Treibhauseffekt — der Energieweg",
+          "svgWidth": 640,
+          "svgHeight": 300,
+          "nodes": [
+            {"id": "sun", "x": 70, "y": 70, "label": "Sonne", "shape": "circle", "size": 56},
+            {"id": "atm", "x": 320, "y": 70, "label": "Atmosphäre", "shape": "rect", "w": 140, "h": 50},
+            {"id": "earth", "x": 320, "y": 220, "label": "Erde", "shape": "ellipse", "rx": 80, "ry": 28},
+            {"id": "ghg", "x": 560, "y": 140, "label": "Treibhausgase", "shape": "rect", "w": 130, "h": 60}
+          ],
+          "edges": [
+            {"from": "sun", "to": "earth", "label": "kurzwellig"},
+            {"from": "earth", "to": "atm", "label": "langwellig"},
+            {"from": "atm", "to": "ghg", "label": "Absorption"},
+            {"from": "ghg", "to": "earth", "label": "Rückstrahlung"}
+          ],
+          "steps": [
+            {"highlightNodes": ["sun"], "highlightEdges": [], "text": "1. Die Sonne sendet kurzwellige Strahlung — sichtbares Licht und UV — Richtung Erde."},
+            {"highlightNodes": ["sun", "earth"], "highlightEdges": [0], "text": "2. Die Strahlung durchquert die Atmosphäre fast ungehindert und trifft auf die Erdoberfläche."},
+            {"highlightNodes": ["earth", "atm"], "highlightEdges": [1], "text": "3. Die Erde erwärmt sich und strahlt die Energie als langwellige Wärmestrahlung (Infrarot) wieder ab."},
+            {"highlightNodes": ["atm", "ghg"], "highlightEdges": [2], "text": "4. Treibhausgase wie CO₂, H₂O und CH₄ absorbieren diese Wärmestrahlung — sie sind durchlässig für kurzwellig, aber nicht für langwellig."},
+            {"highlightNodes": ["ghg", "earth"], "highlightEdges": [3], "text": "5. Die Treibhausgase strahlen die Wärme in alle Richtungen ab — auch zurück zur Erde. Die Erde bleibt warm."},
+            {"highlightNodes": ["ghg"], "highlightEdges": [], "text": "Mehr Treibhausgase = mehr Rückstrahlung = wärmere Erde. Das ist der anthropogene Treibhauseffekt."}
+          ],
+          "autoPlay": false,
+          "stepDuration": 3500
+        }},
         {"type": "widget", "widgetType": "predict-reveal", "config": {
           "setup": "Vor der Industrialisierung lag die CO<sub>2</sub>-Konzentration in der Atmosphäre bei ca. 280 ppm (parts per million). Heute (2024) liegt sie bei...",
           "question": "Was ist der ungefähre aktuelle CO<sub>2</sub>-Wert?",
@@ -27,8 +54,26 @@
     },
     {
       "name": "CO₂-Kreislauf + Konzentration historisch",
-      "description": "Wo das CO<sub>2</sub> herkommt und hingeht.",
-      "content": "<h3>Natürlicher CO<sub>2</sub>-Kreislauf</h3><ul><li>Pflanzen nehmen CO<sub>2</sub> auf (Photosynthese).</li><li>Atmen, Verwesen, Verbrennen geben CO<sub>2</sub> ab.</li><li>Ozeane speichern und lösen CO<sub>2</sub>.</li><li>Im Gleichgewicht: Aufnahme = Abgabe.</li></ul><h3>Störung durch den Menschen</h3><p>Verbrennung fossiler Brennstoffe = Freisetzung von CO<sub>2</sub>, das vor Millionen Jahren aus der Atmosphäre entzogen wurde. Mehr Quelle als Senke → CO<sub>2</sub> sammelt sich an.</p><h3>Historische Daten</h3><p>Eisbohrkerne zeigen CO<sub>2</sub>-Konzentration bis 800.000 Jahre zurück. Fluctuiert zwischen 180 ppm (Eiszeit) und 280 ppm (Warmzeit). Seit 1850 explosiver Anstieg auf 420 ppm.</p>"
+      "description": "Wo das CO₂ herkommt und hingeht.",
+      "blocks": [
+        {"type": "text", "content": "<h3>Natürlicher CO<sub>2</sub>-Kreislauf</h3><ul><li>Pflanzen nehmen CO<sub>2</sub> auf (Photosynthese).</li><li>Atmen, Verwesen, Verbrennen geben CO<sub>2</sub> ab.</li><li>Ozeane speichern und lösen CO<sub>2</sub>.</li><li>Im Gleichgewicht: Aufnahme = Abgabe.</li></ul><h3>Störung durch den Menschen</h3><p>Verbrennung fossiler Brennstoffe = Freisetzung von CO<sub>2</sub>, das vor Millionen Jahren aus der Atmosphäre entzogen wurde. Mehr Quelle als Senke → CO<sub>2</sub> sammelt sich an.</p><h3>Beispielreaktion: Erdgas-Verbrennung</h3><p>Erdgas besteht zum Großteil aus Methan (CH<sub>4</sub>). Bei der Verbrennung im Heizkessel oder Gaskraftwerk reagiert es mit Sauerstoff zu CO<sub>2</sub> und Wasser. Genau diese Reaktion ist eine der größten CO<sub>2</sub>-Quellen weltweit. <strong>Gleiche die Reaktion aus:</strong></p>"},
+        {"type": "widget", "widgetType": "stoichiometry-balancer", "config": {
+          "label": "Methan-Verbrennung ausgleichen",
+          "reactants": [
+            {"formula": "CH4", "atoms": {"C": 1, "H": 4}},
+            {"formula": "O2", "atoms": {"O": 2}}
+          ],
+          "products": [
+            {"formula": "CO2", "atoms": {"C": 1, "O": 2}},
+            {"formula": "H2O", "atoms": {"H": 2, "O": 1}}
+          ],
+          "expectedCoefficients": {
+            "reactants": [1, 2],
+            "products": [1, 2]
+          }
+        }},
+        {"type": "text", "content": "<p>Aus 1 Molekül Methan entstehen 1 CO<sub>2</sub> und 2 H<sub>2</sub>O — das CO<sub>2</sub> landet direkt in der Atmosphäre. Bei jedem m³ Erdgas, das in einem Heizkessel verbrannt wird, kommen ca. 2 kg CO<sub>2</sub> oben aus dem Schornstein.</p><h3>Historische Daten</h3><p>Eisbohrkerne zeigen CO<sub>2</sub>-Konzentration bis 800.000 Jahre zurück. Fluctuiert zwischen 180 ppm (Eiszeit) und 280 ppm (Warmzeit). Seit 1850 explosiver Anstieg auf 420 ppm.</p>"}
+      ]
     },
     {
       "name": "Klimamodelle + Vorhersagen",

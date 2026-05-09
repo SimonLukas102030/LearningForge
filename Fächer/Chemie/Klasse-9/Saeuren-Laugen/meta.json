@@ -24,18 +24,69 @@
             {"id": "rohr", "left": "Rohrreiniger", "right": "pH ~14 (stark basisch)"}
           ],
           "reveal": "Magensäure ist extrem sauer (pH 1) — totötlich für Bakterien. Blut muss zwischen 7,35 und 7,45 bleiben — Schwankungen sind lebensgefährlich. Rohrreiniger basiert auf Natriumhydroxid (NaOH), ätzend wie Magensäure, nur in die andere Richtung."
-        }}
+        }},
+        {"type": "text", "content": "<h3>Titration — pH messen, während die Base zugegeben wird</h3><p>Wenn man eine bekannte Base langsam zu einer Säure tropft und dabei den pH misst, bekommt man eine Titrationskurve. Sie zeigt klar, wie der pH mit jedem Tropfen reagiert — und ab welcher Menge die Säure neutralisiert ist (der Äquivalenzpunkt). <strong>Probiere die Standard-Titration mit starker Säure aus:</strong></p>"},
+        {"type": "widget", "widgetType": "ph-titration", "config": {
+          "label": "Salzsäure-Titration mit Phenolphthalein",
+          "initialAcid": "HCl",
+          "initialIndicator": "phenolphthalein",
+          "acidVolume": 25,
+          "acidConcentration": 0.1,
+          "baseConcentration": 0.1
+        }},
+        {"type": "text", "content": "<p>Bei einer starken Säure (HCl) bleibt der pH lange tief und springt am Äquivalenzpunkt steil hoch. Phenolphthalein wird genau dann pink, wenn ins Basische gekippt wird — perfekter Endpunkt-Indikator für diese Reaktion.</p>"}
       ]
     },
     {
       "name": "Neutralisation: Säure + Base → Salz + Wasser",
       "description": "Wenn Säure und Base sich aufheben.",
-      "content": "<div class=\"lf-formula\">Säure + Base → Salz + Wasser</div><h3>Beispiel: Salzsäure + Natronlauge</h3><div class=\"lf-formula\">HCl + NaOH → NaCl + H<sub>2</sub>O</div><p>Aus Salzsäure und Natronlauge entsteht <strong>Kochsalz</strong> und Wasser. Die Lösung wird neutral (pH 7).</p><h3>Was passiert auf Teilchenebene?</h3><p>Säure gibt H<sup>+</sup> ab. Base gibt OH<sup>-</sup> ab. Beide reagieren:</p><div class=\"lf-formula\">H<sup>+</sup> + OH<sup>-</sup> → H<sub>2</sub>O</div><p>Die anderen Ionen (Na<sup>+</sup>, Cl<sup>-</sup>) bleiben gelöst — bilden das Salz.</p><h3>Anwendungen</h3><ul><li>Sodbrennen: basisches Magnesiumhydroxid neutralisiert überschüssige Magensäure.</li><li>Boden düngen: Sauerer Boden wird mit Kalk (Ca(OH)<sub>2</sub>) neutralisiert.</li></ul>"
+      "blocks": [
+        {"type": "text", "content": "<div class=\"lf-formula\">Säure + Base → Salz + Wasser</div><h3>Beispiel: Salzsäure + Natronlauge</h3><div class=\"lf-formula\">HCl + NaOH → NaCl + H<sub>2</sub>O</div><p>Aus Salzsäure und Natronlauge entsteht <strong>Kochsalz</strong> und Wasser. Die Lösung wird neutral (pH 7).</p><h3>Was passiert auf Teilchenebene?</h3><p>Säure gibt H<sup>+</sup> ab. Base gibt OH<sup>-</sup> ab. Beide reagieren:</p><div class=\"lf-formula\">H<sup>+</sup> + OH<sup>-</sup> → H<sub>2</sub>O</div><p>Die anderen Ionen (Na<sup>+</sup>, Cl<sup>-</sup>) bleiben gelöst — bilden das Salz.</p><h3>So läuft Neutralisation auf Teilchenebene ab</h3><p><strong>Klick dich durch die vier Schritte und sieh, was im Becherglas wirklich passiert:</strong></p>"},
+        {"type": "widget", "widgetType": "phase-stepper", "config": {
+          "label": "Neutralisation — Schritt für Schritt",
+          "stepDuration": 4000,
+          "phases": [
+            {"name": "Säure-Lösung", "visual": "🔴", "text": "Im Becher liegt Salzsäure: HCl ist in Wasser zerfallen in freie H⁺-Ionen und Cl⁻-Ionen. Die H⁺-Ionen machen die Lösung sauer — pH ~1, der Indikator zeigt rot."},
+            {"name": "Base zugeben", "visual": "🔵", "text": "Aus der Bürette tropft Natronlauge (NaOH) hinzu. NaOH ist in der Lösung als Na⁺-Ionen und OH⁻-Ionen vorhanden. Jetzt sind alle vier Ionensorten gleichzeitig im Becher."},
+            {"name": "Reaktion H⁺ + OH⁻", "visual": "💧", "text": "Die eigentliche Reaktion: H⁺ und OH⁻ ziehen sich an und verbinden sich zu Wassermolekülen. H⁺ + OH⁻ → H₂O. Genau hier verschwindet die Säurewirkung."},
+            {"name": "Neutralpunkt", "visual": "⚖", "text": "Wenn genauso viele OH⁻-Ionen zugegeben wurden, wie H⁺-Ionen vorhanden waren, ist die Lösung neutral — pH 7. Der Indikator schlägt um."},
+            {"name": "Salzlösung übrig", "visual": "🧂", "text": "Übrig bleiben Na⁺ und Cl⁻ in Wasser — also gelöstes Kochsalz. Lässt man das Wasser verdunsten, bleiben Salzkristalle zurück."}
+          ]
+        }},
+        {"type": "text", "content": "<h3>Anwendungen</h3><ul><li>Sodbrennen: basisches Magnesiumhydroxid neutralisiert überschüssige Magensäure.</li><li>Boden düngen: Sauerer Boden wird mit Kalk (Ca(OH)<sub>2</sub>) neutralisiert.</li></ul><h3>Stöchiometrie — die richtigen Verhältnisse finden</h3><p>Bei Neutralisation einer mehrprotonigen Säure stimmen die Verhältnisse nicht 1:1. Schwefelsäure (H<sub>2</sub>SO<sub>4</sub>) hat zwei abgebbare Protonen — sie braucht doppelt so viel NaOH wie HCl. <strong>Gleiche die Reaktion aus:</strong></p>"},
+        {"type": "widget", "widgetType": "stoichiometry-balancer", "config": {
+          "label": "Schwefelsäure + Natronlauge ausgleichen",
+          "reactants": [
+            {"formula": "H2SO4", "atoms": {"H": 2, "S": 1, "O": 4}},
+            {"formula": "NaOH", "atoms": {"Na": 1, "O": 1, "H": 1}}
+          ],
+          "products": [
+            {"formula": "Na2SO4", "atoms": {"Na": 2, "S": 1, "O": 4}},
+            {"formula": "H2O", "atoms": {"H": 2, "O": 1}}
+          ],
+          "expectedCoefficients": {
+            "reactants": [1, 2],
+            "products": [1, 2]
+          }
+        }},
+        {"type": "text", "content": "<p>Ergebnis: 1 H<sub>2</sub>SO<sub>4</sub> + 2 NaOH → 1 Na<sub>2</sub>SO<sub>4</sub> + 2 H<sub>2</sub>O. Das Salz heißt Natriumsulfat — auch bekannt als Glaubersalz, früher als Abführmittel verwendet.</p>"}
+      ]
     },
     {
       "name": "Stark vs schwach + Anwendungen",
       "description": "Nicht alle Säuren sind gleich gefährlich.",
-      "content": "<h3>Starke vs. schwache Säuren</h3><dl class=\"lf-def\"><dt>Starke Säure</dt><dd>Gibt fast vollständig Protonen ab. HCl, H<sub>2</sub>SO<sub>4</sub>, HNO<sub>3</sub>.</dd><dt>Schwache Säure</dt><dd>Gibt nur teilweise Protonen ab. Essigsäure, Kohlensäure, Zitronensäure.</dd></dl><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Stark/schwach sagt nichts über die Konzentration. Verdünnte HCl ist immer noch eine starke Säure — nur eben verdünnt. Konzentrierte Essigsäure ist eine schwache Säure — aber konzentriert.</div><h3>Anwendungen</h3><ul><li>Magensäure: HCl tötet Bakterien, hilft bei Verdauung.</li><li>Sodawasser: Kohlensäure CO<sub>2</sub> + H<sub>2</sub>O.</li><li>Backpulver: Reaktion von Natron (basisch) und Wein-/Zitronensäure setzt CO<sub>2</sub> frei.</li><li>Akku: Schwefelsäure als Elektrolyt.</li><li>Seife: Lauge löst Fett.</li></ul>"
+      "blocks": [
+        {"type": "text", "content": "<h3>Starke vs. schwache Säuren</h3><dl class=\"lf-def\"><dt>Starke Säure</dt><dd>Gibt fast vollständig Protonen ab. HCl, H<sub>2</sub>SO<sub>4</sub>, HNO<sub>3</sub>.</dd><dt>Schwache Säure</dt><dd>Gibt nur teilweise Protonen ab. Essigsäure, Kohlensäure, Zitronensäure.</dd></dl><div class=\"lf-box lf-warn\"><strong>Wichtig:</strong> Stark/schwach sagt nichts über die Konzentration. Verdünnte HCl ist immer noch eine starke Säure — nur eben verdünnt. Konzentrierte Essigsäure ist eine schwache Säure — aber konzentriert.</div><h3>Vergleich im Versuch — Essigsäure titrieren</h3><p>Wer das mit der starken HCl gesehen hat, wird sich wundern: bei einer schwachen Säure sieht die Titrationskurve <em>anders</em> aus. Der Anfangs-pH ist höher (Essigsäure dissoziiert nur teilweise), und der Sprung am Äquivalenzpunkt ist weniger steil. Wir nehmen Bromthymolblau, weil es im neutralen Bereich umschlägt — passend für schwache Säure + starke Base. <strong>Probiere es aus und vergleiche mit der HCl-Kurve oben:</strong></p>"},
+        {"type": "widget", "widgetType": "ph-titration", "config": {
+          "label": "Essigsäure-Titration mit Bromthymolblau",
+          "initialAcid": "CH3COOH",
+          "initialIndicator": "bromthymolblau",
+          "acidVolume": 25,
+          "acidConcentration": 0.1,
+          "baseConcentration": 0.1
+        }},
+        {"type": "text", "content": "<p><strong>Beobachtung:</strong> Der Start-pH liegt nicht bei 1, sondern bei ~3 — Essigsäure ist nur schwach dissoziiert. Der Äquivalenzpunkt liegt nicht bei pH 7, sondern leicht im Basischen (~8,7), weil das entstehende Acetat-Ion selbst leicht basisch wirkt. Bromthymolblau (Umschlag pH 6–7,6) zeigt das Ende der Titration sauber an.</p><h3>Anwendungen</h3><ul><li>Magensäure: HCl tötet Bakterien, hilft bei Verdauung.</li><li>Sodawasser: Kohlensäure CO<sub>2</sub> + H<sub>2</sub>O.</li><li>Backpulver: Reaktion von Natron (basisch) und Wein-/Zitronensäure setzt CO<sub>2</sub> frei.</li><li>Akku: Schwefelsäure als Elektrolyt.</li><li>Seife: Lauge löst Fett.</li></ul>"}
+      ]
     }
   ]
 }
