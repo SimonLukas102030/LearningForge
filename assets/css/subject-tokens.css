@@ -301,6 +301,67 @@
   --subject-soft-c: 0.05;
 }
 
+/* 14. Politische-Bildung — civic sky-blue
+       Mega-Update 2026-05-09 Round 2 (Sophie-Audit Finding 2):
+       Basis-Hex aus subjects-config.json #0ea5e9 (sky-500) → OKLCH h~237.
+       Hue 237 sitzt sauber zwischen Physik (h=220) und Englisch (h=264) —
+       eigener Slot, keine Verwechslung mit anderen Blau-Faechern. */
+[data-subject="Politische-Bildung"] {
+  --subject-base-l: 0.62;
+  --subject-base-c: 0.16;
+  --subject-base-h: 237;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
+}
+[data-theme="dark"] [data-subject="Politische-Bildung"] {
+  --subject-base-l: 0.76;
+  --subject-base-c: 0.13;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.05;
+}
+
+/* 15. LER — ethics purple
+       Lebensgestaltung-Ethik-Religionskunde. Basis-Hex #a855f7 (purple-500)
+       → OKLCH h~303. Distinkt von Chemie (h=290 violet-chem) und Latein
+       (h=25 brick-red) — saturierter Magenta-Lila-Zweig. */
+[data-subject="LER"] {
+  --subject-base-l: 0.58;
+  --subject-base-c: 0.20;
+  --subject-base-h: 303;
+  --subject-soft-l: 0.96;
+  --subject-soft-c: 0.04;
+  --subject-font: 'Inter', system-ui, sans-serif;
+}
+[data-theme="dark"] [data-subject="LER"] {
+  --subject-base-l: 0.74;
+  --subject-base-c: 0.16;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.05;
+}
+
+/* 16. Arbeitslehre — workshop earth-brown
+       Mega-Update 2026-05-09 Round 2: Color in subjects-config.json upgraded
+       #737373 → #92400e (amber-800). OKLCH h~47, bewusst niedrige L (0.46
+       light / 0.68 dark) — das macht es zu Braun statt Amber. Hue 47 nahe
+       Musik (h=50) und Geschichte (h=60), aber durch tiefere Lightness klar
+       als Werkstatt-Braun lesbar (Musik L=0.65/0.78, Geschichte L=0.58/0.75).
+       Loest Sophie's Finding 1 (Kontrast) + Finding 2 (OKLCH-Pipeline). */
+[data-subject="Arbeitslehre"] {
+  --subject-base-l: 0.46;
+  --subject-base-c: 0.11;
+  --subject-base-h: 47;
+  --subject-soft-l: 0.95;
+  --subject-soft-c: 0.03;
+  --subject-font: 'Inter', system-ui, sans-serif;
+}
+[data-theme="dark"] [data-subject="Arbeitslehre"] {
+  --subject-base-l: 0.68;
+  --subject-base-c: 0.10;
+  --subject-soft-l: 0.22;
+  --subject-soft-c: 0.04;
+}
+
 
 /* ── Shared accent calc — alle Stub-Subjects ──────────
    Statt jeden Subject-Block die accent-Berechnung zu wiederholen,

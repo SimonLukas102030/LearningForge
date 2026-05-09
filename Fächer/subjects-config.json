@@ -84,5 +84,26 @@
     "color": "#eab308",
     "icon":  "dumbbell",
     "iconType": "lucide"
+  },
+  "Politische-Bildung": {
+    "_note": "Mega-Update 2026-05-09: PB neu hinzugefuegt. Color #0ea5e9 (sky-500) — distinkt von Informatik-Cyan #06b6d4 (klar blauer, weniger gruenstichig). Icon-Fallback: spec wollte 'landmark-2' (existiert nicht in icons.js) bzw. 'vote' (auch nicht da); 'landmark' ist bereits von Geschichte belegt. Stattdessen 'users-round' — passt zu Civic/Buergergesellschaft/Wahlen-Themen und ist im Map verfuegbar.",
+    "name":  "Politische-Bildung",
+    "color": "#0ea5e9",
+    "icon":  "users-round",
+    "iconType": "lucide"
+  },
+  "LER": {
+    "_note": "Mega-Update 2026-05-09: LER (Lebensgestaltung-Ethik-Religionskunde) neu. Color #a855f7 (purple-500) — bewusst aehnliche Lila-Hue wie Latein #a78bfa, aber separates Fach, daher Naehe OK; #a855f7 ist saturierter/dunkler. Icon-Fallback: spec wollte 'heart-handshake' (nicht in icons.js); 'heart' ist die naechstgelegene verfuegbare Option und passt zu Ethik/Mitgefuehl/Religion-Vergleich.",
+    "name":  "LER",
+    "color": "#a855f7",
+    "icon":  "heart",
+    "iconType": "lucide"
+  },
+  "Arbeitslehre": {
+    "_note": "Mega-Update 2026-05-09 Round 2 (Sophie-Audit): Color upgraded #737373 → #92400e (amber-800, deep workshop-brown). Grund: neutral-500 hatte ~3.0:1 Kontrast auf dunklen Themes (washed-out vs. die anderen 15 Faecher). Brown signalisiert WAT/Werken/Handwerk semantisch und faellt in einen leeren Hue-Slot — kein anderes Fach sitzt im tiefen Erd-Braun. Icon-Fallback: spec wollte 'briefcase' (nicht in icons.js); 'hammer' ist beste verfuegbare Option (Werken/praktische Arbeit/Handwerk) und nicht anderswo belegt.",
+    "name":  "Arbeitslehre",
+    "color": "#92400e",
+    "icon":  "hammer",
+    "iconType": "lucide"
   }
 }

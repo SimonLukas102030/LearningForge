@@ -85,6 +85,18 @@
   --rarity-epic:      #a855f7;   /* purple-500 */
   --rarity-legendary: #f59e0b;   /* amber-500 — Gold-Vibe */
 
+  /* Mega-Update 2026-05-09 — Drag-Match-Verbindungs-Farben (MVP-2).
+     6 hue-gestreute Farben fuer bis zu 6 gleichzeitige Begriff↔Definition-
+     Verbindungen. Bewusst absolute Anker (wie Rarity), damit gepaarte Items
+     sicher dieselbe Farbe tragen — Theming wuerde Pair-Identifikation brechen.
+     Alle gegen weissen + schwarzen Text >= 3:1 Kontrast (Border + Chip-Use). */
+  --lf-conn-1: #ef4444;   /* red-500 */
+  --lf-conn-2: #f59e0b;   /* amber-500 */
+  --lf-conn-3: #84cc16;   /* lime-500 */
+  --lf-conn-4: #06b6d4;   /* cyan-500 */
+  --lf-conn-5: #6366f1;   /* indigo-500 */
+  --lf-conn-6: #d946ef;   /* fuchsia-500 */
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
 
@@ -154,6 +166,14 @@
   --rarity-rare:      #60a5fa;   /* blue-400 */
   --rarity-epic:      #c084fc;   /* purple-400 */
   --rarity-legendary: #fbbf24;   /* amber-400 */
+
+  /* Drag-Match-Verbindungs-Farben — Dark: 400-Shades (aufgehellt fuer dunkles BG) */
+  --lf-conn-1: #f87171;   /* red-400 */
+  --lf-conn-2: #fbbf24;   /* amber-400 */
+  --lf-conn-3: #a3e635;   /* lime-400 */
+  --lf-conn-4: #22d3ee;   /* cyan-400 */
+  --lf-conn-5: #818cf8;   /* indigo-400 */
+  --lf-conn-6: #e879f9;   /* fuchsia-400 */
 
   /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
   --success:        #34d399;        /* emerald-400 */
@@ -2655,6 +2675,1421 @@ input, textarea, select { font-family: var(--font); }
   .lf-pr-option,
   .lf-pr-retry { transition: none; }
   .lf-pr-option:active:not(:disabled) { transform: none; }
+}
+
+/* ── Mega-Update 2026-05-09 — Drag-Sort-Widget (MVP-2) ──────
+   Sortier-Karten + Pfeil-Buttons + Touch/HTML5-Drag. Theme-aware
+   ueber dieselben CSS-Variablen wie predict-reveal. Mobile-first
+   ≥44px Tap-Targets, keine Hex-Literale. */
+
+.lf-widget-drag-sort {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-ds-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-ds-setup {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lf-ds-setup p:last-child { margin-bottom: 0; }
+
+.lf-ds-question {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.lf-ds-list {
+  list-style: none;
+  margin: 0 0 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lf-ds-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  touch-action: pan-y;
+}
+.lf-ds-item:hover:not(.lf-ds-locked-correct) {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  box-shadow: var(--shadow-sm);
+}
+.lf-ds-item:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-ds-item.lf-ds-dragging {
+  opacity: 0.85;
+  transform: scale(0.97);
+  box-shadow: var(--shadow-sm);
+  cursor: grabbing;
+}
+.lf-ds-item.lf-ds-locked-correct {
+  border-color: var(--success);
+  background: var(--success-subtle);
+  color: var(--success-text);
+  cursor: default;
+  font-weight: 600;
+}
+.lf-ds-item.lf-ds-shake {
+  border-color: var(--danger);
+  animation: lf-ds-shake 0.4s ease;
+}
+.lf-ds-item.lf-ds-pulse {
+  animation: lf-ds-pulse 0.65s ease;
+}
+
+.lf-ds-grip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  color: var(--text-muted);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+}
+.lf-ds-item.lf-ds-locked-correct .lf-ds-grip {
+  color: var(--success-text);
+  cursor: default;
+}
+
+.lf-ds-label {
+  flex: 1 1 auto;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.lf-ds-arrows {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lf-ds-arrow {
+  min-width: 44px;
+  min-height: 22px;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.lf-ds-arrow:hover:not(:disabled) {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-ds-arrow:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-ds-arrow:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+@media (min-width: 540px) {
+  .lf-ds-arrows { flex-direction: row; gap: 6px; }
+  .lf-ds-arrow { min-height: 44px; padding: 6px 10px; font-size: 13px; }
+}
+
+.lf-ds-hint {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--danger-subtle);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--danger-text);
+}
+
+.lf-ds-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lf-ds-check,
+.lf-ds-retry {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.lf-ds-check {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border: 1.5px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  color: var(--bg-card);
+}
+.lf-ds-check:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.lf-ds-check:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-ds-check:active:not(:disabled) { transform: translateY(1px); }
+.lf-ds-check:disabled {
+  cursor: default;
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success-text);
+}
+.lf-ds-retry {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.lf-ds-retry:hover {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-ds-retry:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+
+.lf-ds-reveal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-ds-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-ds-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-ds-reveal-body p:last-child { margin-bottom: 0; }
+
+@keyframes lf-ds-shake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-6px); }
+  40%  { transform: translateX(6px); }
+  60%  { transform: translateX(-4px); }
+  80%  { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+@keyframes lf-ds-pulse {
+  0%   { transform: scale(1);   box-shadow: none; }
+  40%  { transform: scale(1.025); box-shadow: 0 0 0 3px var(--success-subtle); }
+  100% { transform: scale(1);   box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-ds-item,
+  .lf-ds-arrow,
+  .lf-ds-check,
+  .lf-ds-retry { transition: none; }
+  .lf-ds-item.lf-ds-shake,
+  .lf-ds-item.lf-ds-pulse { animation: none; }
+  .lf-ds-check:active:not(:disabled) { transform: none; }
+}
+
+/* ── Mega-Update 2026-05-09 — Drag-Match-Widget (MVP-2) ──────
+   Tap-Tap-Pattern: Schueler tappt links, dann rechts → Verbindung.
+   Statt SVG-Linien (komplex, scaling-issues) farbiges Border + Chip
+   pro Verbindung. 6 themed Connection-Colors via --lf-conn-1..6. */
+
+.lf-widget-drag-match {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-dm-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-dm-setup {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lf-dm-setup p:last-child { margin-bottom: 0; }
+
+.lf-dm-question {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.lf-dm-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+@media (min-width: 540px) {
+  .lf-dm-columns {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+.lf-dm-column-header {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.lf-dm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lf-dm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  text-align: left;
+}
+.lf-dm-item:hover:not(.lf-dm-locked-correct) {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  box-shadow: var(--shadow-sm);
+}
+.lf-dm-item:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-dm-item.lf-dm-selected {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  transform: scale(1.02);
+  box-shadow: var(--shadow-sm);
+}
+.lf-dm-item.lf-dm-connected {
+  /* --lf-dm-conn wird inline pro Item gesetzt (= eine der --lf-conn-N Variablen). */
+  border-color: var(--lf-dm-conn, var(--accent));
+  background: color-mix(in srgb, var(--lf-dm-conn, var(--accent)) 12%, var(--bg-input));
+}
+.lf-dm-item.lf-dm-locked-correct {
+  border-color: var(--success);
+  background: var(--success-subtle);
+  color: var(--success-text);
+  cursor: default;
+  font-weight: 600;
+}
+.lf-dm-item.lf-dm-locked-correct .lf-dm-chip {
+  background: var(--success);
+}
+.lf-dm-item.lf-dm-shake {
+  border-color: var(--danger);
+  animation: lf-dm-shake 0.4s ease;
+}
+.lf-dm-item.lf-dm-pulse {
+  animation: lf-dm-pulse 0.65s ease;
+}
+.lf-dm-item.lf-dm-wrong {
+  border-color: var(--danger);
+  background: var(--danger-subtle);
+}
+
+.lf-dm-label {
+  flex: 1 1 auto;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.lf-dm-chip {
+  flex: 0 0 auto;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--lf-dm-conn, transparent);
+  border: 1.5px solid var(--bg-card);
+  box-shadow: 0 0 0 1px var(--lf-dm-conn, var(--border));
+}
+.lf-dm-item:not(.lf-dm-connected):not(.lf-dm-locked-correct) .lf-dm-chip {
+  visibility: hidden;
+}
+
+.lf-dm-hint {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--danger-subtle);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--danger-text);
+}
+
+.lf-dm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lf-dm-check,
+.lf-dm-retry {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.lf-dm-check {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border: 1.5px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  color: var(--bg-card);
+}
+.lf-dm-check:hover:not(:disabled) { filter: brightness(1.05); }
+.lf-dm-check:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-dm-check:active:not(:disabled) { transform: translateY(1px); }
+.lf-dm-check:disabled {
+  cursor: default;
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success-text);
+}
+.lf-dm-retry {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.lf-dm-retry:hover {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-dm-retry:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+
+.lf-dm-reveal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-dm-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-dm-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-dm-reveal-body p:last-child { margin-bottom: 0; }
+
+@keyframes lf-dm-shake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-6px); }
+  40%  { transform: translateX(6px); }
+  60%  { transform: translateX(-4px); }
+  80%  { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+@keyframes lf-dm-pulse {
+  0%   { transform: scale(1);   box-shadow: none; }
+  40%  { transform: scale(1.025); box-shadow: 0 0 0 3px var(--success-subtle); }
+  100% { transform: scale(1);   box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-dm-item,
+  .lf-dm-check,
+  .lf-dm-retry { transition: none; }
+  .lf-dm-item.lf-dm-shake,
+  .lf-dm-item.lf-dm-pulse { animation: none; }
+  .lf-dm-item.lf-dm-selected { transform: none; }
+  .lf-dm-check:active:not(:disabled) { transform: none; }
+}
+
+/* ── Mega-Update 2026-05-09 — Number-Slider-Widget ─────────────────────────
+   Schueler schaetzt Zahlenwert per <input type=range>, mit Toleranz-Reveal.
+   Custom-CSS deckt Webkit (-webkit-slider-runnable-track + -thumb) und Firefox
+   (::-moz-range-track + -thumb) komplett ab. Touch-Target ≥44x44 via groesserem
+   Thumb (24px) + ueber-grossem klickbarem Bereich (input min-height 44px).
+   Theme-Regel: ausschliesslich CSS-Variablen, kein hex/named-color/rgba.
+*/
+.lf-widget-number-slider {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-ns-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-ns-setup {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lf-ns-setup p:last-child { margin-bottom: 0; }
+
+.lf-ns-question {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* Grosse Werte-Anzeige. Faerbt sich um je nach state. */
+.lf-ns-display {
+  margin: 0 0 16px 0;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  letter-spacing: 0.2px;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.lf-ns-state-correct .lf-ns-display {
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success-text);
+}
+.lf-ns-state-revealed .lf-ns-display {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.lf-ns-display.lf-ns-flash-wrong {
+  background: var(--danger-subtle);
+  border-color: var(--danger);
+  color: var(--danger-text);
+  animation: lf-ns-shake 0.4s ease;
+}
+.lf-ns-display.lf-ns-pulse {
+  animation: lf-ns-pulse 0.65s ease;
+}
+
+/* Slider + Markers. Wrap ist relativ-positioniert; markers absolut on top of track. */
+.lf-ns-slider-wrap {
+  position: relative;
+  padding: 18px 0 8px 0;
+  margin-bottom: 4px;
+}
+.lf-ns-markers {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  height: 14px;
+  pointer-events: none;
+}
+.lf-ns-marker {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--accent);
+  /* Pfeil-nach-unten: zeigt auf den Track. */
+  filter: drop-shadow(var(--shadow-sm));
+}
+.lf-ns-marker-guess {
+  border-top-color: var(--accent);
+}
+.lf-ns-marker-correct {
+  border-top-color: var(--success);
+}
+
+/* Eigentlicher Slider — Cross-Browser Custom-Style. */
+input[type="range"].lf-ns-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+  /* Touch-Target: hoehe so dass Thumb+Padding zusammen ≥44px sind. */
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  outline: none;
+}
+input[type="range"].lf-ns-input:disabled {
+  cursor: default;
+}
+
+/* Webkit / Blink Track */
+input[type="range"].lf-ns-input::-webkit-slider-runnable-track {
+  height: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+/* Firefox Track */
+input[type="range"].lf-ns-input::-moz-range-track {
+  height: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* Webkit Thumb */
+input[type="range"].lf-ns-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border: 3px solid var(--bg-card);
+  margin-top: -9px; /* center auf Track: -(thumb-h - track-h)/2 inkl. border */
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.18s ease;
+}
+input[type="range"].lf-ns-input:hover:not(:disabled)::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+input[type="range"].lf-ns-input:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+input[type="range"].lf-ns-input:disabled::-webkit-slider-thumb {
+  background: var(--success);
+  cursor: default;
+}
+.lf-ns-state-revealed input[type="range"].lf-ns-input:disabled::-webkit-slider-thumb {
+  background: var(--accent);
+}
+
+/* Firefox Thumb */
+input[type="range"].lf-ns-input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border: 3px solid var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.18s ease;
+}
+input[type="range"].lf-ns-input:hover:not(:disabled)::-moz-range-thumb {
+  transform: scale(1.08);
+}
+input[type="range"].lf-ns-input:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+input[type="range"].lf-ns-input:disabled::-moz-range-thumb {
+  background: var(--success);
+  cursor: default;
+}
+.lf-ns-state-revealed input[type="range"].lf-ns-input:disabled::-moz-range-thumb {
+  background: var(--accent);
+}
+
+.lf-ns-hint {
+  margin: 8px 0 4px 0;
+  padding: 8px 12px;
+  background: var(--danger-subtle);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--danger-text);
+}
+.lf-ns-state-correct .lf-ns-hint {
+  background: var(--success-subtle);
+  border-left-color: var(--success);
+  color: var(--success-text);
+}
+.lf-ns-state-revealed .lf-ns-hint {
+  background: var(--accent-subtle);
+  border-left-color: var(--accent);
+  color: var(--text);
+}
+
+.lf-ns-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.lf-ns-confirm,
+.lf-ns-reset {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.lf-ns-confirm {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border: 1.5px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  color: var(--bg-card);
+}
+.lf-ns-confirm:hover:not(:disabled) { filter: brightness(1.05); }
+.lf-ns-confirm:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-ns-confirm:active:not(:disabled) { transform: translateY(1px); }
+.lf-ns-confirm:disabled {
+  cursor: default;
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success-text);
+}
+.lf-ns-state-revealed .lf-ns-confirm:disabled {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.lf-ns-reset {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.lf-ns-reset:hover {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-ns-reset:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+
+.lf-ns-reveal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-ns-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-ns-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-ns-reveal-body p:last-child { margin-bottom: 0; }
+
+@keyframes lf-ns-shake {
+  0%   { transform: translateX(0); }
+  20%  { transform: translateX(-6px); }
+  40%  { transform: translateX(6px); }
+  60%  { transform: translateX(-4px); }
+  80%  { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+@keyframes lf-ns-pulse {
+  0%   { transform: scale(1);    box-shadow: none; }
+  40%  { transform: scale(1.025); box-shadow: 0 0 0 3px var(--success-subtle); }
+  100% { transform: scale(1);    box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-ns-display,
+  .lf-ns-confirm,
+  .lf-ns-reset,
+  input[type="range"].lf-ns-input::-webkit-slider-thumb,
+  input[type="range"].lf-ns-input::-moz-range-thumb { transition: none; }
+  .lf-ns-display.lf-ns-flash-wrong,
+  .lf-ns-display.lf-ns-pulse { animation: none; }
+  .lf-ns-confirm:active:not(:disabled) { transform: none; }
+  input[type="range"].lf-ns-input:hover:not(:disabled)::-webkit-slider-thumb,
+  input[type="range"].lf-ns-input:hover:not(:disabled)::-moz-range-thumb { transform: none; }
+}
+
+/* ── Mega-Update 2026-05-09 — Hot-Spot-Widget ──────────────────────────────
+   Schueler klickt Punkte auf einem Bild. Coords sind normalisiert (0..1) →
+   Marker via percent-positioning, automatisch responsive.
+   Theme-Regel: ausschliesslich CSS-Variablen, kein hex/named-color/rgba.
+*/
+.lf-widget-hot-spot {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-hs-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-hs-setup {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lf-hs-setup p:last-child { margin-bottom: 0; }
+
+.lf-hs-question {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* Figure umschliesst Bild + Overlay. Position relative, damit absolute-Marker
+   sich auf den Bildbereich beziehen. */
+.lf-hs-figure {
+  position: relative;
+  margin: 0 0 12px 0;
+  padding: 0;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  /* min-height verhindert Layout-Shift waehrend Image-Load. */
+  min-height: 80px;
+}
+.lf-hs-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: crosshair;
+  /* Damit beim Drag nicht das Bild gegrabbt wird. */
+  -webkit-user-drag: none;
+}
+.lf-hs-state-predict[data-hs-gaveup="true"] .lf-hs-image,
+.lf-hs-state-complete .lf-hs-image {
+  cursor: default;
+}
+
+.lf-hs-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* Klicks sollen aufs Bild gehen, nicht auf Overlay. */
+}
+
+/* Marker: zentrierter Kreis mit Checkmark, Tooltip on hover/focus.
+   transform translate(-50%,-50%) zentriert auf den Spot-Punkt. */
+.lf-hs-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--success-subtle, var(--accent-subtle));
+  border: 2.5px solid var(--success);
+  color: var(--success-text, var(--text));
+  font-weight: 800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  pointer-events: auto; /* Marker selbst soll Tooltip-Trigger erlauben. */
+  z-index: 2;
+  animation: lf-hs-marker-pop 0.4s ease;
+}
+.lf-hs-marker-check {
+  line-height: 1;
+}
+.lf-hs-marker.lf-hs-pulse {
+  animation: lf-hs-pulse 0.7s ease;
+}
+
+/* Faded marker fuer Lösung-anzeigen-Modus: gestrichelter Halo, transparent. */
+.lf-hs-marker-faded {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--accent);
+  opacity: 0.7;
+}
+.lf-hs-marker-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Tooltip: blendet bei hover/focus auf den Marker. Default hidden. */
+.lf-hs-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  z-index: 3;
+}
+.lf-hs-marker:hover .lf-hs-tooltip,
+.lf-hs-marker:focus .lf-hs-tooltip {
+  opacity: 1;
+}
+.lf-hs-tooltip-label {
+  display: block;
+  font-weight: 700;
+  color: var(--text);
+}
+.lf-hs-tooltip-explanation {
+  display: block;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: normal;
+  max-width: 220px;
+}
+
+/* Ripple-Effekt bei Falsch-Klick: roter expandierender Kreis, fade-out. */
+.lf-hs-ripple {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--danger-subtle);
+  border: 2px solid var(--danger);
+  pointer-events: none;
+  animation: lf-hs-ripple 0.55s ease-out;
+  z-index: 1;
+}
+
+.lf-hs-status {
+  margin: 8px 0 4px 0;
+  padding: 6px 12px;
+  background: var(--bg-input);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.lf-hs-state-complete .lf-hs-status {
+  background: var(--success-subtle);
+  border-left-color: var(--success);
+  color: var(--success-text);
+}
+
+.lf-hs-hint {
+  margin: 6px 0 4px 0;
+  padding: 8px 12px;
+  background: var(--danger-subtle);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--danger-text);
+}
+
+/* Buttons-Fallback: a11y-Pfad fuer Keyboard/Screenreader. Wird per Tab
+   fokussierbar und navigiert die Spots ohne Maus. */
+.lf-hs-spot-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px 0;
+}
+.lf-hs-spot-btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.lf-hs-spot-btn:hover:not(:disabled) {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-hs-spot-btn:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-hs-spot-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.lf-hs-spot-btn-found {
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success-text);
+  opacity: 1;
+}
+
+.lf-hs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.lf-hs-give-up {
+  min-height: 44px;
+  padding: 10px 18px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.lf-hs-give-up:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-subtle);
+}
+.lf-hs-give-up:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lf-hs-reveal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-hs-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-hs-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-hs-reveal-body p:last-child { margin-bottom: 0; }
+
+@keyframes lf-hs-marker-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+}
+@keyframes lf-hs-pulse {
+  0%   { box-shadow: 0 0 0 0   var(--success-subtle); }
+  60%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0   transparent; }
+}
+@keyframes lf-hs-ripple {
+  0%   { width: 12px;  height: 12px; opacity: 0.9; }
+  100% { width: 64px;  height: 64px; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-hs-marker,
+  .lf-hs-marker.lf-hs-pulse,
+  .lf-hs-ripple,
+  .lf-hs-tooltip,
+  .lf-hs-spot-btn,
+  .lf-hs-give-up { animation: none; transition: none; }
+}
+
+/* ── Mega-Update 2026-05-09 — Fill-Blanks-Widget ──────────────────────────────
+   Cloze-Text mit Inputs an {{key}}-Stellen. Inputs koennen correct (gruen,
+   locked) oder wrong (rot, shake) sein. Hint per ?-Icon neben falschem Blank.
+   Theme-Regel: ausschliesslich CSS-Variablen, kein hex/named-color/rgba.
+*/
+.lf-widget-fill-blanks {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-fb-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-fb-setup {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lf-fb-setup p:last-child { margin-bottom: 0; }
+
+.lf-fb-question {
+  margin: 0 0 14px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* Cloze-Text-Wrapper: line-height generoes, damit Inputs nicht den Text
+   auseinander reissen. Inputs sind inline-block. */
+.lf-fb-text {
+  font-size: 15px;
+  line-height: 2.1;
+  color: var(--text);
+  margin-bottom: 12px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.lf-fb-text-frag {
+  /* Text zwischen Inputs — block-level decorations sollen erlaubt bleiben
+     (z.B. <strong>, <em>). */
+}
+
+/* Wrap um Input + ?-Hint + Tooltip; relative damit Tooltip sich relativ
+   positioniert. */
+.lf-fb-blank-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px;
+  /* Damit Tooltip nicht abgeschnitten wird, falls in scrollendem Container. */
+  vertical-align: middle;
+}
+
+input.lf-fb-blank {
+  font: inherit;
+  /* Mobile: 16px verhindert iOS-Auto-Zoom beim Focus. */
+  font-size: 16px;
+  min-height: 40px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  display: inline-block;
+  min-width: 80px;
+  max-width: 100%;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+  /* Tippfeld soll nicht auf Container-Width auswachsen. */
+  box-sizing: border-box;
+}
+input.lf-fb-blank:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 1px;
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+input.lf-fb-blank::placeholder { color: var(--text-muted); }
+
+input.lf-fb-blank.lf-fb-correct {
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success-text, var(--text));
+  /* readonly bleibt fokus-erhaltend, aber visuell "locked" */
+  cursor: default;
+}
+input.lf-fb-blank.lf-fb-correct:focus-visible {
+  outline-color: var(--success);
+  border-color: var(--success);
+}
+
+input.lf-fb-blank.lf-fb-wrong {
+  background: var(--danger-subtle);
+  border-color: var(--danger);
+  color: var(--danger-text, var(--text));
+}
+input.lf-fb-blank.lf-fb-wrong:focus-visible {
+  outline-color: var(--danger);
+  border-color: var(--danger);
+}
+
+input.lf-fb-blank.lf-fb-shake {
+  animation: lf-fb-shake 0.45s ease;
+}
+input.lf-fb-blank.lf-fb-pulse {
+  animation: lf-fb-pulse 0.7s ease;
+}
+
+/* Hint-Trigger ?-Icon — sichtbar nur wenn der Blank wrong ist. */
+.lf-fb-hint-trigger {
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.lf-fb-hint-trigger:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.lf-fb-hint-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Tooltip mit Hint-Text. Block-level unter dem Wrap, damit es nicht den
+   Text-Flow ueberlappt — Mobile-friendly statt absolute. */
+.lf-fb-hint-tooltip {
+  display: block;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  min-width: 220px;
+  max-width: 320px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: normal;
+  /* Default normales line-height (Parent ist 2.1). */
+}
+.lf-fb-hint-tooltip[hidden] { display: none; }
+
+.lf-fb-status {
+  margin: 4px 0 8px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+.lf-fb-state-correct .lf-fb-status { color: var(--success); }
+.lf-fb-state-wrong   .lf-fb-status { color: var(--danger); }
+
+.lf-fb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.lf-fb-check, .lf-fb-retry {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.lf-fb-check {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border: 1.5px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  color: var(--bg-card);
+}
+.lf-fb-check:hover:not(:disabled) {
+  background: var(--accent-hover, var(--accent));
+  border-color: var(--accent-hover, var(--accent));
+}
+.lf-fb-check:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.lf-fb-check:disabled {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--bg-card);
+  cursor: default;
+  opacity: 0.95;
+}
+.lf-fb-retry {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+}
+.lf-fb-retry:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-subtle);
+}
+.lf-fb-retry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lf-fb-reveal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-fb-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-fb-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-fb-reveal-body p:last-child { margin-bottom: 0; }
+
+@keyframes lf-fb-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-5px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}
+@keyframes lf-fb-pulse {
+  0%   { box-shadow: 0 0 0 0   var(--success-subtle); }
+  60%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0   transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  input.lf-fb-blank,
+  input.lf-fb-blank.lf-fb-shake,
+  input.lf-fb-blank.lf-fb-pulse,
+  .lf-fb-check,
+  .lf-fb-retry,
+  .lf-fb-hint-trigger { animation: none; transition: none; }
 }
 
 .subtopic-detail-title {
