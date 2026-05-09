@@ -1,15 +1,27 @@
 {
   "name": "Partizipien",
-  "description": "PPA, PPP, Ablativus absolutus, AcI &amp; NcI — das Werkzeug, mit dem Latein in einem Wort sagt, wofür Deutsch zwei Sätze braucht.",
+  "description": "PPA, PPP, Ablativus absolutus, AcI & NcI — das Werkzeug, mit dem Latein in einem Wort sagt, wofür Deutsch zwei Sätze braucht.",
   "subtopics": [
     {
       "name": "PPA (gleichzeitig)",
-      "description": "Das Partizip Präsens Aktiv — eine Handlung, die <em>während</em> der Hauptsatz-Handlung passiert.",
-      "content": "<p>Im Deutschen sagen wir „der lachende Mann“ oder „während er lachte“. Beides beschreibt <em>gleichzeitig</em>. Genau das macht das <strong>Partizip Präsens Aktiv</strong> (PPA) im Lateinischen — in einem einzigen Wort.</p><h3>Bildung</h3><div class=\"lf-formula\">Präsensstamm + (-e-) + -ns / -nt-</div><table class=\"lf-table\"><thead><tr><th>Verb</th><th>PPA Nom.</th><th>PPA Gen.</th></tr></thead><tbody><tr><td>laudare</td><td>laudans</td><td>laudantis</td></tr><tr><td>monere</td><td>monens</td><td>monentis</td></tr><tr><td>audire</td><td>audiens</td><td>audientis</td></tr></tbody></table><h3>Drei Übersetzungs-Strategien</h3><dl class=\"lf-def\"><dt>1. Wörtlich</dt><dd><em>legatos audientes</em> → „die zuhörenden Gesandten“</dd><dt>2. Relativsatz</dt><dd>→ „die Gesandten, die zuhören“</dd><dt>3. Adverbialsatz</dt><dd>→ „während sie zuhören“</dd></dl><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">PPA endet auf -ns (Nom.) bzw. enthält -nt-. Bedeutung: Aktiv, gleichzeitig zum Hauptverb.</div></div>"
+      "description": "Das Partizip Präsens Aktiv — eine Handlung, die während der Hauptsatz-Handlung passiert.",
+      "blocks": [
+        {"type": "text", "content": "<p>Im Deutschen sagen wir „der lachende Mann“ oder „während er lachte“. Beides beschreibt <em>gleichzeitig</em>. Genau das macht das <strong>Partizip Präsens Aktiv</strong> (PPA) im Lateinischen — in einem einzigen Wort.</p><h3>Bildung</h3><div class=\"lf-formula\">Präsensstamm + (-e-) + -ns / -nt-</div><table class=\"lf-table\"><thead><tr><th>Verb</th><th>PPA Nom.</th><th>PPA Gen.</th></tr></thead><tbody><tr><td>laudare</td><td>laudans</td><td>laudantis</td></tr><tr><td>monere</td><td>monens</td><td>monentis</td></tr><tr><td>audire</td><td>audiens</td><td>audientis</td></tr></tbody></table><h3>Drei Übersetzungs-Strategien</h3><dl class=\"lf-def\"><dt>1. Wörtlich</dt><dd><em>legatos audientes</em> → „die zuhörenden Gesandten“</dd><dt>2. Relativsatz</dt><dd>→ „die Gesandten, die zuhören“</dd><dt>3. Adverbialsatz</dt><dd>→ „während sie zuhören“</dd></dl><div class=\"lf-key\"><div class=\"lf-key-title\">Mitnehmen</div><div class=\"lf-key-body\">PPA endet auf -ns (Nom.) bzw. enthält -nt-. Bedeutung: Aktiv, gleichzeitig zum Hauptverb.</div></div>"},
+        {"type": "widget", "widgetType": "text-token-tap", "config": {
+          "label": "Partizip erkennen",
+          "question": "Welches Wort ist das Partizip Präsens Aktiv (PPA)? Tippe es an.",
+          "text": "Magnus rex Romam veniens multos milites vidit.",
+          "targetIds": ["t4"],
+          "annotations": {
+            "t4": "veniens — PPA von venire (kommen). Endet auf -ns, beschreibt den rex gleichzeitig: 'der König, der gerade kam' / 'während er kam'."
+          },
+          "reveal": "veniens ist das PPA von venire. Erkennungszeichen: -ns-Endung. Es beschreibt den rex gleichzeitig zur Haupthandlung (vidit). Magnus ist Adjektiv — auch attributiv, aber kein Partizip (es leitet sich nicht von einem Verb ab)."
+        }}
+      ]
     },
     {
       "name": "PPP (vorzeitig)",
-      "description": "Das Partizip Perfekt Passiv — eine Handlung, die <em>vor</em> der Hauptsatz-Handlung abgeschlossen wurde.",
+      "description": "Das Partizip Perfekt Passiv — eine Handlung, die vor der Hauptsatz-Handlung abgeschlossen wurde.",
       "blocks": [
         {"type": "text", "content": "<p>Das <strong>Partizip Perfekt Passiv</strong> (PPP) ist das wichtigste lateinische Partizip. Du brauchst es für das Perfekt Passiv, für den Ablativus absolutus, überall.</p><h3>Was heißt „vorzeitig passiv“?</h3><ul><li><strong>Vorzeitig:</strong> Die PPP-Handlung war <em>vor</em> der Hauptsatz-Handlung beendet.</li><li><strong>Passiv:</strong> Das Bezugswort erleidet die Handlung.</li></ul><div class=\"lf-formula\">urbs capta = die eroberte Stadt (= die Stadt, nachdem sie erobert worden war)</div><h3>Bildung: 3. Stammform</h3><table class=\"lf-table\"><thead><tr><th>Verb</th><th>PPP</th><th>Bedeutung</th></tr></thead><tbody><tr><td>laudare</td><td>laudatus</td><td>gelobt</td></tr><tr><td>capere</td><td>captus</td><td>gefangen</td></tr><tr><td>vincere</td><td>victus</td><td>besiegt</td></tr><tr><td>mittere</td><td>missus</td><td>geschickt</td></tr></tbody></table>"},
         {"type": "widget", "widgetType": "fill-blanks", "config": {

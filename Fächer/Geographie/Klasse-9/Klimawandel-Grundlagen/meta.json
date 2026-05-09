@@ -43,12 +43,12 @@
           "setup": "Vor der Industrialisierung lag die CO<sub>2</sub>-Konzentration in der Atmosphäre bei ca. 280 ppm (parts per million). Heute (2024) liegt sie bei...",
           "question": "Was ist der ungefähre aktuelle CO<sub>2</sub>-Wert?",
           "options": [
-            {"label": "Etwa 300 ppm — kaum gestiegen", "correct": false, "explanation": "Falsch. Der Anstieg ist wesentlich größer. 300 ppm wäre nur ~7% mehr."},
+            {"label": "Etwa 300 ppm — kaum gestiegen", "correct": false, "explanation": "Falsch. Der Anstieg ist wesentlich größer. 300 ppm wäre nur ca. 7% mehr."},
             {"label": "Etwa 350 ppm", "correct": false, "explanation": "Diesen Wert hatten wir um 1988. Seitdem ist es weiter gestiegen."},
-            {"label": "Etwa 420 ppm", "correct": true, "explanation": "Richtig! Aktuell (2024) ~420 ppm — das ist 50% mehr als vor 1750. So hoch war die CO<sub>2</sub>-Konzentration zuletzt vor 3 Millionen Jahren."},
+            {"label": "Etwa 420 ppm", "correct": true, "explanation": "Richtig! Aktuell (2024) ca. 420 ppm — das ist 50% mehr als vor 1750. So hoch war die CO<sub>2</sub>-Konzentration zuletzt vor 3 Millionen Jahren."},
             {"label": "Etwa 600 ppm", "correct": false, "explanation": "Diesen Wert könnten wir bei ungebremstem Anstieg um 2070 erreichen — aber noch nicht heute."}
           ],
-          "reveal": "1750: 280 ppm. 2024: ~420 ppm. Anstieg von 50% in 270 Jahren. Mauna-Loa-Messungen seit 1958 zeigen den klaren Anstieg ('Keeling-Kurve'). Die letzten Mal so hohe Werte: vor 3-5 Millionen Jahren."
+          "reveal": "1750: 280 ppm. 2024: ca. 420 ppm. Anstieg von 50% in 270 Jahren. Mauna-Loa-Messungen seit 1958 zeigen den klaren Anstieg ('Keeling-Kurve'). Die letzten Mal so hohe Werte: vor 3-5 Millionen Jahren."
         }}
       ]
     },
@@ -72,13 +72,60 @@
             "products": [1, 2]
           }
         }},
-        {"type": "text", "content": "<p>Aus 1 Molekül Methan entstehen 1 CO<sub>2</sub> und 2 H<sub>2</sub>O — das CO<sub>2</sub> landet direkt in der Atmosphäre. Bei jedem m³ Erdgas, das in einem Heizkessel verbrannt wird, kommen ca. 2 kg CO<sub>2</sub> oben aus dem Schornstein.</p><h3>Historische Daten</h3><p>Eisbohrkerne zeigen CO<sub>2</sub>-Konzentration bis 800.000 Jahre zurück. Fluctuiert zwischen 180 ppm (Eiszeit) und 280 ppm (Warmzeit). Seit 1850 explosiver Anstieg auf 420 ppm.</p>"}
+        {"type": "text", "content": "<p>Aus 1 Molekül Methan entstehen 1 CO<sub>2</sub> und 2 H<sub>2</sub>O — das CO<sub>2</sub> landet direkt in der Atmosphäre. Bei jedem m³ Erdgas, das in einem Heizkessel verbrannt wird, kommen ca. 2 kg CO<sub>2</sub> oben aus dem Schornstein.</p><h3>Historische Daten</h3><p>Eisbohrkerne zeigen CO<sub>2</sub>-Konzentration bis 800.000 Jahre zurück. Fluktuiert zwischen 180 ppm (Eiszeit) und 280 ppm (Warmzeit). Seit 1850 explosiver Anstieg auf 420 ppm.</p>"}
       ]
     },
     {
       "name": "Klimamodelle + Vorhersagen",
       "description": "Wie sicher sind die Vorhersagen?",
-      "content": "<h3>Klimamodelle</h3><p>Computermodelle simulieren das Klimasystem (Atmosphäre, Ozeane, Eis, Vegetation). Sie sind keine Vorhersage für ein bestimmtes Wetter, sondern für Trends.</p><h3>Validierung</h3><p>Gute Modelle können die Vergangenheit reproduzieren (Rückwartsvalidierung). Wenn sie das schaffen, sind ihre Zukunftsvorhersagen vertrauenswürdig.</p><h3>Szenarien (RCP / SSP)</h3><dl class=\"lf-def\"><dt>SSP1-2.6 (1,5°C-Pfad)</dt><dd>Schnelle Emissionsminderung — +1,5°C bis 2100.</dd><dt>SSP2-4.5</dt><dd>„Weiter wie bisher“ mit Klimaschutz — +2,5°C.</dd><dt>SSP5-8.5</dt><dd>Worst Case ohne Klimaschutz — +4°C oder mehr.</dd></dl><div class=\"lf-box lf-warn\"><strong>Pariser Abkommen 2015:</strong> Erderwärmung deutlich unter 2°C, möglichst 1,5°C. 2024 sind wir bei ca. +1,2°C — und auf Kurs zu über +2,7°C.</div>"
+      "blocks": [
+        {"type": "text", "content": "<h3>Klimamodelle</h3><p>Computermodelle simulieren das Klimasystem (Atmosphäre, Ozeane, Eis, Vegetation). Sie sind keine Vorhersage für ein bestimmtes Wetter, sondern für Trends.</p><h3>Validierung</h3><p>Gute Modelle können die Vergangenheit reproduzieren (Rückwartsvalidierung). Wenn sie das schaffen, sind ihre Zukunftsvorhersagen vertrauenswürdig.</p><h3>Szenarien (RCP / SSP)</h3><dl class=\"lf-def\"><dt>SSP1-2.6 (1,5°C-Pfad)</dt><dd>Schnelle Emissionsminderung — +1,5°C bis 2100.</dd><dt>SSP2-4.5</dt><dd>„Weiter wie bisher“ mit Klimaschutz — +2,5°C.</dd><dt>SSP5-8.5</dt><dd>Worst Case ohne Klimaschutz — +4°C oder mehr.</dd></dl><div class=\"lf-box lf-warn\"><strong>Pariser Abkommen 2015:</strong> Erderwärmung deutlich unter 2°C, möglichst 1,5°C. 2024 sind wir bei ca. +1,2°C — und auf Kurs zu über +2,7°C.</div>"},
+        {"type": "widget", "widgetType": "map-layer-toggle", "config": {
+          "label": "Klimazonen Europas",
+          "regions": [
+            {"id": "de", "label": "Deutschland", "path": ""},
+            {"id": "fr", "label": "Frankreich", "path": ""},
+            {"id": "es", "label": "Spanien", "path": ""},
+            {"id": "se", "label": "Schweden", "path": ""},
+            {"id": "gr", "label": "Griechenland", "path": ""},
+            {"id": "pl", "label": "Polen", "path": ""},
+            {"id": "it", "label": "Italien", "path": ""},
+            {"id": "no", "label": "Norwegen", "path": ""}
+          ],
+          "layers": [
+            {
+              "id": "klima",
+              "label": "Klimazone",
+              "regionData": {
+                "de": {"value": "Gemäßigt-Ozeanisch — mild, ganzjährig feucht, kaum Extreme", "color": "#4ade80"},
+                "fr": {"value": "Gemäßigt bis Mediterran — Norden ozeanisch, Süden trocken-heiß im Sommer", "color": "#86efac"},
+                "es": {"value": "Mediterran — heiße, trockene Sommer; milde, feuchte Winter", "color": "#fbbf24"},
+                "se": {"value": "Kalt-gemäßigt (Boreal) — kurze Sommer, lange kalte Winter, Nadelwald", "color": "#93c5fd"},
+                "gr": {"value": "Mediterran — heiße, trockene Sommer; milde Winter mit Regen", "color": "#fcd34d"},
+                "pl": {"value": "Kontinental-gemäßigt — kältere Winter als Westeuropa, trockenere Sommer", "color": "#6ee7b7"},
+                "it": {"value": "Mediterran im Süden, gemäßigt im Norden (Po-Ebene, Alpen)", "color": "#fde68a"},
+                "no": {"value": "Subarktisch bis Arktisch — kurze Sommer, sehr kalte Winter, Tundra im Norden", "color": "#bfdbfe"}
+              }
+            },
+            {
+              "id": "erwaermung",
+              "label": "Erwärmung bis 2100 (SSP2-Szenario)",
+              "regionData": {
+                "de": {"value": "+2,5 bis +3°C — mehr Hitzewellen, weniger Frost, veränderte Niederschläge", "color": "#fca5a5"},
+                "fr": {"value": "+2,5 bis +3°C im Norden, +3 bis +4°C im Süden — Dürrerisiko steigt", "color": "#f87171"},
+                "es": {"value": "+3 bis +4°C — stärkste Erwärmung in Europa, extreme Dürren möglich", "color": "#ef4444"},
+                "se": {"value": "+3 bis +4°C — Arktis erwärmt sich doppelt so schnell wie der globale Schnitt", "color": "#fca5a5"},
+                "gr": {"value": "+3 bis +4°C — Wasserknappheit, Hitzewellen, Waldbrände", "color": "#dc2626"},
+                "pl": {"value": "+2,5 bis +3,5°C — mehr Extremwetter, Dürren im Sommer", "color": "#fca5a5"},
+                "it": {"value": "+2,5 bis +3,5°C — Süden besonders betroffen, Gletscher im Norden schmelzen", "color": "#f87171"},
+                "no": {"value": "+3 bis +5°C — Permafrost taut auf, Ökosystem-Veränderungen", "color": "#fca5a5"}
+              }
+            }
+          ],
+          "defaultLayer": "klima"
+        }},
+        {"type": "text", "content": "<div class=\"lf-box lf-tip\"><strong>Karte lesen:</strong> Wechsle zwischen den Layern, um zu sehen, wie die heutigen Klimazonen mit der prognostizierten Erwärmung zusammenhängen. Mediterrane Länder (Spanien, Griechenland) erwärmen sich am stärksten — und sind schon heute am trockensten.</div>"}
+      ]
     }
   ]
 }

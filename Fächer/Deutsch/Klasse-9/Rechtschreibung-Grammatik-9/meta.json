@@ -1,5 +1,5 @@
 {
-  "name": "Rechtschreibung &amp; Grammatik 9",
+  "name": "Rechtschreibung & Grammatik 9",
   "description": "Komma, Zitieren, indirekte Rede, Konjunktiv — Klasse-9-Standard sicher beherrschen.",
   "subtopics": [
     {
@@ -18,7 +18,18 @@
           },
           "reveal": "Ich glaube, dass es regnet. Das Auto, das dort parkt, gehört mir. Vor unterordnender Konjunktion (dass, weil, obwohl) und um Relativsätze immer Komma."
         }},
-        {"type": "text", "content": "<div class=\"lf-box lf-warn\"><strong>Falle:</strong> „und“/„oder“ in Aufzählungen kein Komma davor. Bei zwei Hauptstätzen mit „und“ ist Komma fakultativ.</div>"}
+        {"type": "widget", "widgetType": "text-token-tap", "config": {
+          "label": "Adjektive finden",
+          "question": "Tippe alle Adjektive im Satz an. Adjektive beschreiben Substantive — sie sagen, wie jemand oder etwas ist.",
+          "text": "Der alte König herrschte über das weite Land.",
+          "targetIds": ["t2", "t7"],
+          "annotations": {
+            "t2": "alte — Adjektiv (beschreibt den König: wie ist er?)",
+            "t7": "weite — Adjektiv (beschreibt das Land: wie groß ist es?)"
+          },
+          "reveal": "Adjektive beschreiben Substantive (Nomen). Frage: Wie ist der König? — alt. Wie ist das Land? — weit. Verben (herrschte) und Artikel (der, das) sind keine Adjektive."
+        }},
+        {"type": "text", "content": "<div class=\"lf-box lf-warn\"><strong>Falle:</strong> „und“/„oder“ in Aufzählungen kein Komma davor. Bei zwei Hauptsätzen mit „und“ ist Komma fakultativ.</div>"}
       ]
     },
     {
@@ -32,7 +43,7 @@
       "content": "<p>Indirekte Rede = jemand anderes Aussage in eigenen Worten, mit Konjunktiv I.</p><div class=\"lf-formula\">Direkt: „Ich bin müde.“ → Indirekt: Sie sagte, sie sei müde.</div><div class=\"lf-box lf-warn\">Wenn Konj. I gleich aussieht wie Indikativ, nimm <strong>Konjunktiv II</strong>: „sie hätten“ statt „sie haben“.</div>"
     },
     {
-      "name": "Konjunktiv I &amp; II",
+      "name": "Konjunktiv I & II",
       "description": "Zwei Konjunktive, klare Aufgabenteilung.",
       "content": "<h3>Konjunktiv I — indirekte Rede</h3><p>Präsensstamm + e/est/e/en/et/en: ich gehe, du gehest, er gehe.</p><h3>Konjunktiv II — Wunsch, Bedingung</h3><p>Präteritumstamm + Umlaut: ich wäre, hätte, ginge.</p><table class=\"lf-table\"><thead><tr><th>Funktion</th><th>Konjunktiv</th><th>Beispiel</th></tr></thead><tbody><tr><td>Indirekte Rede</td><td>I</td><td>Sie sagte, sie sei krank.</td></tr><tr><td>Wunsch</td><td>II</td><td>Wäre ich doch reich!</td></tr><tr><td>Irrealer Bedingungssatz</td><td>II</td><td>Wenn ich Geld hätte, würde ich reisen.</td></tr></tbody></table>"
     }

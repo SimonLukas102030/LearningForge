@@ -18,10 +18,10 @@
           "options": [
             {"label": "Erlaubt — Hauptsache, niemand merkt es", "correct": false, "explanation": "Falsch. Kant interessiert nicht, ob jemand merkt — sondern ob das Prinzip universalisierbar ist."},
             {"label": "Erlaubt — wenn das Ergebnis gut ist", "correct": false, "explanation": "Das wäre Utilitarismus. Kant lehnt Folgen-Ethik strikt ab."},
-            {"label": "Verboten — würden alle so handeln, würde es Versprechen nicht mehr geben", "correct": true, "explanation": "Richtig! Kategorischer Imperativ: Wenn alle lügen würden, gäbe es das Konzept &apos;Versprechen&apos; nicht mehr. Die Maxime würde sich selbst aufheben — deshalb ist sie nicht universalisierbar."},
+            {"label": "Verboten — würden alle so handeln, würde es Versprechen nicht mehr geben", "correct": true, "explanation": "Richtig! Kategorischer Imperativ: Wenn alle lügen würden, gäbe es das Konzept 'Versprechen' nicht mehr. Die Maxime würde sich selbst aufheben — deshalb ist sie nicht universalisierbar."},
             {"label": "Erlaubt — weil du in Not bist", "correct": false, "explanation": "Kant lässt keine Ausnahmen zu. Eine Pflicht gilt unbedingt."}
           ],
-          "reveal": "Kant: Eine Lüge ist <em>universell</em> nicht denkbar. Würde jeder lügen, wären Versprechen sinnlos — das Konzept wirde sich selbst aufheben. Daher: kategorisch verboten."
+          "reveal": "Kant: Eine Lüge ist universell nicht denkbar. Würde jeder lügen, wären Versprechen sinnlos — das Konzept würde sich selbst aufheben. Daher: kategorisch verboten."
         }},
         {"type": "text", "content": "<h3>Zweite Formulierung</h3><p>Behandle die Menschheit jederzeit auch als Zweck, niemals bloß als Mittel.</p><p>Kurz: <strong>Nutze Menschen nicht aus.</strong> Behandle sie als eigenständige Personen mit Würde, nicht als Werkzeuge für deine Zwecke.</p><h3>Kritik</h3><ul><li>Sehr starr — was, wenn Lügen ein Leben rettet?</li><li>Zu rationalistisch — Mitgefühl spielt keine Rolle.</li></ul>"}
       ]
@@ -29,7 +29,58 @@
     {
       "name": "Utilitarismus (Bentham/Mill)",
       "description": "Das größte Glück der größten Zahl.",
-      "content": "<dl class=\"lf-def\"><dt>Jeremy Bentham (1748-1832), John Stuart Mill (1806-1873)</dt><dd>Englische Philosophen, Begründer des Utilitarismus.</dd></dl><h3>Grundprinzip</h3><div class=\"lf-formula\">Eine Handlung ist gut, wenn sie das größte Glück für die größte Zahl bringt.</div><p>Konsequenzen-Ethik: Was zählt sind die Folgen, nicht die Absicht.</p><h3>Wie misst man Glück?</h3><p>Bentham: utility calculation — Freude minus Leid. Mill verfeinert: nicht alle Freuden sind gleich, geistige sind besser als körperliche.</p><h3>Beispiel: Trolley-Problem</h3><p>Eine Straßenbahn räst auf 5 Menschen zu. Du kannst sie umlenken, tötest aber 1 Person.</p><div class=\"lf-box lf-info\"><strong>Utilitarist:</strong> Lenken — 1 statt 5 Tote.<br><strong>Kantianer:</strong> Nicht lenken — aktiv töten ist immer falsch.</div><h3>Kritik</h3><ul><li>Minderheiten können für das Gemeinwohl geopfert werden.</li><li>Glück ist schwer messbar.</li></ul>"
+      "blocks": [
+        {"type": "text", "content": "<dl class=\"lf-def\"><dt>Jeremy Bentham (1748-1832), John Stuart Mill (1806-1873)</dt><dd>Englische Philosophen, Begründer des Utilitarismus.</dd></dl><h3>Grundprinzip</h3><div class=\"lf-formula\">Eine Handlung ist gut, wenn sie das größte Glück für die größte Zahl bringt.</div><p>Konsequenzen-Ethik: Was zählt sind die Folgen, nicht die Absicht.</p><h3>Wie misst man Glück?</h3><p>Bentham: utility calculation — Freude minus Leid. Mill verfeinert: nicht alle Freuden sind gleich, geistige sind besser als körperliche.</p>"},
+        {"type": "widget", "widgetType": "branch-story", "config": {
+          "label": "Das Trolley-Problem — du entscheidest",
+          "startNode": "start",
+          "nodes": {
+            "start": {
+              "text": "Eine außer Kontrolle geratene Straßenbahn rast auf fünf Menschen zu, die auf den Gleisen stehen. Du stehst neben einem Weichenstellhebel. Was tust du?",
+              "choices": [
+                {"label": "Hebel umlegen — Bahn auf Nebengleis lenken", "next": "lever"},
+                {"label": "Nichts tun — du greifst nicht ein", "next": "nothing"}
+              ]
+            },
+            "lever": {
+              "text": "Auf dem Nebengleis steht eine Person. Durch das Umlegen stirbt diese eine Person, aber die fünf werden gerettet. Die Bahn fährt auf das Nebengleis.",
+              "choices": [
+                {"label": "Das war richtig — 5 Leben > 1 Leben", "next": "util_win"},
+                {"label": "Ich bereue es — ich habe aktiv getötet", "next": "kant_regret"}
+              ]
+            },
+            "nothing": {
+              "text": "Du tust nichts. Die Bahn trifft die fünf Menschen. Sie sterben. Die eine Person auf dem Nebengleis lebt.",
+              "choices": [
+                {"label": "Das war richtig — ich habe niemanden aktiv getötet", "next": "kant_win"},
+                {"label": "Das war falsch — ich hätte eingreifen müssen", "next": "util_regret"}
+              ]
+            },
+            "util_win": {
+              "text": "Du denkst wie ein Utilitarist: 5 Leben wiegen mehr als 1 Leben. Die Konsequenz war besser. Bentham und Mill würden zustimmen.",
+              "end": true,
+              "endLabel": "Utilitaristische Position"
+            },
+            "kant_regret": {
+              "text": "Kant würde sagen: Du hast aktiv in das Schicksal eines unschuldigen Menschen eingegriffen und ihn als Mittel benutzt — das ist moralisch nicht erlaubt, egal was das Ergebnis ist.",
+              "end": true,
+              "endLabel": "Deontologischer Einwand"
+            },
+            "kant_win": {
+              "text": "Du denkst wie ein Kantianer: Aktives Töten ist immer falsch — auch wenn es fünf rettet. Du hast niemanden instrumentalisiert. Deine Hände sind rein.",
+              "end": true,
+              "endLabel": "Deontologische Position"
+            },
+            "util_regret": {
+              "text": "Utilitaristen sehen das so: Durch Untätigkeit hast du fünf Tode akzeptiert, obwohl du sie hättest verhindern können. Das ist das schlechteste Ergebnis — moralisch nicht vertretbar.",
+              "end": true,
+              "endLabel": "Utilitaristischer Einwand"
+            }
+          },
+          "showPath": true
+        }},
+        {"type": "text", "content": "<h3>Kritik am Utilitarismus</h3><ul><li>Minderheiten können für das Gemeinwohl geopfert werden.</li><li>Glück ist schwer messbar.</li><li>Erlaubt es, eine unschuldige Person zu opfern, wenn viele davon profitieren?</li></ul>"}
+      ]
     },
     {
       "name": "Tugendethik (Aristoteles)",
