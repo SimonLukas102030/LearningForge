@@ -243,6 +243,18 @@
   --lf-ph-text-muted:   var(--sim-text-muted);
   --lf-ph-indicator-bg: var(--bg-input);    /* Farbquadrat-Border-BG */
 
+  /* Welle 3.1 — tangent-visualizer. Sekante zu Tangente Animation.
+     Eigene Vars (--lf-tv-*) mit Fallback im JS auf --sim-* / --accent. */
+  --lf-tv-bg:        var(--sim-ground);  /* Canvas-Hintergrund */
+  --lf-tv-grid:      var(--sim-grid);    /* Grid-Linien */
+  --lf-tv-axis:      var(--sim-text);    /* Haupt-Achsen */
+  --lf-tv-curve:     var(--accent);      /* Funktions-Kurve */
+  --lf-tv-point-p:   #ef4444;            /* P (rot, red-500) */
+  --lf-tv-point-q:   #2563eb;            /* Q (blau, blue-600) */
+  --lf-tv-secant:    #2563eb;            /* Sekante (blau) */
+  --lf-tv-tangent:   #ef4444;            /* Tangente (rot, gestrichelt) */
+  --lf-tv-text:      var(--sim-text);
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -399,6 +411,13 @@
      Indikator-Frame fuer Kontrast. Kurve erbt --accent (per-Theme). */
   --lf-ph-point:        #f87171;       /* red-400 */
   --lf-ph-indicator-bg: var(--bg-input);
+
+  /* Welle 3.1 — tangent-visualizer Dark. Punkte/Linien als 400-Shades
+     fuer dunklen BG-Kontrast. Kurve erbt --accent (per-Theme). */
+  --lf-tv-point-p:   #f87171;          /* red-400 */
+  --lf-tv-point-q:   #60a5fa;          /* blue-400 */
+  --lf-tv-secant:    #60a5fa;          /* blue-400 */
+  --lf-tv-tangent:   #f87171;          /* red-400 */
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -1773,6 +1792,57 @@ input, textarea, select { font-family: var(--font); }
 }
 .lf-ph-controls {
   margin-top: 4px;
+}
+
+/* Welle 3.1 — tangent-visualizer widget-specific layout. */
+.lf-tv-host { /* erbt von .lf-widget-physics-throw */ }
+.lf-tv-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.lf-tv-type-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.lf-tv-type-label {
+  font-size: 13px; color: var(--text); font-weight: 500;
+}
+.lf-tv-type-select {
+  flex: 1; min-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 13px; cursor: pointer;
+}
+.lf-tv-canvas {
+  background: var(--lf-tv-bg);
+  border-radius: var(--radius-sm);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.lf-tv-controls {
+  margin-top: 12px;
+}
+.lf-tv-readout {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color: var(--text);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.lf-tv-readout-row { line-height: 1.4; }
+.lf-tv-readout-tan {
+  color: var(--lf-tv-tangent);
+  font-weight: 600;
 }
 
 /* Collapsible details */

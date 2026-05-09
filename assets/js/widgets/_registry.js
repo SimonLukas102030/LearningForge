@@ -37,6 +37,7 @@ export const WIDGET_REGISTRY = {
   'phase-stepper':    () => import('./phase-stepper.js?v=' + WIDGET_VERSION),
   'ph-titration':     () => import('./ph-titration.js?v=' + WIDGET_VERSION),
   'stoichiometry-balancer': () => import('./stoichiometry-balancer.js?v=' + WIDGET_VERSION),
+  'tangent-visualizer': () => import('./tangent-visualizer.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.
