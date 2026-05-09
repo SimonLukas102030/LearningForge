@@ -166,6 +166,17 @@
   --lf-fp-text:  var(--sim-text);
   --lf-fp-text-muted: var(--sim-text-muted);
 
+  /* Welle 1.3 — wave-superposition. 2 Sinus + Sum-Welle. Eigene Vars,
+     fallback im JS auf --sim-* / --accent. */
+  --lf-ws-bg:        var(--sim-ground);  /* Canvas-Hintergrund */
+  --lf-ws-axis-bg:   var(--sim-sky);     /* Spur-Streifen-BG (15% alpha im JS) */
+  --lf-ws-axis:      var(--sim-grid);    /* Nullachse pro Spur */
+  --lf-ws-wave-1:    #0ea5e9;            /* sky-500: Welle 1 */
+  --lf-ws-wave-2:    #f97316;            /* orange-500: Welle 2 */
+  --lf-ws-wave-sum:  var(--accent);      /* Summen-Welle (Akzent, dicker) */
+  --lf-ws-node:      #ef4444;            /* red-500: Knoten-Marker auf Sum */
+  --lf-ws-text-muted: var(--sim-text-muted);
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -266,6 +277,12 @@
   /* Welle 1.2 — function-plotter Dark. Sichtbare Punkt-Farbe + Kurve
      auf dunklem BG. Kurve erbt --accent (per-Theme), Punkt aufgehellt. */
   --lf-fp-point: #f87171;             /* red-400 */
+
+  /* Welle 1.3 — wave-superposition Dark. Wellen-Farben als 400-Shades
+     fuer dunklen BG-Kontrast. Sum erbt --accent (per-Theme). */
+  --lf-ws-wave-1:    #38bdf8;          /* sky-400 */
+  --lf-ws-wave-2:    #fb923c;          /* orange-400 */
+  --lf-ws-node:      #f87171;          /* red-400 */
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -1494,6 +1511,33 @@ input, textarea, select { font-family: var(--font); }
   background: var(--danger-subtle);
   color: var(--danger);
   border-color: var(--danger);
+}
+
+/* Welle 1.3 — wave-superposition widget-specific layout. */
+.lf-ws-host { /* erbt von .lf-widget-physics-throw */ }
+.lf-ws-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.lf-ws-canvas {
+  background: var(--lf-ws-bg);
+  border-radius: var(--radius-sm);
+}
+.lf-ws-controls {
+  margin-top: 12px;
+}
+.lf-ws-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 6px;
+}
+@media (max-width: 540px) {
+  .lf-ws-row { grid-template-columns: 1fr; }
+}
+.lf-ws-live .sim-readout-value {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Collapsible details */

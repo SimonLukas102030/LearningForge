@@ -30,6 +30,7 @@ export const WIDGET_REGISTRY = {
   'physics-throw':  () => import('./physics-throw.js?v=' + WIDGET_VERSION),
   'force-arrow-anim': () => import('./force-arrow-anim.js?v=' + WIDGET_VERSION),
   'function-plotter': () => import('./function-plotter.js?v=' + WIDGET_VERSION),
+  'wave-superposition': () => import('./wave-superposition.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.
