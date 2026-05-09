@@ -6,6 +6,7 @@ import { CONFIG } from './config.js';
 import { getStructure, getTopicMeta, getTopicQuestions, getChangelog, idToName } from './scanner.js';
 import { lfWidgetSlot } from './widgets/_base.js';
 import { mountAllWidgets, unmountAllIn } from './widgets/_loader.js';
+import { isKnownWidget } from './widgets/_registry.js';
 import { auth, db, logout, getUserData, saveGrade, saveGradeConfidence, saveWeakQuestions, onAuthStateChanged, getLeaderboard, resetLeaderboard, getAllUsers, setBanStatus, createGroup, joinGroupByCode, leaveGroup, kickFromGroup, getUserGroups, saveCustomTopic, getMyCustomTopics, getGroupCustomTopics, deleteCustomTopic, getCustomTopicById, getPublicLibraryTopics, getPendingApprovals, toggleBookmark, saveNote, saveSRS, addStudyTime, saveXP, saveAchievements, incrementCounter, saveDailyScore, getDailyScores, saveFreezeDays, addComment, getComments, deleteComment, toggleCommentLike, searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, unfriend, getFriendsData, writeFeedEntry, getFeedForFriends, createShareToken, getShareData, getMultipleUserData, updateUserProfile, syncUserRole, setUserRole, unlockTheme, setActiveTheme, setActiveOutline, adminPatchUser, adminUnlockAllForUser, loginAsClaude, loginAsHacker, submitBugReport, getOpenBugReports, getMyBugReports, resolveBugReport, deleteBugReport, setUserKlasse, markOnboarded, watchBannedStatus, saveExams, saveErrorExplanation } from './auth.js';
 import { OUTLINE_TIERS, THEMES, ALL_THEME_IDS, outlineForLevel, themeById, rollThemeDrop, _clientRollThemeDrop, applyTheme, getStoredTheme } from './cosmetics.js';
 import { ACHIEVEMENTS, calcLevel, calcXPForTest, MOTIVATION_SENTENCES } from './achievements.js';
@@ -1852,11 +1853,7 @@ function renderBlock(block) {
     // mountAllWidgets() (in openSubtopic / renderTopic-legacy-wrap) lazy-loadet
     // dann das Modul aus widgets/<wt>.js und tauscht das Skeleton durch das
     // echte Widget. Unbekannte Typen → pending-Block-Fallback (Maya-Spec Copy).
-    const KNOWN_WIDGETS = new Set([
-      'predict-reveal', 'drag-sort', 'drag-match',
-      'number-slider', 'hot-spot', 'fill-blanks', 'physics-throw'
-    ]);
-    if (KNOWN_WIDGETS.has(wt)) {
+    if (isKnownWidget(wt)) {
       return lfWidgetSlot(wt, block.config || block);
     }
     // F-05 (Casey): User-freundliche Copy fuer noch-nicht-implementierte Widgets.
