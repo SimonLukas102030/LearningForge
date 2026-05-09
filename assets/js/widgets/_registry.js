@@ -28,6 +28,7 @@ export const WIDGET_REGISTRY = {
   'hot-spot':       () => import('./hot-spot.js?v=' + WIDGET_VERSION),
   'fill-blanks':    () => import('./fill-blanks.js?v=' + WIDGET_VERSION),
   'physics-throw':  () => import('./physics-throw.js?v=' + WIDGET_VERSION),
+  'force-arrow-anim': () => import('./force-arrow-anim.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.

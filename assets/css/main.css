@@ -137,6 +137,24 @@
   --sim-tip-bar:    #f59e0b;
   --sim-tip-text:   #78350f;
 
+  /* Welle 1.1 — force-arrow-anim. Newton-Killer-Widget. Eigene Vars,
+     fallback im JS auf --sim-* damit Cosmetics-Themes nicht jede Var
+     ueberschreiben muessen. */
+  --lf-fa-sky:            var(--sim-sky);
+  --lf-fa-ground:         var(--sim-ground);
+  --lf-fa-soil:           var(--sim-soil);
+  --lf-fa-grid:           var(--sim-grid);
+  --lf-fa-text:           var(--sim-text);
+  --lf-fa-text-muted:     var(--sim-text-muted);
+  --lf-fa-trail:          var(--sim-trajectory);
+  --lf-fa-box:            #6366f1;        /* indigo-500: Masse-Box (eigene Identitaet) */
+  --lf-fa-box-top:        #ffffff;
+  --lf-fa-box-border:     #312e81;
+  --lf-fa-box-text:       #ffffff;
+  --lf-fa-arrow-force:    #ef4444;        /* red-500: Kraft (sticht raus) */
+  --lf-fa-arrow-friction: #f59e0b;        /* amber-500: Reibungs-Gegenkraft */
+  --lf-fa-arrow-accel:    #10b981;        /* emerald-500: Beschleunigung */
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -223,6 +241,16 @@
   --sim-tip-bg2:    #78350f;
   --sim-tip-bar:    #f59e0b;
   --sim-tip-text:   #fde68a;
+
+  /* Welle 1.1 — force-arrow-anim Dark. Aufgehellte Box + Pfeile fuer Kontrast
+     auf dunklem BG. */
+  --lf-fa-box:            #818cf8;        /* indigo-400 */
+  --lf-fa-box-top:        #ffffff;
+  --lf-fa-box-border:     #c7d2fe;
+  --lf-fa-box-text:       #ffffff;
+  --lf-fa-arrow-force:    #f87171;        /* red-400 */
+  --lf-fa-arrow-friction: #fbbf24;        /* amber-400 */
+  --lf-fa-arrow-accel:    #34d399;        /* emerald-400 */
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -1309,6 +1337,30 @@ input, textarea, select { font-family: var(--font); }
   padding: 12px; color: #ef4444;
   background: #fee2e2; border-radius: var(--radius-sm);
   font-size: 13px;
+}
+
+/* Welle 1.1 — force-arrow-anim widget-specific layout. */
+.lf-fa-host { /* erbt von .lf-widget-physics-throw via host-class */ }
+.lf-fa-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.lf-fa-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: var(--radius-sm);
+  background: var(--bg-input); color: var(--text);
+  font-size: 13px; cursor: pointer;
+  user-select: none;
+  align-self: flex-start;
+}
+.lf-fa-toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px; height: 16px;
+  cursor: pointer;
+}
+.lf-fa-live .sim-readout-value {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Collapsible details */
