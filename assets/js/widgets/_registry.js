@@ -41,6 +41,7 @@ export const WIDGET_REGISTRY = {
   'unit-circle-sync': () => import('./unit-circle-sync.js?v=' + WIDGET_VERSION),
   'vector-arrow':     () => import('./vector-arrow.js?v=' + WIDGET_VERSION),
   'prob-tree-builder': () => import('./prob-tree-builder.js?v=' + WIDGET_VERSION),
+  'text-token-tap':   () => import('./text-token-tap.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.

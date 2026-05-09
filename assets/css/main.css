@@ -147,6 +147,16 @@
   --lf-sb-counter-unbalanced: var(--danger);
   --lf-sb-arrow:              var(--text-muted);
 
+  /* Welle 4.5 — text-token-tap. Klickbare Wort-Tokens fuer Sprach-Analyse
+     (Adjektive, Stilmittel, Wortform, Quellenkritik). Light. */
+  --lf-tt-bg:        var(--bg-card);
+  --lf-tt-text:      var(--text);
+  --lf-tt-token-bg:  var(--bg-input);
+  --lf-tt-marked:    var(--accent-subtle);
+  --lf-tt-correct:   var(--success-subtle);
+  --lf-tt-wrong:     var(--danger-subtle);
+  --lf-tt-missed:    var(--warning-subtle);
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
 
@@ -373,6 +383,15 @@
   --lf-sb-counter-balanced:   var(--success);
   --lf-sb-counter-unbalanced: var(--danger);
   --lf-sb-arrow:              var(--text-muted);
+
+  /* Welle 4.5 — text-token-tap Dark. Restate gegen redefinierte Token. */
+  --lf-tt-bg:        var(--bg-card);
+  --lf-tt-text:      var(--text);
+  --lf-tt-token-bg:  var(--bg-input);
+  --lf-tt-marked:    var(--accent-subtle);
+  --lf-tt-correct:   var(--success-subtle);
+  --lf-tt-wrong:     var(--danger-subtle);
+  --lf-tt-missed:    var(--warning-subtle);
 
   /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
   --success:        #34d399;        /* emerald-400 */
@@ -4958,6 +4977,205 @@ input.lf-fb-blank.lf-fb-pulse {
   .lf-fb-check,
   .lf-fb-retry,
   .lf-fb-hint-trigger { animation: none; transition: none; }
+}
+
+/* ── Welle 4.5 — text-token-tap-Widget ─────────────────────────────────────
+   Klickbare Wort-Tokens fuer Sprach-Analyse. Wort = <button>, Glue =
+   <span> (Whitespace + Satzzeichen). Theme-Regel: nur CSS-Variablen.
+*/
+.lf-widget-text-token-tap {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--lf-tt-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--lf-tt-text);
+}
+.lf-tt-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+.lf-tt-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.lf-tt-question {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+.lf-tt-text {
+  font-size: 17px;
+  line-height: 2;
+  color: var(--lf-tt-text);
+  margin-bottom: 12px;
+}
+.lf-tt-glue {
+  color: var(--lf-tt-text);
+  white-space: pre-wrap;
+}
+.lf-tt-token {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 1px;
+  background: var(--lf-tt-token-bg);
+  color: var(--lf-tt-text);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.lf-tt-token:hover:not(:disabled) {
+  background: var(--lf-tt-marked);
+  border-color: var(--accent);
+}
+.lf-tt-token:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.lf-tt-token.lf-tt-marked {
+  background: var(--lf-tt-marked);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.lf-tt-token.lf-tt-correct {
+  background: var(--lf-tt-correct);
+  border-color: var(--success);
+  color: var(--success-text, var(--text));
+}
+.lf-tt-token.lf-tt-wrong {
+  background: var(--lf-tt-wrong);
+  border-color: var(--danger);
+  color: var(--danger-text, var(--text));
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.lf-tt-token.lf-tt-missed {
+  background: var(--lf-tt-missed);
+  border: 1.5px dashed var(--warning);
+  color: var(--warning-text, var(--text));
+}
+.lf-tt-token:disabled {
+  cursor: default;
+}
+.lf-tt-token.lf-tt-pulse {
+  animation: lf-tt-pulse 0.7s ease;
+}
+
+.lf-tt-status {
+  font-size: 14px;
+  color: var(--text-muted);
+  min-height: 1.4em;
+  margin-bottom: 8px;
+}
+.lf-tt-state-graded .lf-tt-status,
+.lf-tt-state-revealed .lf-tt-status {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.lf-tt-annotations {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.lf-tt-anno {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.lf-tt-anno-correct {
+  background: var(--lf-tt-correct);
+  border-left: 3px solid var(--success);
+  color: var(--success-text, var(--text));
+}
+.lf-tt-anno-missed {
+  background: var(--lf-tt-missed);
+  border-left: 3px solid var(--warning);
+  color: var(--warning-text, var(--text));
+}
+
+.lf-tt-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.lf-tt-check,
+.lf-tt-show,
+.lf-tt-reset {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.lf-tt-check {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  color: var(--bg-card);
+}
+.lf-tt-check:hover:not(:disabled) { filter: brightness(1.1); }
+.lf-tt-show:hover:not(:disabled),
+.lf-tt-reset:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.lf-tt-check:disabled,
+.lf-tt-show:disabled,
+.lf-tt-reset:disabled { opacity: 0.5; cursor: default; }
+
+.lf-tt-reveal {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-tt-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-tt-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-tt-reveal-body p:last-child { margin-bottom: 0; }
+
+@keyframes lf-tt-pulse {
+  0%   { box-shadow: 0 0 0 0   var(--success-subtle); }
+  60%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0   transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-tt-token,
+  .lf-tt-token.lf-tt-pulse,
+  .lf-tt-check,
+  .lf-tt-show,
+  .lf-tt-reset { animation: none; transition: none; }
 }
 
 .subtopic-detail-title {
