@@ -3034,6 +3034,10 @@ if (typeof document !== 'undefined' && !document.__lfDragMatchBound) {
 }
 
 // ─── Mega-Update 2026-05-09 — Number-Slider-Widget (MVP-3) ───────────────────
+// TODO: remove with number-slider-Glue (Commit 11) — migrated to
+//       assets/js/widgets/number-slider.js (Phase 0 Commit 7). Helpers
+//       below remain only as a bridge for renderBlock() case at L4335
+//       until Commit 11 swaps that to mountAllWidgets()/Slot-Stub.
 // Schueler schaetzt einen Zahlenwert per <input type="range">, kriegt Range-
 // Reveal mit Toleranz. Use-Cases: "Wie viele Tote forderte Verdun?", "CO2-
 // Anstieg seit 1850?", "Schallgeschwindigkeit in Luft?". Pure Predict-Then-
