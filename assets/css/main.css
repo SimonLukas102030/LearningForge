@@ -118,6 +118,18 @@
   --lf-pf-highlight:  var(--subject-accent, var(--subject-color, var(--accent)));
   --lf-pf-text-box:   var(--bg-input);
 
+  /* Welle 2.2 — phase-stepper. Phasen-Slider (Mitose, Reaktion, Stadt-Entwicklung).
+     Light. Pill-Active nutzt --accent damit pro Subject die Farbe automatisch passt. */
+  --lf-ps-bg:          var(--bg-card);
+  --lf-ps-border:      var(--border);
+  --lf-ps-text:        var(--text);
+  --lf-ps-text-muted:  var(--text-muted);
+  --lf-ps-stage-bg:    var(--bg-input);
+  --lf-ps-pill-bg:     var(--bg-input);
+  --lf-ps-pill-text:   var(--text-muted);
+  --lf-ps-pill-active: var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-ps-pill-active-text: #ffffff;
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
 
@@ -268,6 +280,18 @@
   --lf-pf-edge-label: var(--text-muted);
   --lf-pf-highlight:  var(--subject-accent, var(--subject-color, var(--accent)));
   --lf-pf-text-box:   var(--bg-input);
+
+  /* Welle 2.2 — phase-stepper Dark. Restate gegen redefinierte --bg-card/--bg-input.
+     Pill-Active nutzt --accent (Subject-Farbe schlaegt durch). */
+  --lf-ps-bg:          var(--bg-card);
+  --lf-ps-border:      var(--border);
+  --lf-ps-text:        var(--text);
+  --lf-ps-text-muted:  var(--text-muted);
+  --lf-ps-stage-bg:    var(--bg-input);
+  --lf-ps-pill-bg:     var(--bg-input);
+  --lf-ps-pill-text:   var(--text-muted);
+  --lf-ps-pill-active: var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-ps-pill-active-text: #0b0f1a;
 
   /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
   --success:        #34d399;        /* emerald-400 */
@@ -8960,4 +8984,150 @@ input.lf-fb-blank.lf-fb-pulse {
   .lf-pf-btn { transition: none; }
   .lf-pf-btn:active { transform: none; }
   .lf-pf-edge-line, .lf-pf-arrow-head, .lf-pf-node-shape { transition: none; }
+}
+
+/* ══════════════════════════════════════════
+   Welle 2.2 — phase-stepper Widget
+   Phasen-Slider mit Pill-Bar + Auto-Play.
+   ══════════════════════════════════════════ */
+.lf-widget-phase-stepper {
+  border: 1px solid var(--lf-ps-border);
+  border-radius: 12px;
+  background: var(--lf-ps-bg);
+  padding: 16px;
+  margin: 12px 0;
+  color: var(--lf-ps-text);
+}
+.lf-ps-empty {
+  color: var(--lf-ps-text-muted);
+  font-style: italic;
+  text-align: center;
+}
+.lf-ps-title {
+  margin: 0 0 12px 0;
+  font-size: 1.05rem;
+  color: var(--lf-ps-text);
+}
+.lf-ps-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.lf-ps-pill {
+  appearance: none;
+  border: 1px solid var(--lf-ps-border);
+  background: var(--lf-ps-pill-bg);
+  color: var(--lf-ps-pill-text);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease, transform 120ms ease;
+  font-family: inherit;
+}
+.lf-ps-pill:hover {
+  border-color: var(--lf-ps-pill-active);
+  color: var(--lf-ps-text);
+}
+.lf-ps-pill:focus-visible {
+  outline: 2px solid var(--lf-ps-pill-active);
+  outline-offset: 2px;
+}
+.lf-ps-pill:active { transform: scale(0.97); }
+.lf-ps-pill.lf-ps-pill-active {
+  background: var(--lf-ps-pill-active);
+  color: var(--lf-ps-pill-active-text);
+  border-color: var(--lf-ps-pill-active);
+}
+.lf-ps-stage {
+  background: var(--lf-ps-stage-bg);
+  border: 1px solid var(--lf-ps-border);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.lf-ps-visual {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  /* Phase-Wechsel-Fade — bei reduce-motion via .lf-ps-reduced-motion abgeschaltet. */
+  animation: lf-ps-fade 220ms ease;
+}
+.lf-ps-visual-emoji {
+  font-size: 5rem;
+  line-height: 1;
+}
+.lf-ps-visual-svg,
+.lf-ps-visual-svg svg {
+  max-width: 100%;
+  max-height: 150px;
+}
+.lf-ps-visual-img {
+  max-width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+}
+.lf-ps-phase-name {
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  color: var(--lf-ps-text);
+}
+.lf-ps-text {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--lf-ps-text-muted);
+}
+.lf-ps-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.lf-ps-btn {
+  appearance: none;
+  border: 1px solid var(--lf-ps-border);
+  background: var(--lf-ps-stage-bg);
+  color: var(--lf-ps-text);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 160ms ease, transform 120ms ease, border-color 160ms ease;
+}
+.lf-ps-btn:hover {
+  border-color: var(--lf-ps-pill-active);
+}
+.lf-ps-btn:focus-visible {
+  outline: 2px solid var(--lf-ps-pill-active);
+  outline-offset: 2px;
+}
+.lf-ps-btn:active { transform: scale(0.96); }
+.lf-ps-btn-primary {
+  background: var(--lf-ps-pill-active);
+  color: var(--lf-ps-pill-active-text);
+  border-color: var(--lf-ps-pill-active);
+}
+.lf-ps-counter {
+  margin-left: 6px;
+  font-size: 0.85rem;
+  color: var(--lf-ps-text-muted);
+  min-width: 36px;
+  text-align: center;
+}
+@keyframes lf-ps-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.lf-widget-phase-stepper.lf-ps-reduced-motion .lf-ps-visual {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lf-ps-visual { animation: none; }
+  .lf-ps-pill, .lf-ps-btn { transition: none; }
+  .lf-ps-pill:active, .lf-ps-btn:active { transform: none; }
 }
