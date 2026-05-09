@@ -130,6 +130,14 @@
   --lf-ps-pill-active: var(--subject-accent, var(--subject-color, var(--accent)));
   --lf-ps-pill-active-text: #ffffff;
 
+  /* Welle 2.5 — stoichiometry-balancer. Container/Counter/Inputs.
+     Atom-Farben sind im JS hardcoded (chemische Konvention, theme-unabh.). */
+  --lf-sb-bg:                 var(--bg-card);
+  --lf-sb-input-bg:           var(--bg-input);
+  --lf-sb-counter-balanced:   var(--success);
+  --lf-sb-counter-unbalanced: var(--danger);
+  --lf-sb-arrow:              var(--text-muted);
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
 
@@ -305,6 +313,14 @@
   --lf-ps-pill-text:   var(--text-muted);
   --lf-ps-pill-active: var(--subject-accent, var(--subject-color, var(--accent)));
   --lf-ps-pill-active-text: #0b0f1a;
+
+  /* Welle 2.5 — stoichiometry-balancer Dark. Restate gegen redefinierte
+     --bg-card/--bg-input. Counter-Akzente gehen via --success/--danger. */
+  --lf-sb-bg:                 var(--bg-card);
+  --lf-sb-input-bg:           var(--bg-input);
+  --lf-sb-counter-balanced:   var(--success);
+  --lf-sb-counter-unbalanced: var(--danger);
+  --lf-sb-arrow:              var(--text-muted);
 
   /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
   --success:        #34d399;        /* emerald-400 */
@@ -9240,4 +9256,235 @@ input.lf-fb-blank.lf-fb-pulse {
   .lf-ps-visual { animation: none; }
   .lf-ps-pill, .lf-ps-btn { transition: none; }
   .lf-ps-pill:active, .lf-ps-btn:active { transform: none; }
+}
+
+/* ══════════════════════════════════════════
+   Welle 2.5 — stoichiometry-balancer
+   Reaktions-Ausgleichen mit Atom-Visualisierung (Chemie).
+   Pure CSS-Vars => automatisch theme-aware. Atom-Farben sind
+   bewusst hardcoded im JS (CPK-Konvention, chemisch konsistent
+   ueber alle Themes hinweg).
+   ══════════════════════════════════════════ */
+.lf-widget-stoich-balancer {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--lf-sb-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-sb-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+.lf-sb-title {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.lf-sb-counter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-height: 28px;
+  align-items: center;
+}
+.lf-sb-cnt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+.lf-sb-cnt-bad {
+  background: var(--danger-subtle);
+  color: var(--danger-text);
+  border-color: var(--lf-sb-counter-unbalanced);
+}
+.lf-sb-cnt-ok {
+  background: var(--success-subtle);
+  color: var(--success-text);
+  border-color: var(--lf-sb-counter-balanced);
+}
+.lf-sb-cnt-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: inline-block;
+}
+.lf-sb-cnt-el {
+  font-weight: 700;
+  margin-right: 2px;
+}
+.lf-sb-cnt-eq {
+  opacity: 0.6;
+  margin: 0 2px;
+}
+.lf-sb-equation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--lf-sb-input-bg);
+  margin-bottom: 10px;
+}
+.lf-sb-side {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lf-sb-term {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lf-sb-coeff {
+  width: 44px;
+  padding: 4px 6px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--lf-sb-bg);
+  color: var(--text);
+  font-family: inherit;
+  appearance: textfield;
+}
+.lf-sb-coeff:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 1px;
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+.lf-sb-formula {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+.lf-sb-formula sub {
+  font-size: 0.7em;
+  font-weight: 600;
+}
+.lf-sb-plus {
+  font-size: 18px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 2px;
+}
+.lf-sb-arrow {
+  font-size: 22px;
+  color: var(--lf-sb-arrow);
+  margin: 0 6px;
+}
+.lf-sb-stage {
+  width: 100%;
+  background: var(--lf-sb-input-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  padding: 6px 0;
+}
+.lf-sb-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+}
+.lf-sb-arrow-line {
+  fill: var(--lf-sb-arrow);
+  stroke: var(--lf-sb-arrow);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lf-sb-atom-circle {
+  stroke: var(--border);
+  stroke-width: 1.5;
+  transition: cx 240ms ease, cy 240ms ease;
+}
+.lf-sb-atom-label {
+  font: 700 11px sans-serif;
+  pointer-events: none;
+}
+.lf-sb-atom {
+  /* Animations beim Re-Layout (CSS-Transition auf transform) */
+  transition: transform 240ms ease;
+}
+.lf-widget-stoich-balancer.lf-sb-reduced-motion .lf-sb-atom,
+.lf-widget-stoich-balancer.lf-sb-reduced-motion .lf-sb-atom-circle {
+  transition: none;
+}
+.lf-sb-status {
+  margin-top: 10px;
+  min-height: 22px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.lf-sb-state-correct .lf-sb-status {
+  color: var(--success-text);
+  font-weight: 600;
+}
+.lf-sb-state-wrong .lf-sb-status {
+  color: var(--danger-text);
+  font-weight: 600;
+}
+.lf-sb-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.lf-sb-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--lf-sb-input-bg);
+  color: var(--text);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: background 160ms ease, transform 120ms ease, border-color 160ms ease;
+}
+.lf-sb-btn:hover:not(:disabled) {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+.lf-sb-btn:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-sb-btn:active:not(:disabled) { transform: scale(0.97); }
+.lf-sb-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.lf-sb-check {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  color: #ffffff;
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+.lf-sb-check:disabled {
+  background: var(--success);
+  border-color: var(--success);
+  color: #ffffff;
+  opacity: 0.85;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lf-sb-atom, .lf-sb-atom-circle, .lf-sb-btn { transition: none; }
+  .lf-sb-btn:active:not(:disabled) { transform: none; }
 }

@@ -36,6 +36,7 @@ export const WIDGET_REGISTRY = {
   'process-flow-anim': () => import('./process-flow-anim.js?v=' + WIDGET_VERSION),
   'phase-stepper':    () => import('./phase-stepper.js?v=' + WIDGET_VERSION),
   'ph-titration':     () => import('./ph-titration.js?v=' + WIDGET_VERSION),
+  'stoichiometry-balancer': () => import('./stoichiometry-balancer.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.
