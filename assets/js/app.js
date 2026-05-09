@@ -3441,6 +3441,12 @@ if (typeof document !== 'undefined' && !document.__lfNumberSliderBound) {
 }
 
 // ─── Mega-Update 2026-05-09 — Hot-Spot-Widget (MVP-4) ────────────────────────
+// TODO(Phase-0-Commit-11): Bridge-Code — die kanonische Implementierung lebt
+// jetzt in assets/js/widgets/hot-spot.js (Phase 0 Commit 8). Dieser Block
+// (_LF_HS_STATE, _lfHs*, _renderHotSpot, document.__lfHotSpotBound) bleibt
+// als Bridge fuer den synchronen renderBlock()-Pfad und wird in Commit 11
+// entfernt, sobald der Widget-Loader auf Slot-Stubs umgestellt ist.
+//
 // Schueler klickt Punkte auf einem Bild (Plakat, Karte, Diagramm).
 // Use-Cases: "Klicke auf alle Schuetzengraeben", "Erdkern-Schichten",
 // "Stilmittel im Text", "Mitose-Phasen". Coords sind normalisiert (0..1)
