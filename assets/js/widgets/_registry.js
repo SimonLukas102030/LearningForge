@@ -43,6 +43,7 @@ export const WIDGET_REGISTRY = {
   'prob-tree-builder': () => import('./prob-tree-builder.js?v=' + WIDGET_VERSION),
   'text-token-tap':   () => import('./text-token-tap.js?v=' + WIDGET_VERSION),
   'branch-story':     () => import('./branch-story.js?v=' + WIDGET_VERSION),
+  'map-layer-toggle': () => import('./map-layer-toggle.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.

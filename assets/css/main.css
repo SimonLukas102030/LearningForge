@@ -164,6 +164,14 @@
   --lf-bs-path:    var(--bg-input);
   --lf-bs-end:     var(--success-subtle);
 
+  /* Welle 4.1 — map-layer-toggle. Schematische SVG-Karte mit Layer-Toggles.
+     Region-Füllfarbe und Popup-Hintergrund. Light. */
+  --lf-ml-bg:         var(--bg-card);
+  --lf-ml-region:     var(--bg-input);
+  --lf-ml-border:     var(--border);
+  --lf-ml-popup-bg:   var(--bg-card);
+  --lf-ml-active-btn: var(--subject-accent, var(--subject-color, var(--accent)));
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
 
@@ -406,6 +414,13 @@
   --lf-bs-choice:  var(--subject-accent, var(--subject-color, var(--accent)));
   --lf-bs-path:    var(--bg-input);
   --lf-bs-end:     var(--success-subtle);
+
+  /* Welle 4.1 — map-layer-toggle Dark. Restate gegen redefinierte Token. */
+  --lf-ml-bg:         var(--bg-card);
+  --lf-ml-region:     var(--bg-input);
+  --lf-ml-border:     var(--border);
+  --lf-ml-popup-bg:   var(--bg-card);
+  --lf-ml-active-btn: var(--subject-accent, var(--subject-color, var(--accent)));
 
   /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
   --success:        #34d399;        /* emerald-400 */
@@ -10459,4 +10474,205 @@ input.lf-fb-blank.lf-fb-pulse {
 @media (max-width: 480px) {
   .lf-widget-branch-story { padding: 12px; }
   .lf-bs-choice { font-size: 13px; }
+}
+
+/* ══════════════════════════════════════════
+   Welle 4.1 — map-layer-toggle
+   Schematische SVG-Karte mit Layer-Toggles (Geo/Englisch).
+   Pure CSS-Vars => automatisch theme-aware in allen Themes.
+   ══════════════════════════════════════════ */
+.lf-widget-map-layer-toggle {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--lf-ml-bg);
+  border: 1px solid var(--lf-ml-border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+  position: relative;
+}
+.lf-ml-empty {
+  border-left-color: var(--lf-ml-border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+.lf-ml-title {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Layer-Toggle-Buttons ─── */
+.lf-ml-layer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.lf-ml-layer-btn {
+  appearance: none;
+  border: 1.5px solid var(--lf-ml-border);
+  background: var(--lf-ml-region);
+  color: var(--text);
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 100ms ease;
+}
+.lf-ml-layer-btn:hover:not(.lf-ml-layer-btn-active) {
+  border-color: var(--lf-ml-active-btn);
+}
+.lf-ml-layer-btn:focus-visible {
+  outline: 2px solid var(--lf-ml-active-btn);
+  outline-offset: 2px;
+}
+.lf-ml-layer-btn-active {
+  background: var(--lf-ml-active-btn);
+  border-color: var(--lf-ml-active-btn);
+  color: #ffffff;
+}
+.lf-ml-layer-btn:active { transform: scale(0.97); }
+
+/* ── SVG Karte ─── */
+.lf-ml-map-wrap {
+  width: 100%;
+  position: relative;
+}
+.lf-ml-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+/* Region-Paths */
+.lf-ml-region {
+  transition: filter 160ms ease, opacity 160ms ease, stroke-width 120ms ease;
+  stroke: var(--lf-ml-border);
+  stroke-width: 1.5;
+}
+.lf-ml-region:hover,
+.lf-ml-region:focus-visible {
+  filter: brightness(1.18) drop-shadow(0 0 4px rgba(0,0,0,0.25));
+  stroke-width: 2.5;
+  outline: none;
+}
+.lf-ml-region-selected {
+  stroke-width: 2.5;
+  filter: brightness(1.1) drop-shadow(0 0 6px rgba(0,0,0,0.35));
+}
+/* Reduce-Motion: kein Filter-Übergang */
+.lf-ml-reduced-motion .lf-ml-region {
+  transition: stroke-width 0ms;
+}
+
+/* ── Popup ─── */
+.lf-ml-popup {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--lf-ml-popup-bg);
+  border: 1.5px solid var(--lf-ml-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 10px 14px;
+  z-index: 10;
+  min-width: 180px;
+  max-width: 280px;
+}
+.lf-ml-popup-in {
+  animation: lf-ml-popup-fade 160ms ease;
+}
+@keyframes lf-ml-popup-fade {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.lf-ml-popup-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+}
+.lf-ml-popup-region {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+.lf-ml-popup-layer {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.lf-ml-popup-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+.lf-ml-popup-close {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: inherit;
+}
+.lf-ml-popup-close:hover { color: var(--text); }
+.lf-ml-popup-close:focus-visible {
+  outline: 2px solid var(--lf-ml-active-btn);
+  outline-offset: 2px;
+}
+.lf-ml-reduced-motion .lf-ml-popup-in { animation: none; }
+
+/* ── Legende ─── */
+.lf-ml-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.lf-ml-legend-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-right: 2px;
+}
+.lf-ml-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lf-ml-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.12);
+}
+.lf-ml-legend-text {
+  color: var(--text);
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .lf-widget-map-layer-toggle { padding: 12px; }
+  .lf-ml-popup { min-width: 150px; max-width: 220px; font-size: 13px; }
+  .lf-ml-layer-btn { font-size: 12px; padding: 4px 10px; }
 }
