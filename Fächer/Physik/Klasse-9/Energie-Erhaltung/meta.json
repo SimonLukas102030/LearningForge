@@ -29,7 +29,17 @@
     {
       "name": "Energieerhaltungssatz",
       "description": "Energie geht nicht verloren — sie wandelt sich nur um.",
-      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Energieerhaltungssatz</div><div class=\"lf-key-body\">In einem geschlossenen System bleibt die Gesamtenergie <strong>konstant</strong>. Sie kann sich von einer Form in eine andere umwandeln, aber nie entstehen oder verschwinden.</div></div><div class=\"lf-formula\">E<sub>gesamt</sub> = E<sub>kin</sub> + E<sub>pot</sub> + E<sub>therm</sub> + ... = konstant</div><h3>Klassisches Beispiel: Pendel</h3><p>An den Umkehrpunkten: nur E<sub>pot</sub> (steht still). Im tiefsten Punkt: nur E<sub>kin</sub> (h=0, schnellste Bewegung). Dazwischen: Mischung. Summe immer gleich.</p><h3>Worked Example: Fallender Apfel</h3><p>Ein Apfel (m = 0,1 kg) fällt aus 5 m Höhe. Mit welcher Geschwindigkeit kommt er unten an? (g = 10 m/s²)</p><ol class=\"lf-steps\"><li>E<sub>pot</sub> oben = m·g·h = 0,1·10·5 = 5 J</li><li>Energieerhaltung: E<sub>kin</sub> unten = 5 J</li><li>½·m·v² = 5 → v² = 100 → <strong>v = 10 m/s</strong></li></ol>"
+      "blocks": [
+        {"type": "text", "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Energieerhaltungssatz</div><div class=\"lf-key-body\">In einem geschlossenen System bleibt die Gesamtenergie <strong>konstant</strong>. Sie kann sich von einer Form in eine andere umwandeln, aber nie entstehen oder verschwinden.</div></div><div class=\"lf-formula\">E<sub>gesamt</sub> = E<sub>kin</sub> + E<sub>pot</sub> + E<sub>therm</sub> + ... = konstant</div><h3>Klassisches Beispiel: Pendel</h3><p>An den Umkehrpunkten: nur E<sub>pot</sub> (steht still). Im tiefsten Punkt: nur E<sub>kin</sub> (h=0, schnellste Bewegung). Dazwischen: Mischung. Summe immer gleich.</p><p>Statt nur darüber zu lesen — beobachte selbst, wie Energie hin- und herfließt. Im Pendel unten siehst du in Echtzeit, wie sich E<sub>pot</sub> (Lageenergie, oben am höchsten) und E<sub>kin</sub> (Bewegungsenergie, unten am höchsten) gegenseitig umwandeln. Die Summe bleibt konstant — solange keine Reibung dämpft.</p>"},
+        {"type": "widget", "widgetType": "pendulum-sim", "config": {
+          "initialL": 1.5,
+          "initialTheta0": 30,
+          "initialGamma": 0,
+          "autoPlay": true,
+          "label": "Pendel ohne Reibung — E_pot ↔ E_kin"
+        }},
+        {"type": "text", "content": "<p><strong>Probiere aus:</strong></p><ul><li>Schieb γ (Reibung) auf 0 — E_gesamt bleibt konstant, das Pendel schwingt ewig.</li><li>Schieb γ langsam hoch — die Schwingung wird gedämpft, E_gesamt sinkt. Wo geht die Energie hin? Sie wird in Wärme umgewandelt (= Reibung).</li><li>Verändere die Anfangsauslenkung θ₀ — Energie skaliert quadratisch mit θ₀ (für kleine Winkel).</li></ul><h3>Worked Example: Fallender Apfel</h3><p>Ein Apfel (m = 0,1 kg) fällt aus 5 m Höhe. Mit welcher Geschwindigkeit kommt er unten an? (g = 10 m/s²)</p><ol class=\"lf-steps\"><li>E<sub>pot</sub> oben = m·g·h = 0,1·10·5 = 5 J</li><li>Energieerhaltung: E<sub>kin</sub> unten = 5 J</li><li>½·m·v² = 5 → v² = 100 → <strong>v = 10 m/s</strong></li></ol>"}
+      ]
     },
     {
       "name": "Reibung + reale Systeme",

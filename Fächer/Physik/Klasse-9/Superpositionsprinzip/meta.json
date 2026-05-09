@@ -5,7 +5,16 @@
     {
       "name": "Superpositionsprinzip — Grundlagen",
       "description": "Mehrere Bewegungen gleichzeitig — einfach addieren.",
-      "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Superpositionsprinzip</div><div class=\"lf-key-body\">Wirken mehrere Bewegungen gleichzeitig auf einen Körper, kann man sie <strong>einzeln betrachten</strong> und dann <strong>addieren</strong>.</div></div><h3>Beispiel</h3><p>Du wirfst einen Ball waagerecht aus dem Fenster. Zwei Bewegungen überlagern sich:</p><ol class=\"lf-steps\"><li><strong>Waagerecht:</strong> gleichförmige Bewegung mit deiner Wurfgeschwindigkeit.</li><li><strong>Senkrecht:</strong> freier Fall mit g = 9,81 m/s².</li></ol><p>Die echte Flugbahn = beide Bewegungen unabhängig zusammengesetzt = Wurfparabel.</p>"
+      "blocks": [
+        {"type": "text", "content": "<div class=\"lf-key\"><div class=\"lf-key-title\">Superpositionsprinzip</div><div class=\"lf-key-body\">Wirken mehrere Bewegungen gleichzeitig auf einen Körper, kann man sie <strong>einzeln betrachten</strong> und dann <strong>addieren</strong>.</div></div><h3>Beispiel</h3><p>Du wirfst einen Ball waagerecht aus dem Fenster. Zwei Bewegungen überlagern sich:</p><ol class=\"lf-steps\"><li><strong>Waagerecht:</strong> gleichförmige Bewegung mit deiner Wurfgeschwindigkeit.</li><li><strong>Senkrecht:</strong> freier Fall mit g = 9,81 m/s².</li></ol><p>Die echte Flugbahn = beide Bewegungen unabhängig zusammengesetzt = Wurfparabel.</p><h3>Das gleiche Prinzip bei Wellen</h3><p>Superposition gilt nicht nur für Bewegungen, sondern auch für <strong>Wellen</strong>. Treffen zwei Wellen aufeinander — etwa zwei Schallwellen mit fast gleicher Frequenz — addieren sich ihre Auslenkungen Punkt für Punkt. Das Ergebnis ist eine neue Welle, die manchmal verstärkt (konstruktive Interferenz) und manchmal ausgelöscht (destruktive Interferenz) wird.</p><p>Probiere es selbst aus: stell unten zwei nahe Frequenzen ein und beobachte, wie aus zwei einfachen Sinuswellen eine pulsierende Schwebung entsteht — genau das hörst du, wenn zwei Klaviersaiten leicht verstimmt sind.</p>"},
+        {"type": "widget", "widgetType": "wave-superposition", "config": {
+          "initialA1": 1, "initialF1": 1, "initialPhi1": 0,
+          "initialA2": 1, "initialF2": 1.05, "initialPhi2": 0,
+          "autoPlay": true,
+          "label": "Schwebung: zwei nahe Frequenzen überlagern sich"
+        }},
+        {"type": "text", "content": "<p><strong>Probiere aus:</strong></p><ul><li>Setz f₂ genau gleich f₁ (z.B. beide 1.0): die Wellen verstärken sich einfach — doppelte Amplitude, keine Schwebung.</li><li>Setz f₂ leicht anders (z.B. 1.05): die Summenwelle pulsiert. Die Schwebung-Frequenz = |f₁ − f₂|.</li><li>Verschieb φ₂: die zweite Welle wird relativ zur ersten verschoben. Bei φ₂ = π (180°) löschen sich gleiche Wellen genau aus.</li></ul><div class=\"lf-key\"><div class=\"lf-key-title\">Kerngedanke</div><div class=\"lf-key-body\">Egal ob Bewegung oder Welle: Superposition heißt <strong>einzeln betrachten und dann addieren</strong>. Die einzelnen Komponenten beeinflussen sich nicht — sie laufen unabhängig nebeneinander her und werden erst beim Beobachter zur Gesamtgröße aufsummiert.</div></div>"}
+      ]
     },
     {
       "name": "Waagerechter Wurf",
