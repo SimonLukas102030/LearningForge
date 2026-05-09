@@ -338,6 +338,20 @@
   --lf-va-vec-result: #16a34a;            /* green-600: a+b (Akzent) */
   --lf-va-parallel:   var(--text-muted);  /* Parallelogramm-Hilfslinien */
 
+  /* Welle 5.4 — piano-intervals. SVG-Klavier + Web-Audio Intervalle.
+     White-Key / Black-Key / Active-Flash / BG + Akzent fuer Feedback. */
+  --lf-pi-bg:         var(--bg-card);
+  --lf-pi-white-key:  #ffffff;
+  --lf-pi-white-stroke: var(--border);
+  --lf-pi-black-key:  #1e293b;
+  --lf-pi-active:     var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-pi-note-text:  var(--text);
+  --lf-pi-btn:        var(--bg-input);
+  --lf-pi-btn-active: var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-pi-btn-active-text: #ffffff;
+  --lf-pi-fb-correct: var(--success-subtle);
+  --lf-pi-fb-wrong:   var(--danger-subtle);
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -566,6 +580,20 @@
   --lf-va-vec-a:      #f87171;          /* red-400 */
   --lf-va-vec-b:      #60a5fa;          /* blue-400 */
   --lf-va-vec-result: #34d399;          /* emerald-400 */
+
+  /* Welle 5.4 — piano-intervals Dark. Weiße Tasten sichtbar auf dunklem BG;
+     schwarze Tasten leicht aufgehellt damit die Grenze erkennbar bleibt. */
+  --lf-pi-bg:           var(--bg-card);
+  --lf-pi-white-key:    #e2e8f0;
+  --lf-pi-white-stroke: var(--border);
+  --lf-pi-black-key:    #0f172a;
+  --lf-pi-active:       var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-pi-note-text:    var(--text);
+  --lf-pi-btn:          var(--bg-input);
+  --lf-pi-btn-active:   var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-pi-btn-active-text: #ffffff;
+  --lf-pi-fb-correct:   var(--success-subtle);
+  --lf-pi-fb-wrong:     var(--danger-subtle);
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -11166,4 +11194,224 @@ input.lf-fb-blank.lf-fb-pulse {
   }
   .lf-cb-clause-divider { display: none; }
   .lf-widget-conditional-builder { padding: 14px 14px; }
+}
+
+/* ── Welle 5.4 — piano-intervals Widget ──────────────────
+   SVG-Klavier + Web-Audio Intervall-Hörtest.
+   Layout: Titel → Mode-Toggle → Note-Display → SVG-Klavier → Hörtest-Panel. */
+
+.lf-widget-piano-intervals {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--lf-pi-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-pi-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-pi-title {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Mode-Toggle Bar ──────────────────────────────────── */
+.lf-pi-mode-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.lf-pi-mode-btn {
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--lf-pi-btn);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+}
+.lf-pi-mode-btn.lf-pi-mode-active {
+  background: var(--lf-pi-btn-active);
+  border-color:  var(--lf-pi-btn-active);
+  color: var(--lf-pi-btn-active-text);
+}
+.lf-pi-mode-btn:hover:not(.lf-pi-mode-active) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ── Note-Anzeige ─────────────────────────────────────── */
+.lf-pi-note-display {
+  min-height: 26px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--lf-pi-note-text);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+/* ── SVG Klaviatur ────────────────────────────────────── */
+.lf-pi-piano-wrap {
+  overflow-x: auto;
+  margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.lf-pi-svg {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+/* Weiße Tasten */
+.lf-pi-key.lf-pi-white {
+  fill:   var(--lf-pi-white-key);
+  stroke: var(--lf-pi-white-stroke);
+  stroke-width: 1;
+  transition: fill 0.1s ease;
+}
+/* Schwarze Tasten */
+.lf-pi-key.lf-pi-black {
+  fill:   var(--lf-pi-black-key);
+  stroke: none;
+  transition: fill 0.1s ease;
+}
+/* Aktive (angeklickte) Taste */
+.lf-pi-key.lf-pi-active {
+  fill: var(--lf-pi-active) !important;
+}
+.lf-pi-key:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ── Hörtest-Panel ────────────────────────────────────── */
+.lf-pi-hear-panel {
+  margin-top: 4px;
+}
+.lf-pi-hear-prompt {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.lf-pi-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+}
+.lf-pi-play-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.lf-pi-play-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Choice-Buttons Grid */
+.lf-pi-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.lf-pi-choice {
+  flex: 1 1 calc(50% - 4px);
+  min-width: 100px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  font-family: inherit;
+  text-align: center;
+}
+.lf-pi-choice:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.lf-pi-choice:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.lf-pi-choice-retry {
+  flex: 1 1 100%;
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+  opacity: 1;
+  cursor: pointer;
+}
+.lf-pi-choice-retry:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--lf-pi-btn-active-text);
+}
+
+/* Feedback-Zeile */
+.lf-pi-feedback {
+  min-height: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+.lf-pi-feedback:empty { padding: 0; }
+.lf-pi-fb-correct {
+  background: var(--lf-pi-fb-correct);
+  color: var(--success-text);
+  border-left: 3px solid var(--success);
+}
+.lf-pi-fb-wrong {
+  background: var(--lf-pi-fb-wrong);
+  color: var(--danger-text);
+  border-left: 3px solid var(--danger);
+}
+.lf-pi-fb-result {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-left: 3px solid var(--accent);
+}
+
+/* Fortschrittsanzeige */
+.lf-pi-progress {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 420px) {
+  .lf-pi-choice {
+    flex: 1 1 100%;
+  }
+  .lf-widget-piano-intervals { padding: 12px; }
 }

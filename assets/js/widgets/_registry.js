@@ -46,6 +46,7 @@ export const WIDGET_REGISTRY = {
   'map-layer-toggle': () => import('./map-layer-toggle.js?v=' + WIDGET_VERSION),
   'tense-timeline':        () => import('./tense-timeline.js?v=' + WIDGET_VERSION),
   'conditional-builder':   () => import('./conditional-builder.js?v=' + WIDGET_VERSION),
+  'piano-intervals':       () => import('./piano-intervals.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.
