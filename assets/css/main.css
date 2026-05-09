@@ -268,6 +268,16 @@
   --lf-uc-arc:        var(--accent);
   --lf-uc-wave-bg:    var(--bg-input);
 
+  /* Welle 3.4 — vector-arrow. 2 Vektoren + Resultierender mit Parallelogramm.
+     Pure Canvas2D, Farben pro Frame ueber CSS-Vars. Light. */
+  --lf-va-bg:         var(--bg-card);
+  --lf-va-grid:       var(--border);
+  --lf-va-axis:       var(--text-muted);
+  --lf-va-vec-a:      #ef4444;            /* red-500: Vektor a */
+  --lf-va-vec-b:      #3b82f6;            /* blue-500: Vektor b */
+  --lf-va-vec-result: #16a34a;            /* green-600: a+b (Akzent) */
+  --lf-va-parallel:   var(--text-muted);  /* Parallelogramm-Hilfslinien */
+
   /* F-03 Audio-Modus: Highlight-BG fuer den gerade vorgelesenen Absatz.
      Eigene Variable statt --accent-subtle, weil mehrere Themes
      --accent-subtle als kraeftiges Card-BG nutzen — der Text waere
@@ -437,6 +447,11 @@
   --lf-uc-point:      #f87171;          /* red-400 */
   --lf-uc-sin:        #38bdf8;          /* sky-400 */
   --lf-uc-cos:        #fb923c;          /* orange-400 */
+
+  /* Welle 3.4 — vector-arrow Dark. 400-Shades fuer Kontrast auf dunklem BG. */
+  --lf-va-vec-a:      #f87171;          /* red-400 */
+  --lf-va-vec-b:      #60a5fa;          /* blue-400 */
+  --lf-va-vec-result: #34d399;          /* emerald-400 */
 
   /* F-03 Audio-Modus: Dark-Variante des Highlight-BG (etwas
      kraeftiger als Light, damit der Akzent auf dunklem Card-BG sichtbar bleibt). */
@@ -2054,6 +2069,98 @@ input, textarea, select { font-family: var(--font); }
 .lf-uc-rd b { font-weight: 700; }
 .lf-uc-rd-sin { color: var(--lf-uc-sin); }
 .lf-uc-rd-cos { color: var(--lf-uc-cos); }
+
+/* Welle 3.4 — vector-arrow widget-specific layout. Canvas-basiert, Farben
+   ueber --lf-va-* Vars (oben) — Light/Dark vollstaendig per Theme. */
+.lf-va-host { /* erbt margin/padding/border-left vom physik-sim */ }
+.lf-va-title {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.lf-va-canvas {
+  display: block;
+  margin: 0 auto;
+  background: var(--lf-va-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  touch-action: none;
+}
+.lf-va-controls {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lf-va-inputs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.lf-va-num {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  gap: 2px;
+}
+.lf-va-num.lf-va-num-a { color: var(--lf-va-vec-a); }
+.lf-va-num.lf-va-num-b { color: var(--lf-va-vec-b); }
+.lf-va-num-input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+.lf-va-num-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.lf-va-live {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color: var(--text);
+}
+.lf-va-rd b { font-weight: 700; }
+.lf-va-rd-a { color: var(--lf-va-vec-a); }
+.lf-va-rd-b { color: var(--lf-va-vec-b); }
+.lf-va-rd-r { color: var(--lf-va-vec-result); }
+.lf-va-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lf-va-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.lf-va-btn:hover { background: var(--bg-card); border-color: var(--accent); }
+.lf-va-btn[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--bg-card);
+  border-color: var(--accent);
+}
 
 /* Collapsible details */
 .content-body details.lf-collapse {
