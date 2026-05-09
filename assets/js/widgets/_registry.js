@@ -33,6 +33,7 @@ export const WIDGET_REGISTRY = {
   'wave-superposition': () => import('./wave-superposition.js?v=' + WIDGET_VERSION),
   'pendulum-sim':     () => import('./pendulum-sim.js?v=' + WIDGET_VERSION),
   'timeline-drop':    () => import('./timeline-drop.js?v=' + WIDGET_VERSION),
+  'process-flow-anim': () => import('./process-flow-anim.js?v=' + WIDGET_VERSION),
 };
 
 // Whitelist-Funktion: der Registry-Schlüsselsatz IST die Whitelist.

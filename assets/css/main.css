@@ -106,6 +106,18 @@
   --lf-td-card-correct: var(--success);
   --lf-td-card-wrong:   var(--danger);
 
+  /* Welle 2.1 — process-flow-anim. SVG-Knoten + -Edges + Highlight + Text-Box.
+     Light. Highlight nutzt --accent damit pro Subject (Bio gruen, Geo blau)
+     die Farbe automatisch passt. */
+  --lf-pf-bg:         var(--bg-card);
+  --lf-pf-node:       var(--bg-input);
+  --lf-pf-node-text:  var(--text);
+  --lf-pf-node-stroke: var(--border);
+  --lf-pf-edge:       var(--text-muted);
+  --lf-pf-edge-label: var(--text-muted);
+  --lf-pf-highlight:  var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-pf-text-box:   var(--bg-input);
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
 
@@ -245,6 +257,17 @@
   --lf-td-card-bg:      var(--bg-input);
   --lf-td-card-correct: var(--success);
   --lf-td-card-wrong:   var(--danger);
+
+  /* Welle 2.1 — process-flow-anim Dark. Restate gegen --bg-card/--bg-input,
+     die im Dark-Block schon redefiniert sind. Highlight bleibt --accent. */
+  --lf-pf-bg:         var(--bg-card);
+  --lf-pf-node:       var(--bg-input);
+  --lf-pf-node-text:  var(--text);
+  --lf-pf-node-stroke: var(--border);
+  --lf-pf-edge:       var(--text-muted);
+  --lf-pf-edge-label: var(--text-muted);
+  --lf-pf-highlight:  var(--subject-accent, var(--subject-color, var(--accent)));
+  --lf-pf-text-box:   var(--bg-input);
 
   /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
   --success:        #34d399;        /* emerald-400 */
@@ -8765,4 +8788,176 @@ input.lf-fb-blank.lf-fb-pulse {
   .lf-td-check,
   .lf-td-reset { transition: none; }
   .lf-td-check:active:not(:disabled) { transform: none; }
+}
+
+/* ─────────────────────────────────────────────────────────
+   Welle 2.1 — process-flow-anim
+   SVG Schritt-fuer-Schritt-Animation (Bio/Geo).
+   Pure CSS-Vars => automatisch theme-aware in allen Themes
+   (light, dark, aurora, alle Cosmetics-Themes).
+   ───────────────────────────────────────────────────────── */
+.lf-widget-process-flow {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--lf-pf-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-pf-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+.lf-pf-title {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.lf-pf-stage {
+  width: 100%;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.lf-pf-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+}
+.lf-pf-edge-line {
+  fill: none;
+  stroke: var(--lf-pf-edge);
+  stroke-width: 2;
+  transition: stroke 220ms ease, stroke-width 220ms ease;
+}
+.lf-pf-arrow-head {
+  fill: var(--lf-pf-edge);
+  transition: fill 220ms ease;
+}
+.lf-pf-edge-label {
+  fill: var(--lf-pf-edge-label);
+  font: 600 11px sans-serif;
+  pointer-events: none;
+}
+.lf-pf-node-shape {
+  fill: var(--lf-pf-node);
+  stroke: var(--lf-pf-node-stroke);
+  stroke-width: 1.5;
+  transition: fill 220ms ease, stroke 220ms ease, stroke-width 220ms ease;
+}
+.lf-pf-node-label {
+  fill: var(--lf-pf-node-text);
+  font: 600 12px sans-serif;
+  pointer-events: none;
+}
+
+/* Highlight: Knoten — Akzentrand + Glow + Pulse. */
+.lf-pf-node.lf-pf-highlight .lf-pf-node-shape {
+  stroke: var(--lf-pf-highlight);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px var(--lf-pf-highlight));
+  animation: lf-pf-pulse 1.6s ease-in-out infinite;
+}
+.lf-pf-node.lf-pf-highlight .lf-pf-node-label {
+  fill: var(--lf-pf-highlight);
+}
+/* Highlight: Edge — Akzentfarbe + dicker + Glow. */
+.lf-pf-edge.lf-pf-highlight .lf-pf-edge-line {
+  stroke: var(--lf-pf-highlight);
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 4px var(--lf-pf-highlight));
+  animation: lf-pf-pulse 1.6s ease-in-out infinite;
+}
+.lf-pf-edge.lf-pf-highlight .lf-pf-arrow-head {
+  fill: var(--lf-pf-highlight);
+}
+.lf-pf-edge.lf-pf-highlight .lf-pf-edge-label {
+  fill: var(--lf-pf-highlight);
+}
+
+@keyframes lf-pf-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+.lf-pf-text-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  min-height: 44px;
+  background: var(--lf-pf-text-box);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.lf-pf-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.lf-pf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 80ms ease;
+}
+.lf-pf-btn:hover {
+  background: var(--bg-card);
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+.lf-pf-btn:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-pf-btn:active { transform: scale(0.96); }
+.lf-pf-btn-primary {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  color: #ffffff;
+  border-color: transparent;
+}
+.lf-pf-btn-primary:hover {
+  filter: brightness(1.08);
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+.lf-pf-counter {
+  margin-left: auto;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduce-Motion: keine Pulse-Animation, statische Highlights. */
+.lf-widget-process-flow.lf-pf-reduced-motion .lf-pf-node.lf-pf-highlight .lf-pf-node-shape,
+.lf-widget-process-flow.lf-pf-reduced-motion .lf-pf-edge.lf-pf-highlight .lf-pf-edge-line {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lf-pf-node.lf-pf-highlight .lf-pf-node-shape,
+  .lf-pf-edge.lf-pf-highlight .lf-pf-edge-line { animation: none; }
+  .lf-pf-btn { transition: none; }
+  .lf-pf-btn:active { transform: none; }
+  .lf-pf-edge-line, .lf-pf-arrow-head, .lf-pf-node-shape { transition: none; }
 }
