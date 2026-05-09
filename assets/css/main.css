@@ -97,6 +97,15 @@
   --lf-conn-5: #6366f1;   /* indigo-500 */
   --lf-conn-6: #d946ef;   /* fuchsia-500 */
 
+  /* Welle 1.5 — timeline-drop Widget. Achse + Marker + Karten-Hintergrund.
+     Light-Variante. */
+  --lf-td-bg:           var(--bg-card);
+  --lf-td-axis:         var(--text-muted);
+  --lf-td-marker:       var(--border);
+  --lf-td-card-bg:      var(--bg-input);
+  --lf-td-card-correct: var(--success);
+  --lf-td-card-wrong:   var(--danger);
+
   /* Subject colors (referenced by JS) */
   --color-default: #6366f1;
 
@@ -226,6 +235,16 @@
   --lf-conn-4: #22d3ee;   /* cyan-400 */
   --lf-conn-5: #818cf8;   /* indigo-400 */
   --lf-conn-6: #e879f9;   /* fuchsia-400 */
+
+  /* timeline-drop Widget — Dark-Variante (erbt im Wesentlichen aus Standard-Vars,
+     die sich im Dark-Block schon redefiniert haben). Hier nur expliziter Restate
+     fuer Klarheit + Theme-Stabilitaet. */
+  --lf-td-bg:           var(--bg-card);
+  --lf-td-axis:         var(--text-muted);
+  --lf-td-marker:       var(--border);
+  --lf-td-card-bg:      var(--bg-input);
+  --lf-td-card-correct: var(--success);
+  --lf-td-card-wrong:   var(--danger);
 
   /* Status-Akzente (Cycle-1 UX) — Dark-Variante: aufgehellt + dunkel-tinted backgrounds */
   --success:        #34d399;        /* emerald-400 */
@@ -8370,4 +8389,380 @@ input.lf-fb-blank.lf-fb-pulse {
   }
   .audio-bar-pos { min-width: 44px; font-size: 12px; }
   .audio-bar-toggle { display: none; } /* Auto-Weiter-Toggle sehr eng — wegfallen lassen */
+}
+
+/* ── Welle 1.5 (2026-05-09) — Timeline-Drop-Widget ─────────────────────────
+   Karten an Zeitstrahl droppen. Snap-to-Year via JS, hier nur Layout + Look.
+   Theme-Regel: ausschliesslich CSS-Variablen, kein hex/named-color/rgba.
+*/
+.lf-widget-timeline-drop {
+  margin: 16px 0;
+  padding: 16px;
+  background: var(--lf-td-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.lf-td-empty {
+  border-left-color: var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.lf-td-heading {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.lf-td-setup {
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.lf-td-question {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.lf-td-score {
+  margin-bottom: 10px;
+  padding: 6px 12px;
+  background: var(--bg-input);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.lf-td-state-checked .lf-td-score {
+  background: var(--success-subtle);
+  border-left-color: var(--success);
+  color: var(--success-text);
+}
+
+.lf-td-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 48px;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: var(--bg-input);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+.lf-td-tray:empty::before {
+  content: "Alle Karten platziert.";
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+  padding: 6px 4px;
+}
+
+.lf-td-card {
+  min-height: 44px;
+  padding: 8px 14px;
+  background: var(--lf-td-card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.lf-td-card:hover {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-td-card:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-td-card:active { cursor: grabbing; }
+.lf-td-card-label { pointer-events: none; }
+
+/* Achse-Bereich. Position-relative damit Pins/Cursor absolut platziert werden. */
+.lf-td-axis-wrap {
+  width: 100%;
+  margin: 4px 0 14px 0;
+  padding: 56px 8px 70px 8px; /* oben Platz fuer Pins ueber der Linie, unten fuer Year-Labels */
+  background: transparent;
+  position: relative;
+}
+.lf-td-axis {
+  position: relative;
+  height: 4px;
+  margin: 0 8px;
+  outline: none;
+}
+.lf-td-axis-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  background: var(--lf-td-axis);
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+
+.lf-td-ticks { position: absolute; inset: 0; }
+.lf-td-tick {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.lf-td-tick-line {
+  width: 2px;
+  height: 12px;
+  background: var(--lf-td-marker);
+  margin: 0 auto;
+}
+.lf-td-tick-label {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Pins = abgelegte Karten am Zeitstrahl. Stem zeigt vom Marker zur Karte. */
+.lf-td-pins { position: absolute; inset: 0; pointer-events: none; }
+.lf-td-pin {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: grab;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.lf-td-pin:focus-visible { outline: none; }
+.lf-td-pin:focus-visible .lf-td-pin-card {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-td-pin-stem {
+  width: 2px;
+  height: 18px;
+  background: var(--lf-td-axis);
+}
+.lf-td-pin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  max-width: 140px;
+  padding: 6px 10px;
+  background: var(--lf-td-card-bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.lf-td-pin-label {
+  font-weight: 600;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.lf-td-pin-year {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.lf-td-pin-correct .lf-td-pin-card {
+  border-color: var(--lf-td-card-correct);
+  background: var(--success-subtle);
+  color: var(--success-text);
+}
+.lf-td-pin-correct .lf-td-pin-stem { background: var(--lf-td-card-correct); }
+.lf-td-pin-correct .lf-td-pin-year { color: var(--success-text); }
+.lf-td-pin-wrong .lf-td-pin-card {
+  border-color: var(--lf-td-card-wrong);
+  background: var(--danger-subtle);
+  color: var(--danger-text);
+}
+.lf-td-pin-wrong .lf-td-pin-stem { background: var(--lf-td-card-wrong); }
+.lf-td-pin-wrong .lf-td-pin-year { color: var(--danger-text); }
+
+/* Cursor: Selektor-Linie waehrend Pickup. */
+.lf-td-cursor {
+  position: absolute;
+  top: -28px;
+  bottom: -28px;
+  width: 2px;
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+}
+.lf-td-cursor-line {
+  position: absolute;
+  inset: 0;
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  opacity: 0.85;
+}
+.lf-td-cursor-year {
+  position: absolute;
+  left: 50%;
+  bottom: -22px;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  color: var(--bg-card);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Ghost: schwebende Karten-Vorschau waehrend Pointer-Drag. */
+.lf-td-ghost {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  z-index: 3;
+  margin-top: -18px;
+}
+.lf-td-ghost-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  max-width: 140px;
+  padding: 6px 10px;
+  background: var(--lf-td-card-bg);
+  border: 1.5px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  opacity: 0.95;
+}
+.lf-td-ghost-label { font-weight: 600; }
+.lf-td-ghost-year {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+}
+
+.lf-td-hint {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+}
+.lf-td-state-checked .lf-td-hint {
+  background: var(--success-subtle);
+  border-left-color: var(--success);
+  color: var(--success-text);
+}
+
+.lf-td-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lf-td-check,
+.lf-td-reset {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.lf-td-check {
+  background: var(--subject-accent, var(--subject-color, var(--accent)));
+  border: 1.5px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  color: var(--bg-card);
+}
+.lf-td-check:hover:not(:disabled) { filter: brightness(1.05); }
+.lf-td-check:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+.lf-td-check:active:not(:disabled) { transform: translateY(1px); }
+.lf-td-reset {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.lf-td-reset:hover {
+  border-color: var(--subject-accent, var(--subject-color, var(--accent)));
+  background: var(--subject-accent-soft, var(--accent-subtle));
+}
+.lf-td-reset:focus-visible {
+  outline: 2px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  outline-offset: 2px;
+}
+
+.lf-td-reveal {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--subject-accent-soft, var(--accent-subtle));
+  border-left: 3px solid var(--subject-accent, var(--subject-color, var(--accent)));
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.lf-td-reveal-heading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--subject-accent, var(--subject-color, var(--accent)));
+  margin-bottom: 6px;
+}
+.lf-td-reveal-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+.lf-td-reveal-body p:last-child { margin-bottom: 0; }
+
+/* Kleine Viewports: Year-Labels koennen kollidieren — jedes 2. ausblenden,
+   Tick-Linien bleiben. */
+@media (max-width: 480px) {
+  .lf-td-tick:nth-child(even) .lf-td-tick-label { display: none; }
+  .lf-td-pin-card { max-width: 100px; font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lf-td-card,
+  .lf-td-check,
+  .lf-td-reset { transition: none; }
+  .lf-td-check:active:not(:disabled) { transform: none; }
 }
